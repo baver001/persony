@@ -31,6 +31,8 @@ export interface ChatMessage {
   isCallSummary?: boolean;
   callDurationSecs?: number;
   callTranscripts?: Array<{ id: string; sender: 'user' | 'character'; text: string }>;
+  isFromVoiceCall?: boolean;
+  voiceCallSessionId?: string;
   isError?: boolean;
 }
 

@@ -8,6 +8,10 @@ import { CreatePersonaModal } from './components/CreatePersonaModal';
 import { PersonaProfileDrawer } from './components/PersonaProfileDrawer';
 import { PwaInstallBanner } from './components/PwaInstallBanner';
 import { soundFX } from './utils/soundEffects';
+import {
+  buildCallHistoryMessages,
+  isCallSessionAlreadySaved,
+} from './utils/callTranscriptPersistence';
 
 const STORAGE_KEY_PERSONAS = 'persony_personas_v1';
 const STORAGE_KEY_MESSAGES = 'persony_messages_v1';
@@ -548,23 +552,26 @@ export default function App() {
         isOpen={isCallOpen}
         onClose={() => setIsCallOpen(false)}
         recentMessages={messagesByPersona[callingPersona.id] || []}
-        onEndCallSummary={(durationSecs, transcripts) => {
-          if (durationSecs > 0 || transcripts.length > 0) {
-            const summaryMsg: ChatMessage = {
-              id: `call_summary_${Date.now()}`,
-              characterId: callingPersona.id,
-              sender: 'system',
-              text: `📞 Голосовой звонок завершён (Длительность: ${Math.floor(durationSecs / 60)} мин ${durationSecs % 60} сек)`,
-              timestamp: Date.now(),
-              isCallSummary: true,
-              callDurationSecs: durationSecs,
-              callTranscripts: transcripts,
-            };
-            setMessagesByPersona((prev) => ({
+        onEndCallSummary={(durationSecs, transcripts, sessionId) => {
+          if (!sessionId || (durationSecs <= 0 && transcripts.length === 0)) return;
+
+          setMessagesByPersona((prev) => {
+            const existing = prev[callingPersona.id] || [];
+            if (isCallSessionAlreadySaved(existing, sessionId)) return prev;
+
+            const callMessages = buildCallHistoryMessages(
+              callingPersona.id,
+              sessionId,
+              durationSecs,
+              transcripts
+            );
+            if (callMessages.length === 0) return prev;
+
+            return {
               ...prev,
-              [callingPersona.id]: [...(prev[callingPersona.id] || []), summaryMsg],
-            }));
-          }
+              [callingPersona.id]: [...existing, ...callMessages],
+            };
+          });
         }}
       />
 

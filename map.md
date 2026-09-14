@@ -30,6 +30,7 @@ flowchart TD
 ### Готово
 
 - MVP: чат, голосовые, live-звонки, персонажи
+- Транскрипция звонков сохраняется в историю как диалог (`specs/03-call-transcript-persistence.md`)
 - Cloudflare Workers: https://persony.pavel-9e7.workers.dev
 - GitHub: https://github.com/baver001/persony
 - Дизайн-токены Persony (`DESIGN.md`, `src/index.css`)

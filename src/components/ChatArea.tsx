@@ -997,6 +997,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     isUser ? 'text-white/70' : isDark ? 'text-zinc-400' : 'text-neutral-400'
                   }`}
                 >
+                  {msg.isFromVoiceCall && (
+                    <span className="opacity-70" title="Из голосового звонка">🎙️</span>
+                  )}
                   <span>{formatTime(msg.timestamp)}</span>
                   {isUser && <CheckCheck className="w-3.5 h-3.5 text-white" />}
                 </div>

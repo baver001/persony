@@ -435,18 +435,10 @@ ${formattedMsgs}
                     clientWs.send(JSON.stringify({ type: 'interrupted' }));
                   }
 
-                  // 3. Live Transcriptions / Subtitles
-                  const textPart = serverMessage.serverContent?.modelTurn?.parts?.find((p: any) => p.text);
-                  if (textPart?.text) {
-                    clientWs.send(
-                      JSON.stringify({
-                        type: 'model_transcript',
-                        text: textPart.text,
-                      })
-                    );
-                  }
-
-                  const outputTrans = (serverMessage.serverContent as any)?.outputAudioTranscription?.text;
+                  // 3. Live transcriptions (audio transcription only — avoid duplicate modelTurn text)
+                  const outputTrans =
+                    (serverMessage.serverContent as any)?.outputTranscription?.text ??
+                    (serverMessage.serverContent as any)?.outputAudioTranscription?.text;
                   if (outputTrans) {
                     clientWs.send(
                       JSON.stringify({
@@ -456,7 +448,9 @@ ${formattedMsgs}
                     );
                   }
 
-                  const inputTrans = (serverMessage.serverContent as any)?.inputAudioTranscription?.text;
+                  const inputTrans =
+                    (serverMessage.serverContent as any)?.inputTranscription?.text ??
+                    (serverMessage.serverContent as any)?.inputAudioTranscription?.text;
                   if (inputTrans) {
                     clientWs.send(
                       JSON.stringify({

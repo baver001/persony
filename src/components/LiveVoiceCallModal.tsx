@@ -21,7 +21,11 @@ interface LiveVoiceCallModalProps {
   onClose: () => void;
   onNewMessageFromCall?: (text: string, sender: 'user' | 'character') => void;
   recentMessages?: ChatMessage[];
-  onEndCallSummary?: (durationSecs: number, transcripts: Array<{ id: string; sender: 'user' | 'character'; text: string }>) => void;
+  onEndCallSummary?: (
+    durationSecs: number,
+    transcripts: Array<{ id: string; sender: 'user' | 'character'; text: string }>,
+    sessionId: string
+  ) => void;
 }
 
 export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
@@ -49,6 +53,11 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
 
   // Live subtitles
   const [transcripts, setTranscripts] = useState<Array<{ id: string; sender: 'user' | 'character'; text: string }>>([]);
+  const transcriptsRef = useRef<Array<{ id: string; sender: 'user' | 'character'; text: string }>>([]);
+  const durationRef = useRef(0);
+  const statusRef = useRef<CallStatus>('connecting');
+  const sessionIdRef = useRef('');
+  const finalizedRef = useRef(false);
 
   const wsRef = useRef<WebSocket | null>(null);
   const audioStreamerRef = useRef<AudioStreamer | null>(null);
@@ -56,6 +65,22 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
   const ringtoneTimerRef = useRef<number | null>(null);
   const isMutedRef = useRef<boolean>(false);
   const isSpeakerMutedRef = useRef<boolean>(false);
+
+  const appendTranscript = (sender: 'user' | 'character', text: string) => {
+    setTranscripts((prev) => {
+      const last = prev[prev.length - 1];
+      let next: Array<{ id: string; sender: 'user' | 'character'; text: string }>;
+      if (last && last.sender === sender) {
+        const updated = [...prev];
+        updated[updated.length - 1] = { ...last, text: `${last.text} ${text}`.trim() };
+        next = updated;
+      } else {
+        next = [...prev, { id: Math.random().toString(36).slice(2, 10), sender, text }];
+      }
+      transcriptsRef.current = next;
+      return next;
+    });
+  };
 
   isMutedRef.current = isMuted;
   isSpeakerMutedRef.current = isSpeakerMuted;
@@ -67,11 +92,34 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
     return `${mins.toString().padStart(2, '0')}:${remainder.toString().padStart(2, '0')}`;
   };
 
+  const finalizeCall = () => {
+    if (finalizedRef.current) return;
+    finalizedRef.current = true;
+    onEndCallSummary?.(durationRef.current, [...transcriptsRef.current], sessionIdRef.current);
+  };
+
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
+
+  useEffect(() => {
+    durationRef.current = duration;
+  }, [duration]);
+
   useEffect(() => {
     if (!isOpen) {
+      if (durationRef.current > 0 || transcriptsRef.current.length > 0) {
+        finalizeCall();
+      }
       cleanupCall();
       return;
     }
+
+    finalizedRef.current = false;
+    sessionIdRef.current = `call_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    transcriptsRef.current = [];
+    durationRef.current = 0;
+    statusRef.current = 'connecting';
 
     startCall();
 
@@ -118,6 +166,8 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
     setErrorMessage(null);
     setDuration(0);
     setTranscripts([]);
+    transcriptsRef.current = [];
+    durationRef.current = 0;
 
     // Play initial call ringtone
     soundFX.playCallingTone();
@@ -181,11 +231,16 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
             }
             soundFX.playCallConnect();
             setStatus('connected');
+            statusRef.current = 'connected';
             streamer.initPlayback();
 
             // Start duration timer
             timerRef.current = window.setInterval(() => {
-              setDuration((prev) => prev + 1);
+              setDuration((prev) => {
+                const next = prev + 1;
+                durationRef.current = next;
+                return next;
+              });
             }, 1000);
           } else if (msg.type === 'audio') {
             if (!isSpeakerMutedRef.current) {
@@ -196,28 +251,12 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
             setModelAudioLevel(0);
           } else if (msg.type === 'model_transcript') {
             if (msg.text) {
-              setTranscripts((prev) => {
-                const last = prev[prev.length - 1];
-                if (last && last.sender === 'character') {
-                  const updated = [...prev];
-                  updated[updated.length - 1] = { ...last, text: last.text + ' ' + msg.text };
-                  return updated;
-                }
-                return [...prev, { id: Math.random().toString(), sender: 'character', text: msg.text }];
-              });
+              appendTranscript('character', msg.text);
               onNewMessageFromCall?.(msg.text, 'character');
             }
           } else if (msg.type === 'user_transcript') {
             if (msg.text) {
-              setTranscripts((prev) => {
-                const last = prev[prev.length - 1];
-                if (last && last.sender === 'user') {
-                  const updated = [...prev];
-                  updated[updated.length - 1] = { ...last, text: last.text + ' ' + msg.text };
-                  return updated;
-                }
-                return [...prev, { id: Math.random().toString(), sender: 'user', text: msg.text }];
-              });
+              appendTranscript('user', msg.text);
               onNewMessageFromCall?.(msg.text, 'user');
             }
           } else if (msg.type === 'error') {
@@ -242,7 +281,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
       };
 
       ws.onclose = () => {
-        if (status === 'connected') {
+        if (statusRef.current === 'connected') {
           handleEndCall();
         }
       };
@@ -258,12 +297,16 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
   };
 
   const handleEndCall = () => {
+    if (finalizedRef.current) {
+      cleanupCall();
+      setTimeout(() => onClose(), 100);
+      return;
+    }
     soundFX.playCallEnd();
-    const finalDuration = duration;
-    const finalTranscripts = [...transcripts];
     cleanupCall();
     setStatus('ended');
-    onEndCallSummary?.(finalDuration, finalTranscripts);
+    statusRef.current = 'ended';
+    finalizeCall();
     setTimeout(() => {
       onClose();
     }, 400);

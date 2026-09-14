@@ -269,19 +269,18 @@ export async function initLiveSession(
           clientWs.send(JSON.stringify({ type: 'interrupted' }));
         }
 
-        const textPart = serverMessage.serverContent?.modelTurn?.parts?.find((p) => p.text);
-        if (textPart?.text) {
-          clientWs.send(JSON.stringify({ type: 'model_transcript', text: textPart.text }));
-        }
-
-        const outputTrans = (serverMessage.serverContent as { outputAudioTranscription?: { text?: string } })
-          ?.outputAudioTranscription?.text;
+        const outputTrans = (serverMessage.serverContent as { outputTranscription?: { text?: string } })
+          ?.outputTranscription?.text
+          ?? (serverMessage.serverContent as { outputAudioTranscription?: { text?: string } })
+            ?.outputAudioTranscription?.text;
         if (outputTrans) {
           clientWs.send(JSON.stringify({ type: 'model_transcript', text: outputTrans }));
         }
 
-        const inputTrans = (serverMessage.serverContent as { inputAudioTranscription?: { text?: string } })
-          ?.inputAudioTranscription?.text;
+        const inputTrans = (serverMessage.serverContent as { inputTranscription?: { text?: string } })
+          ?.inputTranscription?.text
+          ?? (serverMessage.serverContent as { inputAudioTranscription?: { text?: string } })
+            ?.inputAudioTranscription?.text;
         if (inputTrans) {
           clientWs.send(JSON.stringify({ type: 'user_transcript', text: inputTrans }));
         }
