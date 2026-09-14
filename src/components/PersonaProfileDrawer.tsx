@@ -64,7 +64,7 @@ export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
           exit={{ x: '100%' }}
           transition={{ type: 'spring', damping: 25, stiffness: 260 }}
           onClick={(e) => e.stopPropagation()}
-          className="w-full sm:w-96 h-full bg-[#18181b] border-l border-zinc-800 flex flex-col shadow-2xl overflow-hidden"
+          className="w-full sm:w-96 h-full max-w-full bg-[#18181b] border-l border-zinc-800 flex flex-col shadow-2xl overflow-hidden pb-[env(safe-area-inset-bottom,0px)]"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800 bg-zinc-900/50">
@@ -78,7 +78,7 @@ export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
           </div>
 
           {/* Body */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-white/10">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 sm:space-y-6 scrollbar-thin scrollbar-thumb-white/10 min-h-0">
             {/* Avatar & Hero */}
             <div className="flex flex-col items-center text-center">
               <div className="relative w-28 h-28 rounded-full overflow-hidden p-1 ring-2 ring-zinc-700 bg-zinc-800 shadow-xl">

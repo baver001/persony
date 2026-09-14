@@ -88,7 +88,7 @@ export async function handleChat(
 
   const streamConfig = {
     systemInstruction: `${systemPrompt}\n\n[ВАЖНО ДЛЯ ФОРМАТИРОВАНИЯ В МЕССЕНДЖЕРЕ]:
-- Отвечай в стиле современного мессенджера (Telegram): лаконично, естественно, живым языком персонажа.
+- Отвечай в стиле мессенджера Persony: лаконично, естественно, живым языком персонажа.
 - Сохраняй характер, тон и словарный запас персонажа.
 - Если сообщение — расшифровка голосового, отвечай так, будто только что услышал.
 - Отвечай на языке собеседника (по умолчанию русский).
@@ -161,7 +161,7 @@ export async function handleTranscribe(
 export async function handleGenerateCharacter(apiKey: string, prompt: string): Promise<Record<string, unknown>> {
   const ai = getAIClient(apiKey);
 
-  const promptText = `Создай уникального agentic-персонажа для общения в Telegram-мессенджере по идее: "${prompt}".
+  const promptText = `Создай уникального agentic-персонажа для общения в мессенджере Persony по идее: "${prompt}".
 
 Верни СТРОГИЙ JSON (без markdown):
 {

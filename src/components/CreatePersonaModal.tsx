@@ -3,7 +3,6 @@ import { motion } from 'motion/react';
 import {
   X,
   Sparkles,
-  Bot,
   Wand2,
   Check,
   RefreshCw,
@@ -13,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Persona, VoiceName } from '../types';
 import { generateSvgAvatar, PRESET_AVATARS } from '../utils/avatarGenerator';
+import { PersonyLogo } from './PersonyLogo';
 
 interface CreatePersonaModalProps {
   isOpen: boolean;
@@ -131,7 +131,7 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
       description: description.trim() || 'Пользовательский персонаж для живого общения.',
       systemPrompt:
         systemPrompt.trim() ||
-        `Ты — ${name.trim()}. Общайся в Telegram-мессенджере в своем характерном стиле. Отвечай на русском языке.`,
+        `Ты — ${name.trim()}. Общайся в мессенджере Persony в своем характерном стиле. Отвечай на русском языке.`,
       avatar: avatar || generateSvgAvatar(name, category),
       voice,
       category,
@@ -149,19 +149,19 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
   return (
     <div
       id="create-persona-backdrop"
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto py-safe-top"
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 10 }}
-        className="w-full max-w-4xl bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[96vh]"
+        className="w-full sm:max-w-4xl h-full sm:h-auto bg-zinc-900 border-0 sm:border border-zinc-800 rounded-none sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col sm:my-auto sm:max-h-[96vh]"
       >
         {/* Compact Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800 bg-[#18181b] shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-zinc-800 text-zinc-200 border border-zinc-700 flex items-center justify-center">
-              <Bot className="w-4 h-4" />
+              <PersonyLogo size={18} />
             </div>
             <div>
               <h2 className="text-sm sm:text-base font-bold text-white leading-tight">
@@ -181,8 +181,8 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
         </div>
 
         {/* AI Quick Generator Strip */}
-        <div className="px-5 py-2.5 bg-zinc-800/60 border-b border-zinc-700/60 shrink-0">
-          <div className="flex items-center gap-2">
+        <div className="px-4 sm:px-5 py-2.5 bg-zinc-800/60 border-b border-zinc-700/60 shrink-0">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-300 shrink-0 hidden sm:flex">
               <Wand2 className="w-3.5 h-3.5" />
               <span>Быстрая генерация:</span>
@@ -203,7 +203,7 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
               type="button"
               onClick={handleGenerateWithAI}
               disabled={isGeneratingWithAi || !aiPrompt.trim()}
-              className="px-3 py-1.5 rounded-lg bg-zinc-700 hover:bg-zinc-600 border border-zinc-600 disabled:opacity-50 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm shrink-0 cursor-pointer"
+              className="w-full sm:w-auto px-3 py-1.5 rounded-lg bg-zinc-700 hover:bg-zinc-600 border border-zinc-600 disabled:opacity-50 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm shrink-0 cursor-pointer"
             >
               {isGeneratingWithAi ? (
                 <>
@@ -213,7 +213,8 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
               ) : (
                 <>
                   <Sparkles className="w-3 h-3" />
-                  <span>Создать AI</span>
+                  <span className="sm:hidden">Сгенерировать</span>
+                  <span className="hidden sm:inline">Создать AI</span>
                 </>
               )}
             </button>
@@ -271,7 +272,7 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
             </div>
 
             {/* Name and Tagline */}
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div className="space-y-1">
                 <label className="text-[11px] font-semibold text-white/70">Имя персонажа *</label>
                 <input
@@ -362,7 +363,7 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
               <textarea
                 value={systemPrompt}
                 onChange={(e) => setSystemPrompt(e.target.value)}
-                placeholder="Опишите характер, манеру речи, предысторию и правила поведения персонажа в Telegram..."
+                placeholder="Опишите характер, манеру речи, предысторию и правила поведения персонажа в Persony..."
                 className="w-full flex-1 min-h-[140px] md:min-h-[160px] bg-[#18181b] border border-white/10 rounded-lg p-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-zinc-500 transition-colors leading-relaxed resize-none"
               />
             </div>
@@ -384,7 +385,7 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
         </div>
 
         {/* Compact Footer */}
-        <div className="flex items-center justify-end gap-2.5 px-5 py-3 border-t border-zinc-800 bg-[#18181b] shrink-0">
+        <div className="flex items-center justify-end gap-2.5 px-4 sm:px-5 py-3 border-t border-zinc-800 bg-[#18181b] shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <button
             type="button"
             onClick={onClose}

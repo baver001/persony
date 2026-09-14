@@ -30,13 +30,14 @@ flowchart TD
 ### Готово
 
 - MVP: чат, голосовые, live-звонки, персонажи
-- Cloudflare Workers инфраструктура
-- Дизайн-токены Persony
-- GitHub Actions deploy workflow
+- Cloudflare Workers: https://persony.pavel-9e7.workers.dev
+- GitHub: https://github.com/baver001/persony
+- Дизайн-токены Persony (`DESIGN.md`, `src/index.css`)
+- GitHub Actions deploy workflow (secrets настроены)
 
 ### В работе
 
-- Первый production deploy
+- `GEMINI_API_KEY` в Cloudflare secrets
 - Подключение persony.org
 
 ### Дальше

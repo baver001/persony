@@ -23,7 +23,7 @@ MVP — локальные данные, серверный прокси к Gemi
 1. Spec-driven документация (`specs/`, `map.md`, `DESIGN.md`)
 2. Cloudflare Workers + Vite plugin + CI
 3. Дизайн-система Persony (токены, не копипаст GPL-кода Telegram)
-4. Ребрендинг PersonaGram → Persony
+4. Ребрендинг PersonaGram → Persony — **Готово**
 
 ## Вне scope
 

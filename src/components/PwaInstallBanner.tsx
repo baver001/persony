@@ -49,20 +49,20 @@ export const PwaInstallBanner: React.FC = () => {
   return (
     <div
       id="pwa-install-banner"
-      className="bg-[#18181b] border-b border-zinc-800 px-4 py-2 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-white/80 select-none relative"
+      className="bg-[#18181b] border-b border-zinc-800 px-3 sm:px-4 py-1.5 sm:py-2 flex flex-row items-center justify-between gap-2 text-[10px] sm:text-xs text-white/80 relative shrink-0"
     >
       <div className="flex items-center gap-2 min-w-0">
         <div className="p-1 rounded-lg bg-zinc-800 text-zinc-300 border border-zinc-700 shrink-0">
           <Smartphone className="w-3.5 h-3.5" />
         </div>
-        <span className="truncate">
+        <span className="line-clamp-2 sm:line-clamp-none sm:truncate leading-snug">
           {showManualTip ? (
             <span className="text-zinc-200">
-              В меню браузера (три точки или «Поделиться») выберите <strong>«Установить приложение»</strong> или «На экран Домой».
+              Меню браузера → <strong>«Установить приложение»</strong> или «На экран Домой».
             </span>
           ) : (
             <span>
-              Установите <strong className="text-white">PersonaGram PWA</strong> на смартфон или рабочий стол для быстрых звонков!
+              Установите <strong className="text-white">Persony</strong> для быстрых звонков
             </span>
           )}
         </span>

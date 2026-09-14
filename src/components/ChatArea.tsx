@@ -62,8 +62,8 @@ interface ChatAreaProps {
 
 const EMOJI_LIST = ['👍', '🔥', '❤️', '💡', '⚡', '🚀', '👏', '😂', '🤔', '🎉', '👋', '☕'];
 
-// Telegram Markdown Component
-const TelegramMarkdown: React.FC<{ content: string; isUser: boolean }> = ({ content, isUser }) => {
+// Persony message markdown renderer
+const PersonyMarkdown: React.FC<{ content: string; isUser: boolean }> = ({ content, isUser }) => {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   const codeBlockRegex = /```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g;
@@ -223,7 +223,7 @@ const VoiceNoteBubble: React.FC<{
   };
 
   return (
-    <div className="flex flex-col py-1 min-w-[220px] max-w-sm">
+    <div className="flex flex-col py-1 w-full max-w-[min(85vw,20rem)] sm:max-w-sm">
       <div className="flex items-center gap-3">
         <button
           onClick={togglePlay}
@@ -525,50 +525,20 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   return (
     <div
       id="chat-area-container"
-      className="relative flex-1 flex flex-col h-full overflow-hidden py-chat-bg"
+      className="relative flex-1 flex flex-col h-full overflow-hidden py-chat-bg min-h-0 min-w-0"
     >
-
-      {/* Active Call Floating Top Banner */}
-      {isCallingActive && (
-        <div
-          id="active-call-chat-banner"
-          className="relative z-20 px-4 py-2 bg-zinc-800/95 border-b border-zinc-700 flex items-center justify-between text-xs text-white shadow-md backdrop-blur-sm"
-        >
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            <span>
-              Активный голосовой звонок с <strong className="text-zinc-200">{character.name}</strong>
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onExpandCall}
-              className="px-2.5 py-1 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white font-medium text-[11px] flex items-center gap-1 transition-colors shadow-sm"
-            >
-              <Maximize2 className="w-3 h-3" /> Развернуть
-            </button>
-            <button
-              onClick={onEndActiveCall}
-              className="p-1 rounded-lg bg-rose-500/20 hover:bg-rose-500 text-rose-400 hover:text-white transition-colors"
-              title="Завершить"
-            >
-              <PhoneOff className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Header */}
       <div
         id="chat-header"
-        className="relative z-10 flex items-center justify-between px-4 py-2.5 border-b border-py-border bg-py-sidebar text-py-text transition-colors shadow-xs"
+        className="relative z-10 flex items-center justify-between gap-2 px-2 sm:px-4 py-2 sm:py-2.5 border-b border-py-border bg-py-sidebar text-py-text transition-colors shadow-xs shrink-0"
       >
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
           {/* Back button visible ONLY on small mobile screens (<640px) */}
           {onBackToList && (
             <button
               onClick={onBackToList}
-              className="sm:hidden p-1.5 -ml-1 rounded-full hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
+              className="sm:hidden py-touch-target px-1.5 -ml-0.5 rounded-full hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors shrink-0"
               title="Назад к списку"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -596,7 +566,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             onClick={() => onOpenProfile(character)}
             className="relative cursor-pointer group shrink-0"
           >
-            <div className="w-10 h-10 rounded-full overflow-hidden ring-1 ring-white/10 group-hover:ring-zinc-400 transition-all">
+            <div
+              className={`w-10 h-10 rounded-full overflow-hidden transition-all group-hover:opacity-90 ${
+                isCallingActive ? 'ring-2 ring-py-accent' : 'ring-1 ring-py-border'
+              }`}
+            >
               <img
                 src={character.avatar}
                 alt={character.name}
@@ -604,7 +578,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 className="w-full h-full object-cover"
               />
             </div>
-            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-zinc-900" />
+            <span
+              className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full ring-2 ring-py-sidebar ${
+                isCallingActive ? 'bg-py-accent animate-pulse' : 'bg-py-online'
+              }`}
+            />
           </div>
 
           {/* Contact Details */}
@@ -617,7 +595,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 {character.name}
               </h2>
               {character.badge && (
-                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                <span className={`hidden min-[400px]:inline-flex text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${
                   isDark
                     ? 'bg-zinc-800 text-zinc-300 border border-zinc-700/60'
                     : 'bg-neutral-100 text-neutral-700 border border-neutral-200'
@@ -626,9 +604,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 </span>
               )}
             </div>
-            <p className="text-xs text-zinc-400 truncate leading-tight mt-0.5">
-              {isStreaming ? (
-                <span className="text-zinc-300 animate-pulse font-medium">печатает...</span>
+            <p className="text-[11px] sm:text-xs text-py-text-secondary truncate leading-tight mt-0.5">
+              {isCallingActive ? (
+                <span className="text-py-accent font-medium">в звонке</span>
+              ) : isStreaming ? (
+                <span className="text-py-text animate-pulse font-medium">печатает...</span>
               ) : (
                 `в сети • голос ${character.voice}`
               )}
@@ -637,11 +617,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         </div>
 
         {/* Header Right Action Icons */}
-        <div className="flex items-center gap-1 sm:gap-2">
-          {/* Search in Chat Button */}
+        <div className="flex items-center gap-0.5 sm:gap-2 shrink-0">
+          {/* Search in Chat Button — desktop only */}
           <button
             onClick={() => setIsSearchOpen(!isSearchOpen)}
-            className={`p-2 rounded-full transition-colors ${
+            className={`hidden sm:flex py-touch-target p-2 rounded-full transition-colors ${
               isSearchOpen
                 ? isDark ? 'bg-zinc-700 text-white' : 'bg-neutral-800 text-white'
                 : isDark
@@ -656,23 +636,25 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           {/* Live Voice Call Button */}
           <button
             id="chat-call-btn"
-            onClick={() => onStartCall(character)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full active:scale-95 text-xs font-semibold shadow-xs transition-all cursor-pointer ${
-              isDark
+            onClick={() => (isCallingActive ? onExpandCall?.() : onStartCall(character))}
+            className={`flex items-center justify-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-full active:scale-95 text-xs font-semibold shadow-xs transition-all cursor-pointer py-touch-target ${
+              isCallingActive
+                ? 'bg-py-accent/15 text-py-accent border border-py-accent/40 hover:bg-py-accent/25'
+                : isDark
                 ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 hover:border-zinc-600'
                 : 'bg-neutral-900 hover:bg-neutral-800 text-white'
             }`}
-            title="Позвонить голосом"
+            title={isCallingActive ? 'Развернуть звонок' : 'Позвонить голосом'}
           >
-            <Phone className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Звонок</span>
+            {isCallingActive ? <Maximize2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" /> : <Phone className="w-4 h-4 sm:w-3.5 sm:h-3.5" />}
+            <span className="hidden md:inline">{isCallingActive ? 'В звонке' : 'Звонок'}</span>
           </button>
 
-          {/* Profile Details Button */}
+          {/* Profile Details Button — desktop only (tap avatar on mobile) */}
           <button
             id="chat-profile-btn"
             onClick={() => onOpenProfile(character)}
-            className={`p-2 rounded-full transition-colors ${
+            className={`hidden sm:flex py-touch-target p-2 rounded-full transition-colors ${
               isDark ? 'hover:bg-zinc-800 text-zinc-400 hover:text-white' : 'hover:bg-neutral-100 text-neutral-600'
             }`}
             title="Информация о персонаже"
@@ -720,8 +702,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         </div>
       )}
 
-      {/* Pinned Message Bar */}
-      {showPinnedMessage && (
+      {/* Pinned Message Bar — скрываем во время активного звонка */}
+      {showPinnedMessage && !isCallingActive && (
         <div
           className={`px-4 py-2 border-b flex items-center justify-between text-xs cursor-pointer transition-colors ${
             isDark
@@ -761,7 +743,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       {/* 3. Messages Stream */}
       <div
         id="messages-scroll-container"
-        className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3.5 scrollbar-thin scrollbar-thumb-white/10"
+        className={`flex-1 overflow-y-auto p-3 sm:p-6 space-y-3.5 scrollbar-thin scrollbar-thumb-white/10 min-h-0 ${
+          isCallingActive ? 'py-call-pill-offset' : ''
+        }`}
       >
         {/* Date Badge */}
         <div className="flex justify-center my-2 select-none">
@@ -779,41 +763,66 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         {/* If no messages, render character intro */}
         {messages.length === 0 && (
           <div className="max-w-md mx-auto my-6 text-center space-y-4">
-            <div className="w-20 h-20 rounded-full mx-auto overflow-hidden p-1 ring-2 ring-zinc-700 bg-zinc-800 shadow-xl">
+            <div
+              className={`w-20 h-20 rounded-full mx-auto overflow-hidden shadow-md ${
+                isCallingActive
+                  ? 'ring-2 ring-py-accent ring-offset-2 ring-offset-py-chat'
+                  : 'ring-1 ring-py-border'
+              }`}
+            >
               <img
                 src={character.avatar}
                 alt={character.name}
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-cover rounded-full"
+                className="w-full h-full object-cover"
               />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white dark:text-white text-neutral-900">
-                {character.name}
-              </h3>
-              <p className="text-xs text-zinc-400 mt-1 max-w-sm mx-auto">
+              <h3 className="text-base font-bold text-py-text">{character.name}</h3>
+              <p className="text-xs text-py-text-secondary mt-1 max-w-sm mx-auto leading-relaxed">
                 {character.description}
               </p>
             </div>
 
-            {/* Direct Call Invitation card */}
-            <div className="p-3.5 rounded-2xl bg-zinc-800/80 border border-zinc-700 flex items-center justify-between text-left">
-              <div>
-                <span className="text-xs font-bold text-white block">Прямой голосовой вызов</span>
-                <span className="text-[11px] text-zinc-400">Общайтесь голосом в реальном времени</span>
+            {isCallingActive ? (
+              <div className="p-4 rounded-2xl bg-py-elevated border border-py-accent/30 text-left shadow-sm">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-2 h-2 rounded-full bg-py-accent animate-pulse" />
+                  <span className="text-xs font-bold text-py-text">Идёт голосовой звонок</span>
+                </div>
+                <p className="text-[11px] text-py-text-secondary leading-relaxed">
+                  Говорите в микрофон — разговор сохранится в истории чата после завершения.
+                </p>
+                <button
+                  onClick={() => onExpandCall?.()}
+                  className="mt-3 w-full px-3 py-2 rounded-xl bg-py-accent/15 hover:bg-py-accent/25 text-py-accent text-xs font-semibold flex items-center justify-center gap-1.5 border border-py-accent/30 cursor-pointer transition-colors"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" /> Развернуть звонок
+                </button>
               </div>
-              <button
-                onClick={() => onStartCall(character)}
-                className="px-3 py-1.5 rounded-xl bg-zinc-700 hover:bg-zinc-600 text-white text-xs font-medium flex items-center gap-1.5 shadow-sm border border-zinc-600 cursor-pointer"
-              >
-                <Phone className="w-3.5 h-3.5" /> Позвонить
-              </button>
-            </div>
+            ) : (
+              <div className="p-3.5 rounded-2xl bg-py-elevated border border-py-border flex items-center justify-between text-left shadow-sm">
+                <div>
+                  <span className="text-xs font-bold text-py-text block">Прямой голосовой вызов</span>
+                  <span className="text-[11px] text-py-text-secondary">Общайтесь голосом в реальном времени</span>
+                </div>
+                <button
+                  onClick={() => onStartCall(character)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors ${
+                    isDark
+                      ? 'bg-zinc-700 hover:bg-zinc-600 text-white border border-zinc-600'
+                      : 'bg-neutral-900 hover:bg-neutral-800 text-white'
+                  }`}
+                >
+                  <Phone className="w-3.5 h-3.5" /> Позвонить
+                </button>
+              </div>
+            )}
 
             {/* Quick Starters Chips */}
-            {character.starterMessages && character.starterMessages.length > 0 && (
+            {!isCallingActive && character.starterMessages && character.starterMessages.length > 0 && (
               <div className="pt-2 space-y-2">
-                <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center justify-center gap-1">
+                <span className="text-[11px] font-semibold text-py-text-muted uppercase tracking-wider flex items-center justify-center gap-1">
                   <Sparkles className="w-3 h-3" /> Начните разговор
                 </span>
                 <div className="flex flex-col gap-2">
@@ -848,7 +857,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
             return (
               <div key={msg.id} className="flex justify-end my-2">
-                <div className={`rounded-2xl p-3 shadow-md min-w-[240px] max-w-sm border ${
+                <div className={`rounded-2xl p-3 shadow-md w-full max-w-[min(90vw,20rem)] sm:max-w-sm border ${
                   isDark
                     ? 'bg-zinc-800 text-white border-zinc-700'
                     : 'bg-neutral-800 text-white border-neutral-700'
@@ -979,7 +988,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     )}
                   </div>
                 ) : (
-                  <TelegramMarkdown content={msg.text} isUser={isUser} />
+                  <PersonyMarkdown content={msg.text} isUser={isUser} />
                 )}
 
                 {/* Bubble Footer */}
@@ -1015,7 +1024,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               </div>
               <div className="whitespace-pre-wrap break-words">
                 {streamingText ? (
-                  <TelegramMarkdown content={streamingText} isUser={false} />
+                  <PersonyMarkdown content={streamingText} isUser={false} />
                 ) : (
                   <span className="flex items-center gap-1.5 text-zinc-400 text-xs">
                     <span className="w-2 h-2 rounded-full bg-zinc-400 animate-ping" />
@@ -1062,7 +1071,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             : 'bg-white border-neutral-200'
         }`}
       >
-        <div className="flex items-end gap-2 max-w-4xl mx-auto">
+        <div className="flex items-end gap-1 sm:gap-2 max-w-4xl mx-auto">
           {isRecordingVoice ? (
             <div className="flex-1 flex items-center justify-between bg-rose-500/15 border border-rose-500/30 rounded-[22px] px-4 py-2 text-xs text-rose-400 min-h-[44px]">
               <div className="flex items-center gap-2.5">
@@ -1070,7 +1079,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 <span className="font-mono font-bold text-sm">
                   0:{recordingSeconds.toString().padStart(2, '0')}
                 </span>
-                <span className="text-white/70 text-xs">Запись аудиосообщения...</span>
+                <span className="hidden sm:inline text-white/70 text-xs">Запись аудиосообщения...</span>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -1092,7 +1101,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             </div>
           ) : (
             <>
-              {/* Paperclip Attachment Button */}
+              {/* Paperclip Attachment Button — desktop only */}
               <button
                 type="button"
                 onClick={() => {
@@ -1100,7 +1109,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     setInputText(character.starterMessages[0]);
                   }
                 }}
-                className={`p-2.5 rounded-full mb-0.5 transition-colors shrink-0 cursor-pointer ${
+                className={`hidden sm:flex py-touch-target p-2.5 rounded-full mb-0.5 transition-colors shrink-0 cursor-pointer ${
                   isDark
                     ? 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'
                     : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100'
@@ -1112,7 +1121,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
               {/* Text Input Capsule */}
               <div
-                className={`flex-1 flex items-end min-h-[44px] rounded-[22px] px-3.5 py-2.5 transition-all border ${
+                className={`flex-1 flex items-end min-h-[44px] rounded-[22px] px-3 sm:px-3.5 py-2 sm:py-2.5 transition-all border min-w-0 ${
                   isDark
                     ? 'bg-zinc-800/90 border-zinc-700/80 focus-within:border-zinc-500'
                     : 'bg-[#f4f4f5] border-transparent focus-within:border-neutral-400'
@@ -1138,7 +1147,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               <button
                 type="button"
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                className={`p-2.5 rounded-full mb-0.5 transition-colors shrink-0 cursor-pointer ${
+                className={`py-touch-target p-2 sm:p-2.5 rounded-full mb-0.5 transition-colors shrink-0 cursor-pointer ${
                   showEmojiPicker
                     ? isDark
                       ? 'text-zinc-200 bg-zinc-700'
@@ -1169,14 +1178,14 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                   <ArrowUp className="w-5 h-5 stroke-[2.5]" />
                 </button>
               ) : (
-                <div className="flex items-center gap-1 mb-0.5">
+                <div className="flex items-center gap-0.5 sm:gap-1 mb-0.5 shrink-0">
                   {/* Voice note mic button */}
                   <button
                     id="record-voice-note-btn"
                     type="button"
                     onClick={startVoiceRecording}
                     disabled={isStreaming}
-                    className={`p-2.5 rounded-full transition-all flex items-center justify-center shrink-0 disabled:opacity-40 disabled:cursor-not-allowed ${
+                    className={`py-touch-target p-2 sm:p-2.5 rounded-full transition-all flex items-center justify-center shrink-0 disabled:opacity-40 disabled:cursor-not-allowed ${
                       isDark
                         ? 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'
                         : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100'
@@ -1186,19 +1195,21 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     <Mic className="w-5 h-5" />
                   </button>
 
-                  {/* Direct Voice Call button */}
+                  {/* Direct Voice Call button — hidden on mobile (call is in header) */}
                   <button
                     id="quick-live-call-btn"
                     type="button"
-                    onClick={() => onStartCall(character)}
-                    className={`p-2.5 rounded-full transition-all flex items-center justify-center shrink-0 cursor-pointer ${
-                      isDark
+                    onClick={() => (isCallingActive ? onExpandCall?.() : onStartCall(character))}
+                    className={`hidden sm:flex py-touch-target p-2.5 rounded-full transition-all items-center justify-center shrink-0 cursor-pointer ${
+                      isCallingActive
+                        ? 'bg-py-accent/15 text-py-accent border border-py-accent/40 hover:bg-py-accent/25'
+                        : isDark
                         ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700'
                         : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-800'
                     }`}
-                    title="Голосовой звонок"
+                    title={isCallingActive ? 'Развернуть звонок' : 'Голосовой звонок'}
                   >
-                    <Phone className="w-5 h-5" />
+                    {isCallingActive ? <Maximize2 className="w-5 h-5" /> : <Phone className="w-5 h-5" />}
                   </button>
                 </div>
               )}

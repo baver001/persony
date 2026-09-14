@@ -1,5 +1,5 @@
-// Simple PWA Service Worker for PersonaGram
-const CACHE_NAME = 'personagram-cache-v1';
+// Persony PWA Service Worker
+const CACHE_NAME = 'persony-cache-v1';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

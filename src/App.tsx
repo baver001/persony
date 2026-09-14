@@ -9,10 +9,29 @@ import { PersonaProfileDrawer } from './components/PersonaProfileDrawer';
 import { PwaInstallBanner } from './components/PwaInstallBanner';
 import { soundFX } from './utils/soundEffects';
 
-const STORAGE_KEY_PERSONAS = 'personagram_personas_v1';
-const STORAGE_KEY_MESSAGES = 'personagram_messages_v1';
-const STORAGE_KEY_THEME = 'personagram_theme_v1';
-const STORAGE_KEY_SOUND = 'personagram_sound_v1';
+const STORAGE_KEY_PERSONAS = 'persony_personas_v1';
+const STORAGE_KEY_MESSAGES = 'persony_messages_v1';
+const STORAGE_KEY_THEME = 'persony_theme_v1';
+const STORAGE_KEY_SOUND = 'persony_sound_v1';
+
+const LEGACY_STORAGE_KEYS: Record<string, string> = {
+  personagram_personas_v1: STORAGE_KEY_PERSONAS,
+  personagram_messages_v1: STORAGE_KEY_MESSAGES,
+  personagram_theme_v1: STORAGE_KEY_THEME,
+  personagram_sound_v1: STORAGE_KEY_SOUND,
+};
+
+function migrateLegacyStorageKeys() {
+  for (const [legacyKey, newKey] of Object.entries(LEGACY_STORAGE_KEYS)) {
+    const legacyValue = localStorage.getItem(legacyKey);
+    if (legacyValue && !localStorage.getItem(newKey)) {
+      localStorage.setItem(newKey, legacyValue);
+    }
+    if (legacyValue) {
+      localStorage.removeItem(legacyKey);
+    }
+  }
+}
 
 // Format and unwrap model error messages cleanly for the client
 function cleanModelError(err: any): string {
@@ -63,6 +82,8 @@ function cleanModelError(err: any): string {
 }
 
 export default function App() {
+  migrateLegacyStorageKeys();
+
   // Theme state
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     return (localStorage.getItem(STORAGE_KEY_THEME) as 'dark' | 'light') || 'dark';
@@ -455,7 +476,7 @@ export default function App() {
   return (
     <div
       id="app-root"
-      className="fixed inset-0 flex flex-col overflow-hidden font-sans transition-colors bg-py-app text-py-text"
+      className="fixed inset-0 flex flex-col overflow-hidden font-sans transition-colors bg-py-app text-py-text py-safe-top"
     >
       {/* PWA Install Banner */}
       <PwaInstallBanner />

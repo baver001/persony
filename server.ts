@@ -19,7 +19,7 @@ function getAIClient(): GoogleGenAI {
     apiKey,
     httpOptions: {
       headers: {
-        'User-Agent': 'aistudio-build',
+        'User-Agent': 'persony-server/1.0',
       },
     },
   });
@@ -186,7 +186,7 @@ async function startServer() {
 
       const streamConfig = {
         systemInstruction: `${systemPrompt}\n\n[ВАЖНО ДЛЯ ФОРМАТИРОВАНИЯ В МЕССЕНДЖЕРЕ]:
-- Отвечай в стиле современного мессенджера (Telegram): лаконично, естественно, без лишней "роботизированности", живым человеческим языком персонажа.
+- Отвечай в стиле мессенджера Persony: лаконично, естественно, без лишней "роботизированности", живым человеческим языком персонажа.
 - Сохраняй характер, тон и словарный запас персонажа в каждом сообщении.
 - Если сообщение пользователя начинается с расшифровки голосового сообщения, отвечай так, будто ты его только что услышал и понял каждое слово.
 - Отвечай на том же языке, на котором пишет собеседник (по умолчанию русский).
@@ -283,7 +283,7 @@ async function startServer() {
       }
 
       const ai = getAIClient();
-      const promptText = `Создай уникального agentic-персонажа для общения в Telegram-мессенджере по следующей идее: "${prompt}".
+      const promptText = `Создай уникального agentic-персонажа для общения в мессенджере Persony по следующей идее: "${prompt}".
 
 Верни СТРОГИЙ JSON со следующей структурой (без markdown оберток):
 {
@@ -585,7 +585,7 @@ ${formattedMsgs}
   }
 
   server.listen(PORT, '0.0.0.0', () => {
-    console.log(`PersonaGram Live Server running on port ${PORT}`);
+    console.log(`Persony server running on port ${PORT}`);
   });
 }
 

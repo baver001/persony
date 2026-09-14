@@ -297,7 +297,10 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
 
   if (isMinimized) {
     return (
-      <div id="minimized-call-pill" className="fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[94%] max-w-md pointer-events-auto">
+      <div
+        id="minimized-call-pill"
+        className="fixed left-1/2 -translate-x-1/2 z-[60] w-[calc(100%-1rem)] max-w-md pointer-events-auto top-[calc(env(safe-area-inset-top,0px)+0.75rem)]"
+      >
         <motion.div
           initial={{ y: -30, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -368,7 +371,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.94, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 280 }}
-          className="relative w-full h-full sm:h-auto sm:max-h-[92vh] sm:max-w-xl bg-gradient-to-b from-zinc-900 via-[#18181b] to-zinc-950 sm:rounded-3xl border border-zinc-800 shadow-2xl flex flex-col justify-between overflow-hidden"
+          className="relative w-full h-[100dvh] sm:h-auto sm:max-h-[92vh] sm:max-w-xl bg-gradient-to-b from-zinc-900 via-[#18181b] to-zinc-950 sm:rounded-3xl border-0 sm:border border-zinc-800 shadow-2xl flex flex-col justify-between overflow-hidden"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-6 pt-6 pb-2 z-10">

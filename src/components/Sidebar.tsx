@@ -7,7 +7,6 @@ import {
   Volume2,
   VolumeX,
   Phone,
-  Bot,
   X,
   PanelLeftClose,
   SquarePen,
@@ -16,6 +15,7 @@ import {
   Settings2,
 } from 'lucide-react';
 import { Persona, ChatMessage } from '../types';
+import { PersonyLogo } from './PersonyLogo';
 
 interface SidebarProps {
   personas: Persona[];
@@ -91,7 +91,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 isDark ? 'bg-zinc-800 text-zinc-200' : 'bg-neutral-100 text-neutral-800'
               }`}
             >
-              <Bot className="w-4 h-4" />
+              <PersonyLogo size={18} />
             </div>
             <div className="leading-tight">
               <h1 className="text-sm font-bold tracking-tight font-[family-name:var(--font-display)]">Persony</h1>
@@ -170,7 +170,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       >
         {filteredPersonas.length === 0 ? (
           <div className="p-8 text-center text-zinc-500 space-y-2.5">
-            <Bot className="w-8 h-8 mx-auto opacity-40" />
+            <PersonyLogo size={32} className="mx-auto opacity-40" />
             <p className="text-xs">Персонажи не найдены</p>
             <button
               onClick={onOpenCreateModal}
@@ -301,14 +301,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         e.stopPropagation();
                         onStartCall(persona);
                       }}
-                      className={`p-1.5 rounded-md transition-all shrink-0 ${
+                      className={`py-touch-target p-1.5 rounded-md transition-all shrink-0 ${
                         isSelected
                           ? isDark
                             ? 'hover:bg-zinc-700 text-zinc-200'
                             : 'hover:bg-neutral-200 text-neutral-700'
                           : isDark
-                          ? 'opacity-0 group-hover:opacity-100 hover:bg-zinc-700 text-zinc-400 hover:text-white'
-                          : 'opacity-0 group-hover:opacity-100 hover:bg-neutral-200 text-neutral-600'
+                          ? 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-zinc-700 text-zinc-400 hover:text-white'
+                          : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-neutral-200 text-neutral-600'
                       }`}
                       title="Позвонить голосом"
                     >
