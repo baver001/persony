@@ -1,0 +1,6 @@
+{
+  "name": "Persony — AI Messenger",
+  "description": "Мессенджер с AI-персонажами. Текст, голосовые и live-звонки через Gemini.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

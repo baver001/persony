@@ -1,0 +1,105 @@
+@import "tailwindcss";
+
+/* ─── Persony Design Tokens ─── */
+:root {
+  --py-bg-app: #f4f4f5;
+  --py-bg-sidebar: #ffffff;
+  --py-bg-chat: #e8e8ea;
+  --py-bg-elevated: #ffffff;
+  --py-bg-input: #f0f0f2;
+  --py-bubble-in: #ffffff;
+  --py-bubble-out: #2a2a2e;
+  --py-accent: #3db892;
+  --py-accent-muted: rgba(61, 184, 146, 0.15);
+  --py-text-primary: #18181b;
+  --py-text-secondary: #52525b;
+  --py-text-muted: #a1a1aa;
+  --py-border: #e4e4e7;
+  --py-border-subtle: #f0f0f2;
+  --py-online: #22c55e;
+  --py-error: #f87171;
+  --py-radius-bubble: 18px;
+  --py-radius-panel: 12px;
+  --py-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --py-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --py-chat-pattern: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+.dark {
+  --py-bg-app: #0a0a0b;
+  --py-bg-sidebar: #111113;
+  --py-bg-chat: #0e0e10;
+  --py-bg-elevated: #1a1a1d;
+  --py-bg-input: #1c1c1f;
+  --py-bubble-in: #1c1c1f;
+  --py-bubble-out: #2a2a2e;
+  --py-accent: #4ec9a0;
+  --py-accent-muted: rgba(78, 201, 160, 0.12);
+  --py-text-primary: #f4f4f5;
+  --py-text-secondary: #a1a1aa;
+  --py-text-muted: #71717a;
+  --py-border: #27272a;
+  --py-border-subtle: #1f1f23;
+  --py-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --py-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --py-chat-pattern: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.015'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+@theme inline {
+  --color-py-app: var(--py-bg-app);
+  --color-py-sidebar: var(--py-bg-sidebar);
+  --color-py-chat: var(--py-bg-chat);
+  --color-py-elevated: var(--py-bg-elevated);
+  --color-py-input: var(--py-bg-input);
+  --color-py-bubble-in: var(--py-bubble-in);
+  --color-py-bubble-out: var(--py-bubble-out);
+  --color-py-accent: var(--py-accent);
+  --color-py-text: var(--py-text-primary);
+  --color-py-text-secondary: var(--py-text-secondary);
+  --color-py-text-muted: var(--py-text-muted);
+  --color-py-border: var(--py-border);
+  --color-py-online: var(--py-online);
+  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-display: 'Outfit', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--py-text-muted) 40%, transparent);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--py-text-muted) 70%, transparent);
+}
+
+/* Chat wallpaper pattern */
+.py-chat-bg {
+  background-color: var(--py-bg-chat);
+  background-image: var(--py-chat-pattern);
+}
+
+/* Bubble utilities */
+.py-bubble-in {
+  background: var(--py-bubble-in);
+  color: var(--py-text-primary);
+  border-radius: var(--py-radius-bubble);
+  border-bottom-left-radius: 4px;
+  border: 1px solid var(--py-border-subtle);
+  box-shadow: var(--py-shadow-sm);
+}
+
+.py-bubble-out {
+  background: var(--py-bubble-out);
+  color: #f4f4f5;
+  border-radius: var(--py-radius-bubble);
+  border-bottom-right-radius: 4px;
+  box-shadow: var(--py-shadow-sm);
+}
