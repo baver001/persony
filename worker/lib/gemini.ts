@@ -1,5 +1,11 @@
 import { GoogleGenAI, Modality, LiveServerMessage } from '@google/genai';
 import { formatCleanErrorMessage } from './errors';
+import {
+  GEMINI_CHAT_MODELS,
+  GEMINI_GENERATOR_MODELS,
+  GEMINI_LIVE_MODEL,
+  GEMINI_TRANSCRIBE_MODELS,
+} from './models';
 
 export interface Env {
   GEMINI_API_KEY: string;
@@ -19,22 +25,6 @@ export function getAIClient(apiKey: string): GoogleGenAI {
   });
 }
 
-const CHAT_MODELS = [
-  'gemini-3.8-flash',
-  'gemini-3.1-flash-lite',
-  'gemini-flash-latest',
-  'gemini-2.5-flash',
-];
-
-const TRANSCRIBE_MODELS = [
-  'gemini-3.8-flash',
-  'gemini-3.5-transcribe',
-  'gemini-3.1-flash-lite',
-  'gemini-2.5-flash',
-];
-
-const GENERATOR_MODELS = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-2.5-flash'];
-
 export async function streamGeminiWithFallback(
   ai: GoogleGenAI,
   contents: Array<{ role: string; parts: Array<{ text: string }> }>,
@@ -44,8 +34,8 @@ export async function streamGeminiWithFallback(
   let streamedAny = false;
   let lastError: unknown = null;
 
-  for (let i = 0; i < CHAT_MODELS.length; i++) {
-    const model = CHAT_MODELS[i];
+  for (let i = 0; i < GEMINI_CHAT_MODELS.length; i++) {
+    const model = GEMINI_CHAT_MODELS[i];
     try {
       const responseStream = await ai.models.generateContentStream({
         model,
@@ -64,7 +54,7 @@ export async function streamGeminiWithFallback(
     } catch (err) {
       lastError = err;
       if (streamedAny) throw err;
-      if (i < CHAT_MODELS.length - 1) {
+      if (i < GEMINI_CHAT_MODELS.length - 1) {
         await new Promise((resolve) => setTimeout(resolve, 250));
       }
     }
@@ -134,7 +124,7 @@ export async function handleTranscribe(
     inlineData: { mimeType: cleanMime, data: audioBase64 },
   };
 
-  for (const model of TRANSCRIBE_MODELS) {
+  for (const model of GEMINI_TRANSCRIBE_MODELS) {
     try {
       const response = await ai.models.generateContent({
         model,
@@ -178,7 +168,7 @@ export async function handleGenerateCharacter(apiKey: string, prompt: string): P
 
   let lastErr: unknown = null;
 
-  for (const model of GENERATOR_MODELS) {
+  for (const model of GEMINI_GENERATOR_MODELS) {
     try {
       const response = await ai.models.generateContent({
         model,
@@ -242,7 +232,7 @@ export async function initLiveSession(
 - Держи образ ${characterName || ''}!${contextSnippet}`;
 
   const liveSession = await ai.live.connect({
-    model: 'gemini-3.1-flash-live-preview',
+    model: GEMINI_LIVE_MODEL,
     config: {
       responseModalities: [Modality.AUDIO],
       speechConfig: {

@@ -38,6 +38,9 @@ export function formatCleanErrorMessage(rawError: unknown): string {
   if (lower.includes('quota') || lower.includes('429') || lower.includes('rate limit')) {
     return 'Превышен лимит запросов. Подождите и повторите отправку.';
   }
+  if (lower.includes('no longer available') || (lower.includes('not found') && lower.includes('model'))) {
+    return 'Модель временно недоступна. Повторите запрос — сервер переключится на резервную модель.';
+  }
   if (
     lower.includes('api_key') ||
     lower.includes('apikey') ||

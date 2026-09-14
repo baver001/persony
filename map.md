@@ -31,6 +31,7 @@ flowchart TD
 
 - MVP: чат, голосовые, live-звонки, персонажи
 - Транскрипция звонков сохраняется в историю как диалог (`specs/03-call-transcript-persistence.md`)
+- Gemini chat: `gemini-3.6-flash` (primary), fallback без `gemini-2.5-flash` — `worker/lib/models.ts`
 - Cloudflare Workers: https://persony.pavel-9e7.workers.dev
 - GitHub: https://github.com/baver001/persony
 - Дизайн-токены Persony (`DESIGN.md`, `src/index.css`)

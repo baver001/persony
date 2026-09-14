@@ -5,6 +5,12 @@ import dotenv from 'dotenv';
 import { WebSocketServer, WebSocket } from 'ws';
 import { GoogleGenAI, Modality, LiveServerMessage } from '@google/genai';
 import { createServer as createViteServer } from 'vite';
+import {
+  GEMINI_CHAT_MODELS,
+  GEMINI_GENERATOR_MODELS,
+  GEMINI_LIVE_MODEL,
+  GEMINI_TRANSCRIBE_MODELS,
+} from './worker/lib/models.ts';
 
 dotenv.config();
 
@@ -87,26 +93,18 @@ function formatCleanErrorMessage(rawError: any): string {
   return msg.length > 250 ? msg.slice(0, 250) + '...' : msg;
 }
 
-// Multi-tier stream fallback cascade:
-// Tries gemini-3.8-flash -> gemini-3.1-flash-lite -> gemini-flash-latest -> gemini-2.5-flash
+// Multi-tier stream fallback — see worker/lib/models.ts
 async function streamGeminiWithFallback(
   ai: ReturnType<typeof getAIClient>,
   contents: any[],
   config: any,
   onChunk: (text: string) => void
 ) {
-  const CANDIDATE_MODELS = [
-    'gemini-3.8-flash',
-    'gemini-3.1-flash-lite',
-    'gemini-flash-latest',
-    'gemini-2.5-flash',
-  ];
-
   let streamedAny = false;
   let lastError: any = null;
 
-  for (let i = 0; i < CANDIDATE_MODELS.length; i++) {
-    const model = CANDIDATE_MODELS[i];
+  for (let i = 0; i < GEMINI_CHAT_MODELS.length; i++) {
+    const model = GEMINI_CHAT_MODELS[i];
     try {
       const responseStream = await ai.models.generateContentStream({
         model,
@@ -134,7 +132,7 @@ async function streamGeminiWithFallback(
       }
 
       // If failed before any tokens streamed, wait briefly and cascade to next model
-      if (i < CANDIDATE_MODELS.length - 1) {
+      if (i < GEMINI_CHAT_MODELS.length - 1) {
         await new Promise((resolve) => setTimeout(resolve, 250));
       }
     }
@@ -194,7 +192,7 @@ async function startServer() {
         temperature: 0.85,
       };
 
-      // Call multi-tier fallback stream: gemini-3.8-flash -> gemini-3.1-flash-lite -> gemini-flash-latest -> gemini-2.5-flash
+      // Call multi-tier fallback stream (gemini-3.6-flash first)
       await streamGeminiWithFallback(ai, contents, streamConfig, (text) => {
         res.write(`data: ${JSON.stringify({ text })}\n\n`);
       });
@@ -234,17 +232,10 @@ async function startServer() {
         },
       };
 
-      const TRANSCRIBE_MODELS = [
-        'gemini-3.8-flash',
-        'gemini-3.5-transcribe',
-        'gemini-3.1-flash-lite',
-        'gemini-2.5-flash',
-      ];
-
       let transcript = '';
       let lastErr = null;
 
-      for (const model of TRANSCRIBE_MODELS) {
+      for (const model of GEMINI_TRANSCRIBE_MODELS) {
         try {
           const response = await ai.models.generateContent({
             model,
@@ -306,11 +297,10 @@ async function startServer() {
 - Zephyr (спокойный, душевный, эмпатичный)
 - Aoede (интеллектуальный, элегантный)`;
 
-      const GENERATOR_MODELS = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-2.5-flash'];
       let parsed = null;
       let lastErr = null;
 
-      for (const model of GENERATOR_MODELS) {
+      for (const model of GEMINI_GENERATOR_MODELS) {
         try {
           const response = await ai.models.generateContent({
             model,
@@ -398,7 +388,7 @@ ${formattedMsgs}
 - Полностью держи образ и характер персонажа ${characterName || ''}!${contextSnippet}`;
 
             liveSession = await ai.live.connect({
-              model: 'gemini-3.1-flash-live-preview',
+              model: GEMINI_LIVE_MODEL,
               config: {
                 responseModalities: [Modality.AUDIO],
                 speechConfig: {

@@ -202,7 +202,7 @@ export default function App() {
     }
   }
 
-  // Handle sending a text message or voice note to Gemini 3.8 Flash with automatic speech transcription
+  // Handle sending a text message or voice note to Gemini with automatic speech transcription
   const handleSendMessage = async (
     text: string,
     isVoiceNote = false,
@@ -286,7 +286,7 @@ export default function App() {
         });
       }
 
-      // Prepare history for Gemini 3.8 Flash chat stream
+      // Prepare history for Gemini chat stream
       const messagesPayload = updatedHistory.slice(-10).map((m) => {
         if (m.id === msgId && isVoiceNote) {
           return {
@@ -302,7 +302,7 @@ export default function App() {
         };
       });
 
-      // Request Gemini 3.8 Flash chat stream from server
+      // Request Gemini chat stream from server
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
