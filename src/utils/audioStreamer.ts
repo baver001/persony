@@ -1,4 +1,17 @@
 // Web Audio helper for bidirectional Gemini Live PCM16 streaming
+// Optimized for mobile: resampling, jitter buffer, batched uplink, no mic→speaker loop
+
+import {
+  GEMINI_INPUT_SAMPLE_RATE,
+  GEMINI_OUTPUT_SAMPLE_RATE,
+  arrayBufferToBase64,
+  base64ToFloat32Pcm16,
+  concatFloat32,
+  floatTo16BitPCM,
+  isMobileDevice,
+  resampleFloat32,
+} from './pcmAudio';
+import { callDiagnostics } from './callDiagnostics';
 
 export class AudioStreamer {
   private inputAudioCtx: AudioContext | null = null;
@@ -6,84 +19,144 @@ export class AudioStreamer {
   private mediaStream: MediaStream | null = null;
   private processor: ScriptProcessorNode | null = null;
   private source: MediaStreamAudioSourceNode | null = null;
-  private nextPlayTime: number = 0;
+  private silentGain: GainNode | null = null;
+  private nextPlayTime = 0;
   private activeSources: AudioBufferSourceNode[] = [];
-  
-  // Analysers for UI waveform
+
+  private readonly isMobile = isMobileDevice();
+  private readonly jitterBufferSec = this.isMobile ? 0.14 : 0.08;
+  private readonly uplinkFlushMs = this.isMobile ? 120 : 80;
+  private readonly processorBufferSize = this.isMobile ? 2048 : 4096;
+
+  private pendingUplink: Float32Array[] = [];
+  private uplinkFlushTimer: number | null = null;
+  private pendingPlayback: Float32Array[] = [];
+  private playbackFlushTimer: number | null = null;
+
+  private lastMicVolumeTick = 0;
+  private lastSpeakerVolumeTick = 0;
+
   public inputAnalyser: AnalyserNode | null = null;
   public outputAnalyser: AnalyserNode | null = null;
 
   public onMicVolumeChange?: (volume: number) => void;
   public onSpeakerVolumeChange?: (volume: number) => void;
 
-  constructor() {}
+  public async resumeContexts(): Promise<void> {
+    try {
+      if (this.inputAudioCtx?.state === 'suspended') {
+        await this.inputAudioCtx.resume();
+      }
+      if (this.outputAudioCtx?.state === 'suspended') {
+        await this.outputAudioCtx.resume();
+      }
+      callDiagnostics.inputCtxState = this.inputAudioCtx?.state ?? 'n/a';
+      callDiagnostics.outputCtxState = this.outputAudioCtx?.state ?? 'n/a';
+    } catch {
+      // ignore
+    }
+  }
+
+  public async configureAudioSession(): Promise<void> {
+    try {
+      const nav = navigator as Navigator & {
+        audioSession?: { type: string };
+      };
+      if (nav.audioSession) {
+        nav.audioSession.type = 'play-and-record';
+      }
+    } catch {
+      // iOS Safari — optional
+    }
+  }
 
   public async startRecording(onAudioChunk: (base64Pcm: string) => void): Promise<void> {
-    // 16kHz for Gemini input
-    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    this.inputAudioCtx = new AudioContextClass({ sampleRate: 16000 });
-    
-    if (this.inputAudioCtx.state === 'suspended') {
-      await this.inputAudioCtx.resume();
-    }
+    await this.configureAudioSession();
+
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+
+    this.inputAudioCtx = new AudioContextClass({
+      latencyHint: 'interactive',
+    });
+    await this.resumeContexts();
+
+    const inputRate = this.inputAudioCtx.sampleRate;
+    callDiagnostics.inputSampleRate = inputRate;
+    callDiagnostics.isMobile = this.isMobile;
 
     this.mediaStream = await navigator.mediaDevices.getUserMedia({
       audio: {
         channelCount: 1,
-        sampleRate: 16000,
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
+        ...(this.isMobile ? {} : { sampleRate: GEMINI_INPUT_SAMPLE_RATE }),
       },
     });
 
     this.source = this.inputAudioCtx.createMediaStreamSource(this.mediaStream);
-    
-    // Setup mic analyser
+
     this.inputAnalyser = this.inputAudioCtx.createAnalyser();
     this.inputAnalyser.fftSize = 256;
     this.source.connect(this.inputAnalyser);
 
-    // Buffer size 2048 or 4096 gives ~128ms - 256ms chunk size
-    this.processor = this.inputAudioCtx.createScriptProcessor(4096, 1, 1);
+    // ScriptProcessor kept for broad mobile support; mic NOT routed to speakers
+    this.processor = this.inputAudioCtx.createScriptProcessor(this.processorBufferSize, 1, 1);
+    this.silentGain = this.inputAudioCtx.createGain();
+    this.silentGain.gain.value = 0;
+
     this.source.connect(this.processor);
-    this.processor.connect(this.inputAudioCtx.destination);
+    this.processor.connect(this.silentGain);
+    this.silentGain.connect(this.inputAudioCtx.destination);
 
     const inputDataArray = new Uint8Array(this.inputAnalyser.frequencyBinCount);
 
     this.processor.onaudioprocess = (e) => {
       const channelData = e.inputBuffer.getChannelData(0);
-      
-      // Compute mic volume
-      if (this.inputAnalyser && this.onMicVolumeChange) {
+
+      const now = performance.now();
+      if (this.inputAnalyser && this.onMicVolumeChange && now - this.lastMicVolumeTick > 100) {
         this.inputAnalyser.getByteFrequencyData(inputDataArray);
         let sum = 0;
-        for (let i = 0; i < inputDataArray.length; i++) {
-          sum += inputDataArray[i];
-        }
-        const avg = sum / inputDataArray.length;
-        this.onMicVolumeChange(Math.min(1, avg / 80));
+        for (let i = 0; i < inputDataArray.length; i++) sum += inputDataArray[i];
+        this.onMicVolumeChange(Math.min(1, sum / inputDataArray.length / 80));
+        this.lastMicVolumeTick = now;
       }
 
-      // Convert Float32 to Int16 PCM
-      const pcm16 = this.floatTo16BitPCM(channelData);
-      const base64 = this.arrayBufferToBase64(pcm16);
-      onAudioChunk(base64);
+      const resampled = resampleFloat32(channelData, inputRate, GEMINI_INPUT_SAMPLE_RATE);
+      if (resampled.length > 0) {
+        this.pendingUplink.push(resampled);
+      }
     };
+
+    this.uplinkFlushTimer = window.setInterval(() => {
+      if (this.pendingUplink.length === 0) return;
+      const merged = concatFloat32(this.pendingUplink);
+      this.pendingUplink = [];
+      const pcm16 = floatTo16BitPCM(merged);
+      onAudioChunk(arrayBufferToBase64(pcm16));
+      callDiagnostics.chunksSent += 1;
+    }, this.uplinkFlushMs);
   }
 
   public initPlayback(): void {
     if (!this.outputAudioCtx) {
-      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      // Output: 24kHz for Gemini Live model output
-      this.outputAudioCtx = new AudioContextClass({ sampleRate: 24000 });
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+
+      this.outputAudioCtx = new AudioContextClass({ latencyHint: 'interactive' });
       this.outputAnalyser = this.outputAudioCtx.createAnalyser();
       this.outputAnalyser.fftSize = 256;
       this.outputAnalyser.connect(this.outputAudioCtx.destination);
-      this.nextPlayTime = this.outputAudioCtx.currentTime;
+      callDiagnostics.outputSampleRate = this.outputAudioCtx.sampleRate;
     }
-    if (this.outputAudioCtx.state === 'suspended') {
-      this.outputAudioCtx.resume();
+
+    void this.resumeContexts();
+    if (this.outputAudioCtx) {
+      this.nextPlayTime = this.outputAudioCtx.currentTime + this.jitterBufferSec;
     }
   }
 
@@ -93,21 +166,53 @@ export class AudioStreamer {
     }
     if (!this.outputAudioCtx || !this.outputAnalyser) return;
 
-    try {
-      const float32 = this.base64ToFloat32(base64Pcm);
-      if (float32.length === 0) return;
+    const float32 = base64ToFloat32Pcm16(base64Pcm);
+    if (float32.length === 0) return;
 
-      const buffer = this.outputAudioCtx.createBuffer(1, float32.length, 24000);
-      buffer.getChannelData(0).set(float32);
+    this.pendingPlayback.push(float32);
+
+    if (!this.playbackFlushTimer) {
+      const flushDelay = this.isMobile ? 50 : 30;
+      this.playbackFlushTimer = window.setTimeout(() => {
+        this.flushPlaybackQueue();
+        this.playbackFlushTimer = null;
+      }, flushDelay);
+    }
+  }
+
+  private flushPlaybackQueue(): void {
+    if (!this.outputAudioCtx || !this.outputAnalyser || this.pendingPlayback.length === 0) return;
+
+    void this.resumeContexts();
+
+    const merged = concatFloat32(this.pendingPlayback);
+    this.pendingPlayback = [];
+
+    const ctxRate = this.outputAudioCtx.sampleRate;
+    const playable = resampleFloat32(merged, GEMINI_OUTPUT_SAMPLE_RATE, ctxRate);
+
+    try {
+      const buffer = this.outputAudioCtx.createBuffer(1, playable.length, ctxRate);
+      buffer.getChannelData(0).set(playable);
 
       const source = this.outputAudioCtx.createBufferSource();
       source.buffer = buffer;
       source.connect(this.outputAnalyser);
 
       const now = this.outputAudioCtx.currentTime;
-      const startTime = Math.max(now, this.nextPlayTime);
+
+      if (this.nextPlayTime < now) {
+        callDiagnostics.underruns += 1;
+        this.nextPlayTime = now + this.jitterBufferSec;
+      }
+
+      const startTime = this.nextPlayTime;
       source.start(startTime);
       this.nextPlayTime = startTime + buffer.duration;
+
+      callDiagnostics.chunksPlayed += 1;
+      callDiagnostics.playbackQueueMs = Math.max(0, (this.nextPlayTime - now) * 1000);
+      callDiagnostics.outputCtxState = this.outputAudioCtx.state;
 
       this.activeSources.push(source);
       source.onended = () => {
@@ -118,14 +223,14 @@ export class AudioStreamer {
         }
       };
 
-      if (this.onSpeakerVolumeChange) {
-        // approximate volume peak
+      const tick = performance.now();
+      if (this.onSpeakerVolumeChange && tick - this.lastSpeakerVolumeTick > 100) {
         let maxVal = 0;
-        for (let i = 0; i < float32.length; i += 10) {
-          const abs = Math.abs(float32[i]);
-          if (abs > maxVal) maxVal = abs;
+        for (let i = 0; i < playable.length; i += 12) {
+          maxVal = Math.max(maxVal, Math.abs(playable[i]));
         }
         this.onSpeakerVolumeChange(Math.min(1, maxVal * 2));
+        this.lastSpeakerVolumeTick = tick;
       }
     } catch (err) {
       console.error('Failed to play audio chunk:', err);
@@ -133,30 +238,53 @@ export class AudioStreamer {
   }
 
   public stopAllPlayback(): void {
+    if (this.playbackFlushTimer) {
+      clearTimeout(this.playbackFlushTimer);
+      this.playbackFlushTimer = null;
+    }
+    this.pendingPlayback = [];
+
     for (const src of this.activeSources) {
       try {
         src.stop();
         src.disconnect();
       } catch {
-        // ignore already stopped
+        // ignore
       }
     }
     this.activeSources = [];
+
     if (this.outputAudioCtx) {
-      this.nextPlayTime = this.outputAudioCtx.currentTime;
+      this.nextPlayTime = this.outputAudioCtx.currentTime + this.jitterBufferSec;
     }
     if (this.onSpeakerVolumeChange) {
       this.onSpeakerVolumeChange(0);
     }
+    callDiagnostics.playbackQueueMs = 0;
   }
 
   public stop(): void {
+    if (this.uplinkFlushTimer) {
+      clearInterval(this.uplinkFlushTimer);
+      this.uplinkFlushTimer = null;
+    }
+    if (this.playbackFlushTimer) {
+      clearTimeout(this.playbackFlushTimer);
+      this.playbackFlushTimer = null;
+    }
+    this.pendingUplink = [];
+    this.pendingPlayback = [];
+
     this.stopAllPlayback();
 
     if (this.processor) {
       this.processor.disconnect();
       this.processor.onaudioprocess = null;
       this.processor = null;
+    }
+    if (this.silentGain) {
+      this.silentGain.disconnect();
+      this.silentGain = null;
     }
     if (this.source) {
       this.source.disconnect();
@@ -176,49 +304,5 @@ export class AudioStreamer {
     }
     this.inputAnalyser = null;
     this.outputAnalyser = null;
-  }
-
-  private floatTo16BitPCM(input: Float32Array): ArrayBuffer {
-    const buffer = new ArrayBuffer(input.length * 2);
-    const view = new DataView(buffer);
-    for (let i = 0; i < input.length; i++) {
-      const s = Math.max(-1, Math.min(1, input[i]));
-      view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
-    }
-    return buffer;
-  }
-
-  private arrayBufferToBase64(buffer: ArrayBuffer): string {
-    const bytes = new Uint8Array(buffer);
-    const chunkSize = 0x8000;
-    let binary = '';
-    for (let i = 0; i < bytes.length; i += chunkSize) {
-      const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
-      binary += String.fromCharCode.apply(null, chunk as unknown as number[]);
-    }
-    return window.btoa(binary);
-  }
-
-  private base64ToFloat32(base64: string): Float32Array {
-    try {
-      const binary = window.atob(base64);
-      const sampleCount = Math.floor(binary.length / 2);
-      if (sampleCount === 0) return new Float32Array(0);
-
-      const buffer = new ArrayBuffer(sampleCount * 2);
-      const bytes = new Uint8Array(buffer);
-      for (let i = 0; i < sampleCount * 2; i++) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-      const view = new DataView(buffer);
-      const float32 = new Float32Array(sampleCount);
-      for (let i = 0; i < sampleCount; i++) {
-        float32[i] = view.getInt16(i * 2, true) / 32768.0;
-      }
-      return float32;
-    } catch (e) {
-      console.warn('Failed to parse PCM16 base64:', e);
-      return new Float32Array(0);
-    }
   }
 }

@@ -14,6 +14,8 @@ import {
 import { Persona, CallStatus, ChatMessage } from '../types';
 import { AudioStreamer } from '../utils/audioStreamer';
 import { soundFX } from '../utils/soundEffects';
+import { callDiagnostics } from '../utils/callDiagnostics';
+import { isMobileDevice } from '../utils/pcmAudio';
 
 interface LiveVoiceCallModalProps {
   character: Persona;
@@ -65,6 +67,8 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
   const ringtoneTimerRef = useRef<number | null>(null);
   const isMutedRef = useRef<boolean>(false);
   const isSpeakerMutedRef = useRef<boolean>(false);
+  const interruptTimerRef = useRef<number | null>(null);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
   const appendTranscript = (sender: 'user' | 'character', text: string) => {
     setTranscripts((prev) => {
@@ -121,20 +125,60 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
     durationRef.current = 0;
     statusRef.current = 'connecting';
 
+    callDiagnostics.reset();
+    callDiagnostics.startConsoleLogging();
     startCall();
+    requestWakeLock();
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsMinimized(true);
       }
     };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        audioStreamerRef.current?.resumeContexts();
+      }
+    };
+
+    const handlePageShow = () => {
+      audioStreamerRef.current?.resumeContexts();
+    };
+
     window.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('pageshow', handlePageShow);
+    window.addEventListener('focus', handlePageShow);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('pageshow', handlePageShow);
+      window.removeEventListener('focus', handlePageShow);
+      releaseWakeLock();
+      callDiagnostics.stopConsoleLogging();
       cleanupCall();
     };
   }, [isOpen, character.id]);
+
+  const requestWakeLock = async () => {
+    if (!isMobileDevice() || !('wakeLock' in navigator)) return;
+    try {
+      wakeLockRef.current = await navigator.wakeLock.request('screen');
+    } catch {
+      // permission denied or unsupported
+    }
+  };
+
+  const releaseWakeLock = async () => {
+    try {
+      await wakeLockRef.current?.release();
+    } catch {
+      // ignore
+    }
+    wakeLockRef.current = null;
+  };
 
   const cleanupCall = () => {
     if (timerRef.current) {
@@ -152,6 +196,10 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
         // ignore
       }
       wsRef.current = null;
+    }
+    if (interruptTimerRef.current) {
+      clearTimeout(interruptTimerRef.current);
+      interruptTimerRef.current = null;
     }
     if (audioStreamerRef.current) {
       audioStreamerRef.current.stop();
@@ -232,6 +280,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
             soundFX.playCallConnect();
             setStatus('connected');
             statusRef.current = 'connected';
+            void streamer.resumeContexts();
             streamer.initPlayback();
 
             // Start duration timer
@@ -243,12 +292,23 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
               });
             }, 1000);
           } else if (msg.type === 'audio') {
+            if (interruptTimerRef.current) {
+              clearTimeout(interruptTimerRef.current);
+              interruptTimerRef.current = null;
+            }
             if (!isSpeakerMutedRef.current) {
               streamer.playChunk(msg.data);
             }
           } else if (msg.type === 'interrupted') {
-            streamer.stopAllPlayback();
-            setModelAudioLevel(0);
+            // Debounce: mobile echo/noise can trigger false interrupts
+            if (interruptTimerRef.current) {
+              clearTimeout(interruptTimerRef.current);
+            }
+            interruptTimerRef.current = window.setTimeout(() => {
+              streamer.stopAllPlayback();
+              setModelAudioLevel(0);
+              interruptTimerRef.current = null;
+            }, isMobileDevice() ? 120 : 60);
           } else if (msg.type === 'model_transcript') {
             if (msg.text) {
               appendTranscript('character', msg.text);
