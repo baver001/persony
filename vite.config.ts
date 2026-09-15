@@ -2,11 +2,15 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { cloudflare } from '@cloudflare/vite-plugin';
 import path from 'path';
-import {defineConfig} from 'vite';
+import {defineConfig} from 'vitest/config';
 
-export default defineConfig(() => {
+export default defineConfig(({ mode }) => {
+  const isTest = mode === 'test';
   return {
-    plugins: [react(), cloudflare(), tailwindcss()],
+    plugins: isTest ? [react(), tailwindcss()] : [react(), cloudflare(), tailwindcss()],
+    test: {
+      include: ['src/**/*.test.ts', 'worker/**/*.test.ts'],
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

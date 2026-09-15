@@ -12,6 +12,7 @@ import {
   buildCallHistoryMessages,
   isCallSessionAlreadySaved,
 } from './utils/callTranscriptPersistence';
+import { SseStreamParser } from './lib/sseParser';
 
 const STORAGE_KEY_PERSONAS = 'persony_personas_v1';
 const STORAGE_KEY_MESSAGES = 'persony_messages_v1';
@@ -320,6 +321,7 @@ export default function App() {
       if (!reader) throw new Error('No readable stream returned');
 
       const decoder = new TextDecoder('utf-8');
+      const sseParser = new SseStreamParser();
       let accumulated = '';
       let hasChimed = false;
       let errorReceived = '';
@@ -329,27 +331,23 @@ export default function App() {
         if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.text) {
-                if (!hasChimed) {
-                  soundFX.playReceive();
-                  hasChimed = true;
-                }
-                accumulated += data.text;
-                setStreamingText(accumulated);
+        for (const event of sseParser.push(chunk)) {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.text) {
+              if (!hasChimed) {
+                soundFX.playReceive();
+                hasChimed = true;
               }
-              if (data.error) {
-                console.error('Chat stream error:', data.error);
-                errorReceived = cleanModelError(data.error);
-              }
-            } catch (e) {
-              // partial json chunk, continue
+              accumulated += data.text;
+              setStreamingText(accumulated);
             }
+            if (data.error) {
+              console.error('Chat stream error:', data.error);
+              errorReceived = cleanModelError(data.error);
+            }
+          } catch {
+            // malformed event payload — skip
           }
         }
       }

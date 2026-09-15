@@ -6,6 +6,7 @@ import {
   GEMINI_LIVE_MODEL,
   GEMINI_TRANSCRIBE_MODELS,
 } from './models';
+import { classifyProviderError, shouldFallbackToNextModel } from './provider-errors';
 
 export interface Env {
   GEMINI_API_KEY: string;
@@ -53,10 +54,13 @@ export async function streamGeminiWithFallback(
       return;
     } catch (err) {
       lastError = err;
-      if (streamedAny) throw err;
+      const kind = classifyProviderError(err);
+      if (!shouldFallbackToNextModel(kind, streamedAny)) throw err;
       if (i < GEMINI_CHAT_MODELS.length - 1) {
         await new Promise((resolve) => setTimeout(resolve, 250));
+        continue;
       }
+      throw err;
     }
   }
 
@@ -140,8 +144,9 @@ export async function handleTranscribe(
       });
       const transcript = response.text?.trim() || '';
       if (transcript) return { transcript };
-    } catch {
-      // try next model
+    } catch (err) {
+      const kind = classifyProviderError(err);
+      if (!shouldFallbackToNextModel(kind, false)) break;
     }
   }
 
@@ -183,6 +188,8 @@ export async function handleGenerateCharacter(apiKey: string, prompt: string): P
       if (parsed?.name) return parsed;
     } catch (err) {
       lastErr = err;
+      const kind = classifyProviderError(err);
+      if (!shouldFallbackToNextModel(kind, false)) break;
     }
   }
 

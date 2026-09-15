@@ -31,17 +31,3 @@ export const GEMINI_GENERATOR_MODELS = [
 /** Real-time voice calls (Live API). */
 export const GEMINI_LIVE_MODEL = 'gemini-3.1-flash-live-preview';
 
-export function isSkippableModelError(err: unknown): boolean {
-  const msg = String(
-    typeof err === 'object' && err && 'message' in err ? (err as Error).message : err
-  ).toLowerCase();
-
-  return (
-    msg.includes('no longer available') ||
-    msg.includes('not found') ||
-    msg.includes('does not exist') ||
-    msg.includes('invalid model') ||
-    msg.includes('404') ||
-    msg.includes('is not supported')
-  );
-}
