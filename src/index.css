@@ -116,7 +116,11 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* Minimum 40×40 tap area with centered icon/content */
 .py-touch-target {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 2.5rem;
   min-height: 2.5rem;
   touch-action: manipulation;

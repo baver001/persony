@@ -550,7 +550,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             <button
               id="chat-open-sidebar-btn"
               onClick={onToggleSidebar}
-              className={`hidden sm:flex p-1.5 -ml-1 rounded-lg transition-colors items-center justify-center ${
+              className={`hidden sm:inline-flex py-touch-target p-2 -ml-1 rounded-lg transition-colors ${
                 isDark
                   ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100'
                   : 'hover:bg-neutral-100 text-neutral-600 hover:text-neutral-900'
@@ -621,7 +621,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           {/* Search in Chat Button — desktop only */}
           <button
             onClick={() => setIsSearchOpen(!isSearchOpen)}
-            className={`hidden sm:flex py-touch-target p-2 rounded-full transition-colors ${
+            className={`hidden sm:inline-flex py-touch-target p-2 rounded-full transition-colors ${
               isSearchOpen
                 ? isDark ? 'bg-zinc-700 text-white' : 'bg-neutral-800 text-white'
                 : isDark
@@ -637,7 +637,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           <button
             id="chat-call-btn"
             onClick={() => (isCallingActive ? onExpandCall?.() : onStartCall(character))}
-            className={`flex items-center justify-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-full active:scale-95 text-xs font-semibold shadow-xs transition-all cursor-pointer py-touch-target ${
+            className={`py-touch-target gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-full active:scale-95 text-xs font-semibold shadow-xs transition-all cursor-pointer ${
               isCallingActive
                 ? 'bg-py-accent/15 text-py-accent border border-py-accent/40 hover:bg-py-accent/25'
                 : isDark
@@ -654,7 +654,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           <button
             id="chat-profile-btn"
             onClick={() => onOpenProfile(character)}
-            className={`hidden sm:flex py-touch-target p-2 rounded-full transition-colors ${
+            className={`hidden sm:inline-flex py-touch-target p-2 rounded-full transition-colors ${
               isDark ? 'hover:bg-zinc-800 text-zinc-400 hover:text-white' : 'hover:bg-neutral-100 text-neutral-600'
             }`}
             title="Информация о персонаже"
@@ -685,7 +685,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           {searchInChat && (
             <button
               onClick={() => setSearchInChat('')}
-              className={`p-0.5 ${isDark ? 'text-zinc-500 hover:text-zinc-200' : 'text-neutral-400 hover:text-neutral-700'}`}
+              className={`py-touch-target p-1 rounded-md transition-colors ${
+                isDark ? 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800' : 'text-neutral-400 hover:text-neutral-700 hover:bg-neutral-200'
+              }`}
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -1112,7 +1114,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     setInputText(character.starterMessages[0]);
                   }
                 }}
-                className={`hidden sm:flex py-touch-target p-2.5 rounded-full mb-0.5 transition-colors shrink-0 cursor-pointer ${
+                className={`hidden sm:inline-flex py-touch-target p-2 rounded-full mb-0.5 transition-colors shrink-0 cursor-pointer ${
                   isDark
                     ? 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'
                     : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100'
@@ -1150,7 +1152,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               <button
                 type="button"
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                className={`py-touch-target p-2 sm:p-2.5 rounded-full mb-0.5 transition-colors shrink-0 cursor-pointer ${
+                className={`py-touch-target p-2 rounded-full mb-0.5 transition-colors shrink-0 cursor-pointer ${
                   showEmojiPicker
                     ? isDark
                       ? 'text-zinc-200 bg-zinc-700'
@@ -1188,7 +1190,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     type="button"
                     onClick={startVoiceRecording}
                     disabled={isStreaming}
-                    className={`py-touch-target p-2 sm:p-2.5 rounded-full transition-all flex items-center justify-center shrink-0 disabled:opacity-40 disabled:cursor-not-allowed ${
+                    className={`py-touch-target p-2 rounded-full transition-all shrink-0 disabled:opacity-40 disabled:cursor-not-allowed ${
                       isDark
                         ? 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'
                         : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100'
@@ -1203,7 +1205,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     id="quick-live-call-btn"
                     type="button"
                     onClick={() => (isCallingActive ? onExpandCall?.() : onStartCall(character))}
-                    className={`hidden sm:flex py-touch-target p-2.5 rounded-full transition-all items-center justify-center shrink-0 cursor-pointer ${
+                    className={`hidden sm:inline-flex py-touch-target p-2 rounded-full transition-all shrink-0 cursor-pointer ${
                       isCallingActive
                         ? 'bg-py-accent/15 text-py-accent border border-py-accent/40 hover:bg-py-accent/25'
                         : isDark

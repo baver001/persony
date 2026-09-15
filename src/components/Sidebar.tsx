@@ -104,7 +104,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               id="sidebar-create-persona-btn"
               onClick={onOpenCreateModal}
-              className={`p-2 rounded-lg transition-colors cursor-pointer ${
+              className={`py-touch-target p-2 rounded-lg transition-colors cursor-pointer ${
                 isDark
                   ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100'
                   : 'hover:bg-neutral-100 text-neutral-600 hover:text-neutral-900'
@@ -119,7 +119,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 id="sidebar-collapse-btn"
                 onClick={onToggleSidebar}
-                className={`p-2 rounded-lg transition-colors cursor-pointer hidden sm:flex items-center justify-center ${
+                className={`py-touch-target p-2 rounded-lg transition-colors cursor-pointer hidden sm:inline-flex ${
                   isDark
                     ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100'
                     : 'hover:bg-neutral-100 text-neutral-600 hover:text-neutral-900'
@@ -153,7 +153,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="text-zinc-400 hover:text-zinc-200 p-0.5"
+              className={`py-touch-target p-1 rounded-md transition-colors ${
+                isDark
+                  ? 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
+                  : 'text-neutral-400 hover:text-neutral-700 hover:bg-neutral-200'
+              }`}
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -301,7 +305,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         e.stopPropagation();
                         onStartCall(persona);
                       }}
-                      className={`py-touch-target p-1.5 rounded-md transition-all shrink-0 ${
+                      className={`py-touch-target p-2 rounded-full transition-all shrink-0 ${
                         isSelected
                           ? isDark
                             ? 'hover:bg-zinc-700 text-zinc-200'
@@ -332,7 +336,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Theme Toggle */}
           <button
             onClick={onToggleTheme}
-            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+            className={`py-touch-target p-2 rounded-lg transition-colors cursor-pointer ${
               isDark ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200' : 'hover:bg-neutral-200 text-neutral-600'
             }`}
             title={isDark ? 'Включить светлую тему' : 'Включить тёмную тему'}
@@ -343,7 +347,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Sound Toggle */}
           <button
             onClick={onToggleSound}
-            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+            className={`py-touch-target p-2 rounded-lg transition-colors cursor-pointer ${
               isDark ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200' : 'hover:bg-neutral-200 text-neutral-600'
             }`}
             title="Звуковые эффекты"
@@ -366,7 +370,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="relative">
             <button
               onClick={() => setShowSettingsMenu(!showSettingsMenu)}
-              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+              className={`py-touch-target p-2 rounded-lg transition-colors cursor-pointer ${
                 isDark ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200' : 'hover:bg-neutral-200 text-neutral-600'
               }`}
               title="Настройки"

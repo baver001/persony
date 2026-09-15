@@ -71,7 +71,7 @@ export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
             <span className="text-sm font-semibold text-white/90">Информация о персонаже</span>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-full text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+              className="py-touch-target p-2 rounded-full text-white/50 hover:text-white hover:bg-white/10 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>

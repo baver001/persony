@@ -440,7 +440,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={handleToggleMute}
-              className={`p-2 rounded-full transition-colors ${
+              className={`py-touch-target p-2 rounded-full transition-colors ${
                 isMuted ? 'bg-rose-500/20 text-rose-400' : 'bg-white/10 text-white hover:bg-white/20'
               }`}
               title={isMuted ? 'Включить микрофон' : 'Выключить микрофон'}
@@ -449,14 +449,14 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
             </button>
             <button
               onClick={() => setIsMinimized(false)}
-              className="p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+              className="py-touch-target p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
               title="Развернуть звонок"
             >
               <Maximize2 className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={handleEndCall}
-              className="p-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white shadow-md transition-colors"
+              className="py-touch-target p-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white shadow-md transition-colors"
               title="Завершить звонок"
             >
               <PhoneOff className="w-3.5 h-3.5" />
@@ -504,7 +504,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
               <button
                 id="toggle-subtitles-btn"
                 onClick={() => setShowSubtitles(!showSubtitles)}
-                className={`p-2 rounded-full transition-colors text-xs flex items-center gap-1 cursor-pointer ${
+                className={`py-touch-target p-2 rounded-full transition-colors text-xs gap-1 cursor-pointer ${
                   showSubtitles
                     ? 'bg-zinc-800 text-zinc-200 border border-zinc-700'
                     : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white'
@@ -517,7 +517,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
               <button
                 id="toggle-minimize-btn"
                 onClick={() => setIsMinimized(true)}
-                className="flex p-2 rounded-full bg-white/5 text-white/50 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+                className="py-touch-target p-2 rounded-full bg-white/5 text-white/50 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
                 title="Свернуть звонок"
               >
                 <Minimize2 className="w-4 h-4" />
