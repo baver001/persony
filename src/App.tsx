@@ -14,7 +14,20 @@ import {
 } from './utils/callTranscriptPersistence';
 import { SseStreamParser } from './lib/sseParser';
 import { getApiHeaders } from './lib/api/headers';
+import {
+  cloudMessageToChatMessage,
+  ensureConversation,
+  fetchConversationMessages,
+  fetchMe,
+  sendCloudMessage,
+} from './lib/api/conversations';
 import { syncCustomPersonasToCloud, syncPersonaToCloud } from './lib/api/personas';
+import {
+  buildLocalExport,
+  hasLocalDataToImport,
+  isCloudMigrationCompleted,
+} from './lib/cloudMigration';
+import { CloudImportModal } from './components/CloudImportModal';
 
 const STORAGE_KEY_PERSONAS = 'persony_personas_v1';
 const STORAGE_KEY_MESSAGES = 'persony_messages_v1';
@@ -150,9 +163,43 @@ export default function App() {
   // Collapsible sidebar state (ChatGPT-style)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
+  // Cloud mode state
+  const [isCloudAuthenticated, setIsCloudAuthenticated] = useState(false);
+  const [conversationByPersona, setConversationByPersona] = useState<Record<string, string>>({});
+  const [showImportModal, setShowImportModal] = useState(false);
+
+  const refreshCloudAuth = async () => {
+    const me = await fetchMe();
+    setIsCloudAuthenticated(me.isAuthenticated);
+    if (me.isAuthenticated && hasLocalDataToImport(personas, messagesByPersona) && !isCloudMigrationCompleted()) {
+      setShowImportModal(true);
+    }
+  };
+
   useEffect(() => {
+    void refreshCloudAuth();
     void syncCustomPersonasToCloud(personas.filter((p) => p.isCustom));
   }, []);
+
+  useEffect(() => {
+    const onFocus = () => void refreshCloudAuth();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [personas, messagesByPersona]);
+
+  const loadCloudMessages = async (personaId: string) => {
+    const conversation = await ensureConversation(personaId);
+    if (!conversation) return;
+
+    setConversationByPersona((prev) => ({ ...prev, [personaId]: conversation.id }));
+    const cloudMessages = await fetchConversationMessages(conversation.id);
+    if (cloudMessages.length === 0) return;
+
+    setMessagesByPersona((prev) => ({
+      ...prev,
+      [personaId]: cloudMessages.map((m) => cloudMessageToChatMessage(m, personaId)),
+    }));
+  };
 
   // Sync theme to root class
   useEffect(() => {
@@ -258,7 +305,7 @@ export default function App() {
         try {
           const transRes = await fetch('/api/transcribe', {
             method: 'POST',
-            headers: getApiHeaders(),
+            headers: await getApiHeaders(),
             body: JSON.stringify({
               audioBase64,
               mimeType: 'audio/wav',
@@ -293,35 +340,51 @@ export default function App() {
         });
       }
 
-      // Prepare history for Gemini chat stream
-      const messagesPayload = updatedHistory.slice(-10).map((m) => {
-        if (m.id === msgId && isVoiceNote) {
-          return {
-            sender: 'user',
-            text: transcriptText
-              ? `[Пользователь отправил голосовое аудиосообщение]: "${transcriptText}". Ответь на слова пользователя развернуто и естественно в твоем характерном стиле персонажа.`
-              : `[Пользователь отправил голосовое аудиосообщение длительностью ${audioDuration || 3} сек, но в записи была тишина или слова не распознаны]. Обрати на это внимание собеседника в стиле своего персонажа.`,
-          };
-        }
-        return {
-          sender: m.sender,
-          text: m.text,
-        };
-      });
+      const outboundText =
+        isVoiceNote && transcriptText
+          ? `[Пользователь отправил голосовое аудиосообщение]: "${transcriptText}". Ответь на слова пользователя развернуто и естественно в твоем характерном стиле персонажа.`
+          : isVoiceNote
+            ? `[Пользователь отправил голосовое аудиосообщение длительностью ${audioDuration || 3} сек, но в записи была тишина или слова не распознаны]. Обрати на это внимание собеседника в стиле своего персонажа.`
+            : text.trim();
 
-      // Request Gemini chat stream from server
       if (selectedPersona.isCustom) {
         await syncPersonaToCloud(selectedPersona);
       }
 
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: getApiHeaders(),
-        body: JSON.stringify({
-          personaId: selectedPersona.id,
-          messages: messagesPayload,
-        }),
-      });
+      let response: Response;
+
+      if (isCloudAuthenticated) {
+        let conversationId = conversationByPersona[selectedPersona.id];
+        if (!conversationId) {
+          const conversation = await ensureConversation(selectedPersona.id);
+          if (conversation) {
+            conversationId = conversation.id;
+            setConversationByPersona((prev) => ({ ...prev, [selectedPersona.id]: conversationId! }));
+          }
+        }
+
+        if (conversationId) {
+          response = await sendCloudMessage(conversationId, outboundText);
+        } else {
+          throw new Error('Failed to open cloud conversation');
+        }
+      } else {
+        const messagesPayload = updatedHistory.slice(-10).map((m) => {
+          if (m.id === msgId && isVoiceNote) {
+            return { sender: 'user', text: outboundText };
+          }
+          return { sender: m.sender, text: m.text };
+        });
+
+        response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: await getApiHeaders(),
+          body: JSON.stringify({
+            personaId: selectedPersona.id,
+            messages: messagesPayload,
+          }),
+        });
+      }
 
       if (!response.ok) {
         throw new Error(`Server returned ${response.status}`);
@@ -447,6 +510,9 @@ export default function App() {
   const handleSelectPersona = (persona: Persona) => {
     setSelectedPersona(persona);
     setMobileView('chat');
+    if (isCloudAuthenticated) {
+      void loadCloudMessages(persona.id);
+    }
   };
 
   const handleSavePersona = (newPersona: Persona) => {
@@ -594,6 +660,25 @@ export default function App() {
         }}
         onSave={handleSavePersona}
         initialPersona={editingPersona}
+      />
+
+      <CloudImportModal
+        isOpen={showImportModal}
+        personas={personas}
+        messagesByPersona={messagesByPersona}
+        onDismiss={() => setShowImportModal(false)}
+        onImported={(personaIdMap) => {
+          setShowImportModal(false);
+          if (Object.keys(personaIdMap).length > 0) {
+            setPersonas((prev) =>
+              prev.map((p) =>
+                personaIdMap[p.id] ? { ...p, id: personaIdMap[p.id], isCustom: true } : p
+              )
+            );
+          }
+          void refreshCloudAuth();
+          void loadCloudMessages(selectedPersona.id);
+        }}
       />
 
       {/* Persona Profile & Dossier Drawer */}

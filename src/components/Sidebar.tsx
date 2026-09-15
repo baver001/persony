@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Persona, ChatMessage } from '../types';
 import { PersonyLogo } from './PersonyLogo';
+import { AuthBar } from './AuthBar';
 
 interface SidebarProps {
   personas: Persona[];
@@ -100,6 +101,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           <div className="flex items-center gap-1">
+            <AuthBar />
             {/* Create Persona Button */}
             <button
               id="sidebar-create-persona-btn"

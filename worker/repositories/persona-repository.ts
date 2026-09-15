@@ -1,5 +1,11 @@
 import { DEFAULT_PERSONAS } from '../../shared/default-personas';
-import type { PersonaRecord, PersonaPublicMeta, UpsertPersonaInput } from '../domain/persona';
+import type {
+  CreatePersonaInput,
+  PersonaPublicDTO,
+  PersonaRecord,
+  UpdatePersonaInput,
+} from '../domain/persona';
+import { toPersonaPublicDTO } from '../domain/persona';
 
 const SYSTEM_OWNER = 'system';
 const SEED_MARKER = 'persony-seed-v1';
@@ -14,6 +20,7 @@ type PersonaRow = {
   voice: string;
   category: string;
   visibility: string;
+  status: string;
   current_version: number;
   badge: string | null;
   color: string | null;
@@ -43,6 +50,10 @@ function seedToRecord(p: (typeof DEFAULT_PERSONAS)[number]): PersonaRecord {
 
 const SEED_MAP = new Map(DEFAULT_PERSONAS.map((p) => [p.id, seedToRecord(p)]));
 
+export function generatePersonaId(): string {
+  return `p_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
+}
+
 export async function isDbReady(db: D1Database): Promise<boolean> {
   try {
     await db.prepare('SELECT 1 FROM personas LIMIT 1').first();
@@ -64,7 +75,7 @@ export async function ensureDefaultPersonasSeeded(db: D1Database): Promise<void>
 
   const now = new Date().toISOString();
   for (const persona of DEFAULT_PERSONAS) {
-    await upsertPersonaInDb(db, SYSTEM_OWNER, {
+    await createPersonaInDb(db, SYSTEM_OWNER, {
       id: persona.id,
       name: persona.name,
       tagline: persona.tagline,
@@ -143,7 +154,25 @@ export async function getPersonaById(
   return SEED_MAP.get(personaId) ?? null;
 }
 
-export async function listPublicPersonas(db: D1Database | undefined): Promise<PersonaPublicMeta[]> {
+export async function getPersonaOwnerRecord(
+  db: D1Database,
+  personaId: string,
+  ownerUserId: string
+): Promise<PersonaRecord | null> {
+  const row = await db
+    .prepare(
+      `SELECT p.*, pv.system_prompt
+       FROM personas p
+       JOIN persona_versions pv ON pv.persona_id = p.id AND pv.version = p.current_version
+       WHERE p.id = ? AND p.owner_user_id = ? AND p.status = 'active'`
+    )
+    .bind(personaId, ownerUserId)
+    .first<PersonaRow>();
+
+  return row ? rowToRecord(row) : null;
+}
+
+export async function listPublicPersonas(db: D1Database | undefined): Promise<PersonaPublicDTO[]> {
   if (db && (await isDbReady(db))) {
     const { results } = await db
       .prepare(
@@ -174,7 +203,7 @@ export async function listPublicPersonas(db: D1Database | undefined): Promise<Pe
       avatarUrl: r.avatar_url || '',
       voice: r.voice,
       category: r.category,
-      visibility: r.visibility as PersonaPublicMeta['visibility'],
+      visibility: r.visibility as PersonaPublicDTO['visibility'],
       badge: r.badge || undefined,
       color: r.color || undefined,
       starterMessages: r.starter_messages_json
@@ -198,85 +227,186 @@ export async function listPublicPersonas(db: D1Database | undefined): Promise<Pe
   }));
 }
 
-export async function upsertPersonaInDb(
+type CreatePersonaInDbInput = CreatePersonaInput & { id?: string };
+
+async function insertPersonaVersion(
   db: D1Database,
-  ownerUserId: string,
-  input: UpsertPersonaInput
-): Promise<PersonaRecord> {
+  personaId: string,
+  version: number,
+  systemPrompt: string
+): Promise<void> {
+  const versionId = `${personaId}_v${version}`;
   const now = new Date().toISOString();
-  const existing = await db
-    .prepare('SELECT current_version FROM personas WHERE id = ?')
-    .bind(input.id)
-    .first<{ current_version: number }>();
-
-  const nextVersion = existing ? existing.current_version + 1 : 1;
-  const versionId = `${input.id}_v${nextVersion}`;
-
-  if (existing) {
-    await db
-      .prepare(
-        `UPDATE personas SET
-          name = ?, tagline = ?, description = ?, avatar_url = ?, voice = ?, category = ?,
-          visibility = ?, badge = ?, color = ?, starter_messages_json = ?, current_version = ?, updated_at = ?
-         WHERE id = ? AND owner_user_id = ?`
-      )
-      .bind(
-        input.name,
-        input.tagline,
-        input.description,
-        input.avatarUrl,
-        input.voice,
-        input.category,
-        input.visibility || 'private',
-        input.badge || null,
-        input.color || null,
-        input.starterMessages ? JSON.stringify(input.starterMessages) : null,
-        nextVersion,
-        now,
-        input.id,
-        ownerUserId
-      )
-      .run();
-  } else {
-    await db
-      .prepare(
-        `INSERT INTO personas (
-          id, owner_user_id, slug, name, tagline, description, avatar_url, voice, category,
-          visibility, status, source_persona_id, current_version, badge, color, starter_messages_json,
-          created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?)`
-      )
-      .bind(
-        input.id,
-        ownerUserId,
-        input.id,
-        input.name,
-        input.tagline,
-        input.description,
-        input.avatarUrl,
-        input.voice,
-        input.category,
-        input.visibility || 'private',
-        input.sourcePersonaId || null,
-        nextVersion,
-        input.badge || null,
-        input.color || null,
-        input.starterMessages ? JSON.stringify(input.starterMessages) : null,
-        now,
-        now
-      )
-      .run();
-  }
-
   await db
     .prepare(
       `INSERT INTO persona_versions (id, persona_id, version, system_prompt, configuration_json, created_at)
        VALUES (?, ?, ?, ?, NULL, ?)`
     )
-    .bind(versionId, input.id, nextVersion, input.systemPrompt, now)
+    .bind(versionId, personaId, version, systemPrompt, now)
+    .run();
+}
+
+export async function createPersonaInDb(
+  db: D1Database,
+  ownerUserId: string,
+  input: CreatePersonaInDbInput
+): Promise<PersonaRecord> {
+  const id = input.id ?? generatePersonaId();
+  const now = new Date().toISOString();
+
+  const existing = await db
+    .prepare('SELECT id FROM personas WHERE id = ?')
+    .bind(id)
+    .first();
+
+  if (existing) {
+    throw new PersonaIdCollisionError(id);
+  }
+
+  await db
+    .prepare(
+      `INSERT INTO personas (
+        id, owner_user_id, slug, name, tagline, description, avatar_url, voice, category,
+        visibility, status, source_persona_id, current_version, badge, color, starter_messages_json,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, 1, ?, ?, ?, ?, ?)`
+    )
+    .bind(
+      id,
+      ownerUserId,
+      id,
+      input.name,
+      input.tagline,
+      input.description,
+      input.avatarUrl,
+      input.voice,
+      input.category,
+      input.visibility || 'private',
+      input.sourcePersonaId || null,
+      input.badge || null,
+      input.color || null,
+      input.starterMessages ? JSON.stringify(input.starterMessages) : null,
+      now,
+      now
+    )
     .run();
 
-  const record = await getPersonaById(db, input.id, ownerUserId);
-  if (!record) throw new Error('Failed to load persona after upsert');
+  await insertPersonaVersion(db, id, 1, input.systemPrompt);
+
+  const record = await getPersonaById(db, id, ownerUserId);
+  if (!record) throw new Error('Failed to load persona after create');
   return record;
 }
+
+export async function updatePersonaInDb(
+  db: D1Database,
+  ownerUserId: string,
+  personaId: string,
+  input: UpdatePersonaInput
+): Promise<PersonaRecord> {
+  const existing = await getPersonaOwnerRecord(db, personaId, ownerUserId);
+  if (!existing) {
+    throw new PersonaNotOwnedError(personaId);
+  }
+
+  const now = new Date().toISOString();
+  const nextVersion = existing.currentVersion + 1;
+  const merged = {
+    name: input.name ?? existing.name,
+    tagline: input.tagline ?? existing.tagline,
+    description: input.description ?? existing.description,
+    systemPrompt: input.systemPrompt ?? existing.systemPrompt,
+    avatarUrl: input.avatarUrl ?? existing.avatarUrl,
+    voice: input.voice ?? existing.voice,
+    category: input.category ?? existing.category,
+    visibility: input.visibility ?? existing.visibility,
+    badge: input.badge ?? existing.badge,
+    color: input.color ?? existing.color,
+    starterMessages: input.starterMessages ?? existing.starterMessages,
+  };
+
+  await db
+    .prepare(
+      `UPDATE personas SET
+        name = ?, tagline = ?, description = ?, avatar_url = ?, voice = ?, category = ?,
+        visibility = ?, badge = ?, color = ?, starter_messages_json = ?, current_version = ?, updated_at = ?
+       WHERE id = ? AND owner_user_id = ? AND status = 'active'`
+    )
+    .bind(
+      merged.name,
+      merged.tagline,
+      merged.description,
+      merged.avatarUrl,
+      merged.voice,
+      merged.category,
+      merged.visibility,
+      merged.badge || null,
+      merged.color || null,
+      merged.starterMessages ? JSON.stringify(merged.starterMessages) : null,
+      nextVersion,
+      now,
+      personaId,
+      ownerUserId
+    )
+    .run();
+
+  await insertPersonaVersion(db, personaId, nextVersion, merged.systemPrompt);
+
+  const record = await getPersonaOwnerRecord(db, personaId, ownerUserId);
+  if (!record) throw new Error('Failed to load persona after update');
+  return record;
+}
+
+export async function softDeletePersona(
+  db: D1Database,
+  ownerUserId: string,
+  personaId: string
+): Promise<boolean> {
+  const result = await db
+    .prepare(
+      `UPDATE personas SET status = 'deleted', updated_at = ? WHERE id = ? AND owner_user_id = ? AND status = 'active'`
+    )
+    .bind(new Date().toISOString(), personaId, ownerUserId)
+    .run();
+
+  return (result.meta.changes ?? 0) > 0;
+}
+
+export class PersonaIdCollisionError extends Error {
+  readonly status = 409;
+  constructor(personaId: string) {
+    super(`Persona id already exists: ${personaId}`);
+    this.name = 'PersonaIdCollisionError';
+  }
+}
+
+export class PersonaNotOwnedError extends Error {
+  readonly status = 403;
+  constructor(personaId: string) {
+    super(`Persona not owned by user: ${personaId}`);
+    this.name = 'PersonaNotOwnedError';
+  }
+}
+
+/** @deprecated Use createPersonaInDb / updatePersonaInDb */
+export async function upsertPersonaInDb(
+  db: D1Database,
+  ownerUserId: string,
+  input: CreatePersonaInDbInput & { id: string }
+): Promise<PersonaRecord> {
+  const existing = await db
+    .prepare('SELECT id, owner_user_id FROM personas WHERE id = ? AND status = ?')
+    .bind(input.id, 'active')
+    .first<{ id: string; owner_user_id: string }>();
+
+  if (existing) {
+    if (existing.owner_user_id !== ownerUserId) {
+      throw new PersonaNotOwnedError(input.id);
+    }
+    return updatePersonaInDb(db, ownerUserId, input.id, input);
+  }
+
+  return createPersonaInDb(db, ownerUserId, input);
+}
+
+export { toPersonaPublicDTO };

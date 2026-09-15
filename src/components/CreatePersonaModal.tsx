@@ -13,6 +13,7 @@ import {
 import { Persona, VoiceName } from '../types';
 import { generateSvgAvatar, PRESET_AVATARS } from '../utils/avatarGenerator';
 import { PersonyLogo } from './PersonyLogo';
+import { getApiHeaders } from '../lib/api/headers';
 
 interface CreatePersonaModalProps {
   isOpen: boolean;
@@ -69,7 +70,7 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
     try {
       const res = await fetch('/api/generate-character', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await getApiHeaders(),
         body: JSON.stringify({ prompt: aiPrompt.trim() }),
       });
 

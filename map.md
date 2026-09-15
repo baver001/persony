@@ -48,12 +48,15 @@ flowchart TD
 - CF Workers + GitHub Actions deploy
 - Дизайн-токены Persony
 
-### В работе — Phase 1 (cloud foundation)
+### Готово — Phase 1 (cloud foundation, locally verified)
 
-- D1 `persony-db` + migration `0001_initial.sql`
-- Server-authoritative chat/live (`personaId`, не `systemPrompt` с клиента)
-- `AuthContext` + optional Clerk JWT
-- `POST /api/personas` sync custom personas (dev mode / auth)
+- D1 `persony-db` + migrations `0001`–`0002`
+- Internal Persony user IDs (Clerk/dev → lazy `users` provisioning)
+- `requireAIEntitlement()` на billable AI endpoints
+- CORS: no arbitrary origin reflection
+- Cloud conversations + server-authoritative chat (`conversationId + text`)
+- Persona CRUD (POST/PATCH/DELETE) + public/owner DTOs
+- Clerk UI + localStorage import modal
 - `specs/06-cloud-data-auth.md`
 
 ### Готово (Phase 0)
@@ -63,8 +66,7 @@ flowchart TD
 
 ### Дальше (по фазам roadmap)
 
-1. **Phase 1** — Auth (Clerk), D1, cloud personas/conversations, server-authoritative prompts
-2. **Phase 2** — Multi-provider (DeepSeek + Gemini), ModelRouter, eval
+1. **Phase 2** — Multi-provider (DeepSeek + Gemini), ModelRouter, eval
 3. **Phase 3** — Energy wallet, trial battery, CostEngine
 4. **Phase 4** — Paddle recharge
 5. **Phase 5** — Public catalog, share, remix

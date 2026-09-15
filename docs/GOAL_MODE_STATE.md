@@ -3,22 +3,27 @@
 **Objective:** Развить Persony из локального MVP-мессенджера в платформу persistent AI personas (create · share · work) без переписывания рабочего приложения с нуля.
 
 **Last updated:** 2026-09-15 UTC  
-**Current phase:** Phase 1 — Cloud foundation (in progress)
+**Current phase:** Phase 1 — Cloud foundation (**locally verified**)
 
 ## Gate table
 
 | Gate | Status | Evidence | Limitation / next proof |
 |---|---|---|---|
-| Baseline lint / build / test | verified | `npm run lint`, `build`, `test` 14/14 | — |
+| Baseline lint / build / test | verified | `npm run lint`, `build`, `test` 24/24 | — |
 | SSE parser + model fallback | verified | Phase 0 commits | — |
 | Health endpoint sanitized | verified | no `hasApiKey` in `/api/health` | — |
-| D1 schema + remote migration | verified | `db:migrate:remote` 20 queries OK | — |
-| Server-authoritative chat/live | verified | `personaId` API, `specs/06` | Custom personas: dev mode or Clerk |
-| AuthContext interface | verified | `worker/middleware/auth.ts` | Clerk UI not wired |
-| Clerk production auth | open | — | `docs/USER_TASKS.md` §1 |
-| Cloud conversations | open | schema only | Phase 1b |
+| D1 schema + migrations 0001–0002 | verified | `worker/db/migrations/` | production: `db:migrate:remote` after push |
+| CORS hardened | verified | `worker/middleware/cors.ts` + tests | production same-origin |
+| requireAIEntitlement on billable AI | verified | chat/transcribe/generate/live | Energy check in Phase 3 |
+| Internal Persony user IDs | verified | `user-repository.ts`, lazy provisioning | — |
+| Persona CRUD security + DTOs | verified | POST/PATCH/DELETE, no public systemPrompt | — |
+| Cloud conversations API | verified | `worker/routes/conversations.ts` | — |
+| Server-authoritative chat path | verified | `conversationId + text` | legacy `messages[]` still supported |
+| Clerk UI integration | verified | `@clerk/clerk-react`, `AuthBar` | needs `VITE_CLERK_PUBLISHABLE_KEY` |
+| localStorage import modal | verified | `CloudImportModal`, `/api/import/legacy` | — |
 | Energy / trial | open | wallet tables in D1 | Phase 3 |
 | CI green with D1 migrate step | open | workflow updated | After push |
+| Production smoke test | open | — | After deploy + Clerk secrets |
 
 ## External tasks
 
@@ -27,4 +32,4 @@
 
 ## Next independent task
 
-Clerk sign-in UI + user webhook → `users` table + localStorage import modal.
+**Phase 2:** `AIProvider` interface, DeepSeek + Gemini adapters, normalized usage, Persona benchmark eval suite (`specs/07-ai-provider-router.md`).
