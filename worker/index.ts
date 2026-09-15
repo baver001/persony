@@ -6,7 +6,7 @@ import { formatCleanErrorMessage } from './lib/errors';
 import { initLiveSession } from './lib/gemini';
 import { liveInitSchema } from './lib/validation';
 import { apiCors } from './middleware/cors';
-import { requireAIEntitlement } from './middleware/ai-entitlement';
+import { InsufficientEnergyError, requireAIEntitlement } from './middleware/ai-entitlement';
 import { AuthRequiredError } from './middleware/auth';
 import { apiRoutes } from './routes/api';
 import { PersonaNotFoundError, resolvePersonaForInference } from './services/persona-service';
@@ -49,6 +49,10 @@ app.get(
               } catch (authErr) {
                 if (authErr instanceof AuthRequiredError) {
                   ws.send(JSON.stringify({ type: 'error', message: 'Authentication required' }));
+                  return;
+                }
+                if (authErr instanceof InsufficientEnergyError) {
+                  ws.send(JSON.stringify({ type: 'error', message: authErr.message, code: 'energy_empty' }));
                   return;
                 }
                 throw authErr;

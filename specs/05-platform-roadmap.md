@@ -1,6 +1,6 @@
 # 05 — Platform roadmap (MVP → Persony Cloud)
 
-**Статус:** Phase 0 в работе  
+**Статус:** Phases 1–10 foundation implemented (locally verified)  
 **Цель:** Open platform for persistent AI personas — create, share, work with them.
 
 ## Продуктовая модель

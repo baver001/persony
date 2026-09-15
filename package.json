@@ -15,8 +15,8 @@
     "test:watch": "vitest",
     "types": "wrangler types",
     "icons": "node scripts/generate-icons.mjs",
-    "db:migrate:local": "wrangler d1 execute persony-db --local --file=worker/db/migrations/0001_initial.sql && wrangler d1 execute persony-db --local --file=worker/db/migrations/0002_phase1_hardening.sql",
-    "db:migrate:remote": "wrangler d1 execute persony-db --remote --file=worker/db/migrations/0001_initial.sql && wrangler d1 execute persony-db --remote --file=worker/db/migrations/0002_phase1_hardening.sql"
+    "db:migrate:local": "wrangler d1 execute persony-db --local --file=worker/db/migrations/0001_initial.sql && wrangler d1 execute persony-db --local --file=worker/db/migrations/0002_phase1_hardening.sql && wrangler d1 execute persony-db --local --file=worker/db/migrations/0003_platform_features.sql",
+    "db:migrate:remote": "wrangler d1 execute persony-db --remote --file=worker/db/migrations/0001_initial.sql && wrangler d1 execute persony-db --remote --file=worker/db/migrations/0002_phase1_hardening.sql && wrangler d1 execute persony-db --remote --file=worker/db/migrations/0003_platform_features.sql"
   },
   "dependencies": {
     "@clerk/backend": "^3.17.2",

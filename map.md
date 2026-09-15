@@ -5,138 +5,66 @@
 **Persony** (`persony.org`) — open platform for persistent AI personas.  
 Create them. Share them. Work with them.
 
-Сейчас: рабочий MVP-мессенджер (Telegram/ChatGPT-like UX) с AI-персонажами, голосом и PWA.  
-Цель: облачная платформа с auth, cloud data, Energy billing, публичным каталогом, памятью и Rooms — **без переписывания MVP с нуля**.
-
-Для кого: люди, создающие и использующие постоянных AI-собеседников; профессионалы, собирающие AI-команду в Rooms.
+MVP-мессенджер эволюционировал в платформу: cloud data, multi-provider AI, Energy billing, Discover, Memory, Rooms.
 
 ## Устройство
 
 ```mermaid
 flowchart TD
-  U[Пользователь] --> SPA[React SPA / Vite]
+  U[Пользователь] --> SPA[React SPA]
   SPA --> API[Cloudflare Worker / Hono]
-  API --> G[Gemini API]
-  API --> LIVE[Gemini Live WS]
-  SPA --> LS[localStorage — временно]
-  API -.-> D1[(D1 — Phase 1)]
-  API -.-> R2[(R2 — Phase 8)]
-  API -.-> Clerk[Clerk — Phase 1]
+  API --> Router[ModelRouter]
+  Router --> DS[DeepSeek]
+  Router --> G[Gemini]
+  API --> D1[(D1)]
+  API --> R2[(R2 knowledge)]
+  API --> Clerk[Clerk]
+  API --> Paddle[Paddle webhooks]
 ```
 
 | Путь | Назначение |
 |------|------------|
-| `src/` | React UI |
-| `src/lib/` | Shared client libs (SSE parser, …) |
-| `worker/` | API + WebSocket proxy |
-| `worker/lib/` | Gemini, models, provider errors |
-| `specs/` | Spec-driven roadmap |
-| `docs/GOAL_MODE_STATE.md` | Goal-mode: gates и фаза |
-| `DESIGN.md` | Дизайн-система |
-| `wrangler.jsonc` | Cloudflare конфиг |
+| `src/` | React UI (Chats, Discover, Rooms, Profile) |
+| `worker/providers/` | AIProvider adapters + router |
+| `worker/billing/` | CostEngine, Energy, Paddle |
+| `worker/services/` | inference, memory, rooms, catalog |
+| `eval/` | Persona benchmark scenarios |
+| `schemas/` | Portable `persony.persona.json` |
+| `specs/` | Spec-driven roadmap 00–13 |
 
-**Production:** https://persony.pavel-9e7.workers.dev  
-**Repo:** https://github.com/baver001/persony
+**Production:** https://persony.pavel-9e7.workers.dev
 
-## Статусы
+## Статусы (2026-09-15)
 
-### Готово (MVP baseline)
+### Готово (locally verified)
 
-- Чат со streaming, голосовые заметки, Gemini Live, транскрипты звонков в истории
-- Mobile voice stability (`specs/04-mobile-voice-stability.md`)
-- Иконка P + paper plane, центрирование touch-target кнопок
-- CF Workers + GitHub Actions deploy
-- Дизайн-токены Persony
+- Phase 1: Cloud foundation
+- Phase 2: Multi-provider AI + eval suite
+- Phase 3: Energy wallet, trial battery, CostEngine
+- Phase 4: Paddle webhook + recharge packages
+- Phase 5: Discover, public pages, remix/install
+- Phase 6: Memory layers + UI
+- Phase 7: Rooms multi-persona
+- Phase 8: Tool registry foundation
+- Phase 9: Voice + energy gate
+- Phase 10: OSS docs, BYOK, persona format
 
-### Готово — Phase 1 (cloud foundation, locally verified)
+### Проверить в production
 
-- D1 `persony-db` + migrations `0001`–`0002`
-- Internal Persony user IDs (Clerk/dev → lazy `users` provisioning)
-- `requireAIEntitlement()` на billable AI endpoints
-- CORS: no arbitrary origin reflection
-- Cloud conversations + server-authoritative chat (`conversationId + text`)
-- Persona CRUD (POST/PATCH/DELETE) + public/owner DTOs
-- Clerk UI + localStorage import modal
-- `specs/06-cloud-data-auth.md`
+- D1 migrations 0001–0003
+- Clerk, DeepSeek, Paddle secrets
+- End-to-end signup → trial → chat → recharge
 
-### Готово (Phase 0)
+## Экономика
 
-- SSE parser, provider error fallback, Vitest + CI
-- `specs/05-platform-roadmap.md`
+- 100% battery = 1_000_000 Energy units ≈ $2 retail (config)
+- Target AI gross margin: 80%
+- Recharge: $10 / $20 / $50
 
-### Дальше (по фазам roadmap)
+## Команды
 
-1. **Phase 2** — Multi-provider (DeepSeek + Gemini), ModelRouter, eval
-3. **Phase 3** — Energy wallet, trial battery, CostEngine
-4. **Phase 4** — Paddle recharge
-5. **Phase 5** — Public catalog, share, remix
-6. **Phase 6–10** — Memory, Rooms, tools, voice hardening, OSS
-
-### Проверить
-
-- Health endpoint не должен раскрывать `hasApiKey` в production (Phase 0 security)
-- Live voice regression на iOS/Android после каждого voice-изменения
-
-## Решения
-
-- **Инкрементальное развитие** — не big-bang rewrite (`specs/05-platform-roadmap.md`)
-- **Backend authoritative** — клиент перестанет слать `systemPrompt` (Phase 1)
-- **Нет free tier** — одна trial-батарея, далее Energy (Phase 3)
-- **D1** как system of record; **localStorage** только UI prefs (Phase 1)
-- Деплой на Workers; Express `server.ts` — legacy dev only
-
-## Режим зрелости
-
-**MVP → платформа** (переход; см. goal-mode objective)
-
-## Модульность (целевая)
-
-| Модуль | Сейчас | Цель |
-|--------|--------|------|
-| Chat UI | `ChatArea`, `App` | `features/chat` |
-| Personas | localStorage + modals | `domain/persona` + D1 |
-| AI | `worker/lib/gemini.ts` | `providers/` + router |
-| Billing | — | `worker/billing/` |
-| Auth | — | `lib/auth` + Clerk adapter |
-
-## Продуктовая жизнеспособность
-
-### Задача
-
-Постоянные AI-персоны с памятью, шарингом и профессиональными Rooms — не «ещё один frontend к Gemini».
-
-### Решение
-
-Messenger-first UX + cloud personas + Energy economy + viral loop (`/p/:slug` → signup → trial → chat).
-
-### Доставка
-
-Публичные страницы персон (SEO), share/remix, каталог Discover — acquisition без paywall на просмотр.
-
-### Петля распространения
-
-Автор публикует Persona → ссылка → новый пользователь → trial → install → свой чат → создаёт свою Persona.
-
-## Экономика (гипотеза)
-
-- 100% battery ≈ $2 retail AI (config-driven)
-- Target gross margin on AI: 80%
-- Trial: +1 full battery once per account
-- Пакеты recharge: $10 / $20 / $50 (Phase 4)
-
-## Данные и безопасность
-
-| Сейчас | Цель |
-|--------|------|
-| localStorage personas/messages | D1 + optional import |
-| Client sends `systemPrompt` | Server loads persona version |
-| Open CORS / health leaks | Auth middleware, sanitized health |
-| GEMINI_API_KEY in CF secrets | Managed keys; BYOK for self-host |
-
-## Эксплуатация
-
-```text
-npm ci && npm run lint && npm test && npm run build && wrangler deploy
+```bash
+npm ci && npm run lint && npm test && npm run build
+npm run db:migrate:local   # dev
+npm run db:migrate:remote  # production
 ```
-
-CI: `.github/workflows/deploy.yml` (lint → test → build → deploy)

@@ -65,6 +65,9 @@ export async function createUser(
     .bind(id, authProvider, authProviderUserId, now, now)
     .run();
 
+  const { grantTrialBattery } = await import('../billing/wallet-repository');
+  await grantTrialBattery(db, id);
+
   return {
     id,
     authProvider,

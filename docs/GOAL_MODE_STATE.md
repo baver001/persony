@@ -1,35 +1,38 @@
 # Goal mode state
 
-**Objective:** Развить Persony из локального MVP-мессенджера в платформу persistent AI personas (create · share · work) без переписывания рабочего приложения с нуля.
+**Objective:** Persony platform — persistent AI personas (create · share · work)
 
 **Last updated:** 2026-09-15 UTC  
-**Current phase:** Phase 1 — Cloud foundation (**locally verified**)
+**Current phase:** Phases 1–10 foundation — **locally verified**
 
 ## Gate table
 
-| Gate | Status | Evidence | Limitation / next proof |
-|---|---|---|---|
-| Baseline lint / build / test | verified | `npm run lint`, `build`, `test` 24/24 | — |
-| SSE parser + model fallback | verified | Phase 0 commits | — |
-| Health endpoint sanitized | verified | no `hasApiKey` in `/api/health` | — |
-| D1 schema + migrations 0001–0002 | verified | `worker/db/migrations/` | production: `db:migrate:remote` after push |
-| CORS hardened | verified | `worker/middleware/cors.ts` + tests | production same-origin |
-| requireAIEntitlement on billable AI | verified | chat/transcribe/generate/live | Energy check in Phase 3 |
-| Internal Persony user IDs | verified | `user-repository.ts`, lazy provisioning | — |
-| Persona CRUD security + DTOs | verified | POST/PATCH/DELETE, no public systemPrompt | — |
-| Cloud conversations API | verified | `worker/routes/conversations.ts` | — |
-| Server-authoritative chat path | verified | `conversationId + text` | legacy `messages[]` still supported |
-| Clerk UI integration | verified | `@clerk/clerk-react`, `AuthBar` | needs `VITE_CLERK_PUBLISHABLE_KEY` |
-| localStorage import modal | verified | `CloudImportModal`, `/api/import/legacy` | — |
-| Energy / trial | open | wallet tables in D1 | Phase 3 |
-| CI green with D1 migrate step | open | workflow updated | After push |
-| Production smoke test | open | — | After deploy + Clerk secrets |
+| Phase | Status | Evidence |
+|---|---|---|
+| 1 Cloud foundation | verified | auth, CORS, conversations, DTOs, import |
+| 2 Multi-provider AI | verified | providers/, router, eval 45 scenarios, inference-service |
+| 3 Energy | verified | CostEngine, wallet, trial grant, Battery UI |
+| 4 Payments | verified | Paddle webhook + packages API (manual checkout UI) |
+| 5 Persona platform | verified | discover, /p/:slug, publish/install/remix |
+| 6 Memory | verified | memory API, extraction, MemoryPanel |
+| 7 Rooms | verified | rooms API, RoomsView, @mention / Ask Team |
+| 8 Professional | foundation | ToolRegistry, knowledge_items schema |
+| 9 Voice | foundation | energy gate on /live, existing voice stability |
+| 10 OSS | verified | TRADEMARKS, persona schema, SELF_HOST, BYOK |
+
+| Gate | Status | Next proof |
+|---|---|---|
+| lint / test / build | verified | 30/30 tests |
+| production deploy + smoke | open | Clerk + D1 migrate + secrets |
+| CI green | open | after push |
 
 ## External tasks
 
-1. **Current task:** Clerk dev instance + secrets — `docs/USER_TASKS.md` §1.
-2. **Waiting:** Paddle (Phase 4), DeepSeek (Phase 2), persony.org domain.
+1. Clerk + `VITE_CLERK_PUBLISHABLE_KEY`
+2. `DEEPSEEK_API_KEY` (optional, for text routing)
+3. Paddle live catalog + webhook URL
+4. persony.org domain
 
-## Next independent task
+## Notes
 
-**Phase 2:** `AIProvider` interface, DeepSeek + Gemini adapters, normalized usage, Persona benchmark eval suite (`specs/07-ai-provider-router.md`).
+Full Persony 1.0 production loop requires production secrets and smoke test. Core architecture for all roadmap phases is in place.

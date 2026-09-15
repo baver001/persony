@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { toConversationDTO, toMessageDTO } from '../domain/conversation';
 import { sendMessageSchema, createConversationSchema } from '../lib/validation';
+import { InsufficientEnergyError } from '../middleware/ai-entitlement';
 import { AuthRequiredError, requireUser } from '../middleware/auth';
 import {
   deleteConversation,
@@ -14,9 +15,10 @@ import {
   persistPersonaMessage,
   persistUserMessage,
 } from '../services/conversation-service';
-import { handleChat } from '../lib/gemini';
-import { PersonaNotFoundError, resolvePersonaForInference } from '../services/persona-service';
 import { buildInferenceMessages, assertConversationOwner } from '../services/conversation-service';
+import { PersonaNotFoundError, resolvePersonaForInference } from '../services/persona-service';
+import { runChatInference } from '../services/inference-service';
+import { buildAugmentedSystemPrompt, extractMemoriesFromExchange } from '../services/memory-service';
 import type { PersonyEnv } from '../types/env';
 import { requireAIEntitlement } from '../middleware/ai-entitlement';
 
@@ -137,13 +139,26 @@ conversationRoutes.post('/conversations/:id/messages', async (c) => {
     }
 
     const persona = await resolvePersonaForInference(c.env, personaId, userId);
-
     await persistUserMessage(c.env.DB, conversationId, userId, parsed.data.text);
     const history = await buildInferenceMessages(c.env.DB, conversationId, userId);
 
-    const stream = await handleChat(c.env.GEMINI_API_KEY, persona.systemPrompt, history);
-    const [clientStream, teeStream] = stream.tee();
+    const systemPrompt = await buildAugmentedSystemPrompt(
+      c.env,
+      userId,
+      persona.systemPrompt,
+      personaId,
+      conversationId
+    );
 
+    const stream = await runChatInference(c.env, {
+      userId,
+      systemPrompt,
+      messages: history,
+      conversationId,
+      personaId,
+    });
+
+    const [clientStream, teeStream] = stream.tee();
     const reader = teeStream.getReader();
     const decoder = new TextDecoder();
     let accumulated = '';
@@ -167,6 +182,13 @@ conversationRoutes.post('/conversations/:id/messages', async (c) => {
         if (accumulated.trim()) {
           await persistPersonaMessage(c.env.DB!, conversationId, personaId, accumulated.trim());
           await touchConversation(c.env.DB!, conversationId);
+          await extractMemoriesFromExchange(c.env, {
+            userId,
+            personaId,
+            conversationId,
+            userText: parsed.data.text,
+            assistantText: accumulated.trim(),
+          });
         }
       } catch (err) {
         console.error('Failed to persist assistant message:', err);
@@ -185,6 +207,9 @@ conversationRoutes.post('/conversations/:id/messages', async (c) => {
   } catch (err) {
     if (err instanceof AuthRequiredError) {
       return c.json({ error: 'Authentication required' }, 401);
+    }
+    if (err instanceof InsufficientEnergyError) {
+      return c.json({ error: err.message, code: 'energy_empty' }, 402);
     }
     if (err instanceof ConversationNotFoundError || err instanceof PersonaNotFoundError) {
       return c.json({ error: err.message }, 404);
