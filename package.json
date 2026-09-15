@@ -11,7 +11,8 @@
     "dev:legacy": "tsx server.ts",
     "clean": "rm -rf dist .wrangler",
     "lint": "tsc --noEmit",
-    "types": "wrangler types"
+    "types": "wrangler types",
+    "icons": "node scripts/generate-icons.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

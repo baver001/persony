@@ -1,21 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
   <defs>
     <linearGradient id="fbg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#161618" />
-      <stop offset="100%" stop-color="#0a0a0b" />
+      <stop offset="0%" stop-color="#18181b" />
+      <stop offset="100%" stop-color="#09090b" />
     </linearGradient>
     <linearGradient id="fac" x1="0%" y1="100%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="#3db892" />
-      <stop offset="100%" stop-color="#5eddb3" />
+      <stop offset="100%" stop-color="#6ee7b7" />
     </linearGradient>
   </defs>
   <rect width="64" height="64" rx="14" fill="url(#fbg)" />
-  <g transform="translate(32 33) rotate(-8)">
-    <path d="M -15 7 L -1 -15 L 7 -5 Z" fill="url(#fac)" />
-    <path d="M -1 -15 L 19 -1 L 7 -5 Z" fill="#e4e4e7" />
-    <path d="M -10 3 L -1 -10 L 2 -4 Z" fill="url(#fbg)" />
-    <path d="M -9 1 L 4 -6" stroke="url(#fac)" stroke-width="1.4" stroke-linecap="round" fill="none" />
-    <circle cx="21" cy="-3" r="3.2" fill="#fff" />
-    <rect x="-2" y="5" width="2.6" height="9" rx="0.6" fill="#a1a1aa" />
-  </g>
+  <path
+    fill="url(#fac)"
+    d="M 41.8 19.5 C 43.5 18 46 19.5 45.5 21.8 L 43.5 28.5 C 43 30 41.2 30.8 39.8 29.8 L 31.5 26.5 C 29.5 25.5 29 23.2 30.5 22 L 36 19.8 L 32.8 23.5 L 34.3 25.8 L 38.3 23.8 L 41.8 19.5 Z"
+  />
+  <path
+    fill="#f4f4f5"
+    fill-rule="evenodd"
+    d="M 14.8 12 V 52 H 21 V 48.5 H 24.5 C 38.8 48.5 47.8 39.5 47.8 28.5 C 47.8 17.5 38.8 12 24.5 12 H 14.8 Z
+       M 41.8 19.5 C 43.5 18 46 19.5 45.5 21.8 L 43.5 28.5 C 43 30 41.2 30.8 39.8 29.8 L 31.5 26.5 C 29.5 25.5 29 23.2 30.5 22 L 36 19.8 L 32.8 23.5 L 34.3 25.8 L 38.3 23.8 L 41.8 19.5 Z"
+  />
 </svg>

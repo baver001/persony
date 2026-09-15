@@ -1,41 +1,62 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
     <linearGradient id="py-bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#161618" />
-      <stop offset="100%" stop-color="#0a0a0b" />
+      <stop offset="0%" stop-color="#18181b" />
+      <stop offset="100%" stop-color="#09090b" />
     </linearGradient>
     <linearGradient id="py-accent" x1="0%" y1="100%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="#3db892" />
-      <stop offset="100%" stop-color="#5eddb3" />
+      <stop offset="100%" stop-color="#6ee7b7" />
     </linearGradient>
-    <linearGradient id="py-wing" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#f4f4f5" />
-      <stop offset="100%" stop-color="#d4d4d8" />
-    </linearGradient>
-    <filter id="py-shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000" flood-opacity="0.45" />
+    <filter id="py-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#4ec9a0" flood-opacity="0.4" />
     </filter>
   </defs>
 
   <rect width="512" height="512" rx="112" fill="url(#py-bg)" />
-  <rect x="14" y="14" width="484" height="484" rx="100" fill="none" stroke="#27272a" stroke-width="5" />
+  <rect x="12" y="12" width="488" height="488" rx="100" fill="none" stroke="#27272a" stroke-width="4" />
 
-  <!-- AI monogram as messenger paper plane (↗) -->
-  <g filter="url(#py-shadow)" transform="translate(256 268) rotate(-8)">
-    <!-- A: left wing facet -->
-    <path d="M -118 58 L -6 -118 L 52 -42 Z" fill="url(#py-accent)" />
-    <!-- A: right wing / forward fold -->
-    <path d="M -6 -118 L 148 -8 L 52 -42 Z" fill="url(#py-wing)" />
-    <!-- A inner counter (letter A) -->
-    <path d="M -78 22 L -6 -78 L 18 -28 Z" fill="url(#py-bg)" />
-    <!-- A crossbar -->
-    <path d="M -72 8 L 28 -48" stroke="url(#py-accent)" stroke-width="11" stroke-linecap="round" fill="none" />
-
-    <!-- I: nose dot -->
-    <circle cx="162" cy="-22" r="24" fill="#ffffff" />
-    <!-- I: tail stem -->
-    <rect x="-14" y="42" width="20" height="72" rx="5" fill="#a1a1aa" />
-    <!-- I: body connector to nose -->
-    <path d="M 6 -18 L 138 -22 L 52 -42 Z" fill="#c8c8cc" opacity="0.95" />
+  <!-- Rounded messenger plane (visible through P counter) -->
+  <g filter="url(#py-glow)">
+    <path
+      fill="url(#py-accent)"
+      d="M 334 156
+         C 348 144 368 156 364 174
+         L 348 228
+         C 344 242 328 248 314 240
+         L 252 212
+         C 236 204 232 186 244 176
+         L 288 158
+         L 262 188
+         L 274 206
+         L 306 190
+         L 334 156 Z"
+    />
   </g>
+
+  <!-- Bold P: bowl only on upper half; stem runs full height -->
+  <path
+    fill="#f4f4f5"
+    fill-rule="evenodd"
+    d="M 118 96
+       V 416
+       H 168
+       V 388
+       H 196
+       C 310 388 382 316 382 228
+       C 382 140 310 96 196 96
+       H 118
+       Z
+       M 334 156
+       C 348 144 368 156 364 174
+       L 348 228
+       C 344 242 328 248 314 240
+       L 252 212
+       C 236 204 232 186 244 176
+       L 288 158
+       L 262 188
+       L 274 206
+       L 306 190
+       L 334 156 Z"
+  />
 </svg>
