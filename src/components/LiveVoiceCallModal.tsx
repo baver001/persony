@@ -396,6 +396,10 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
     }
   };
 
+  const liveCue = transcripts.length > 0 ? transcripts[transcripts.length - 1] : null;
+  const liveCueSpeakerLabel =
+    liveCue?.sender === 'user' ? 'Вы' : character.name.split(' ')[0];
+
   if (!isOpen) return null;
 
   if (isMinimized) {
@@ -584,22 +588,35 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
               )}
             </div>
 
-            {/* Live Subtitles Panel (Only shown when subtitles are toggled ON and there are transcripts) */}
-            {showSubtitles && transcripts.length > 0 && (
-              <div className="w-full max-w-md mt-4 max-h-24 overflow-y-auto px-3.5 py-2 rounded-xl bg-black/30 border border-white/5 text-xs text-white/80 space-y-1.5 scrollbar-thin scrollbar-thumb-white/10">
-                {transcripts.slice(-3).map((t) => (
-                  <div
-                    key={t.id}
-                    className={`flex gap-1.5 ${
-                      t.sender === 'user' ? 'text-emerald-300 justify-end' : 'text-zinc-200 justify-start'
-                    }`}
-                  >
-                    <span className="font-medium shrink-0">
-                      {t.sender === 'user' ? 'Вы:' : `${character.name.split(' ')[0]}:`}
-                    </span>
-                    <span className="line-clamp-2">{t.text}</span>
-                  </div>
-                ))}
+            {/* Live subtitle — only the current utterance; full history saved to chat after call */}
+            {showSubtitles && liveCue && (
+              <div
+                id="live-call-subtitle"
+                className="relative w-full max-w-md mt-4 h-[4.25rem] overflow-hidden rounded-xl bg-black/30 border border-white/5"
+                aria-live="polite"
+              >
+                <div
+                  className="pointer-events-none absolute inset-x-0 top-0 z-10 h-8 bg-gradient-to-b from-[#18181b]/90 to-transparent"
+                  aria-hidden
+                />
+                <div className="relative h-full px-3.5 pb-2.5 pt-1">
+                  <AnimatePresence initial={false}>
+                    <motion.div
+                      key={liveCue.id}
+                      initial={{ y: 20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      exit={{ y: -24, opacity: 0 }}
+                      transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+                      className={`absolute inset-x-3.5 bottom-2.5 text-xs leading-relaxed line-clamp-3 ${
+                        liveCue.sender === 'user' ? 'text-emerald-300 text-right' : 'text-zinc-100 text-left'
+                      }`}
+                    >
+                      <span className="font-semibold opacity-80">{liveCueSpeakerLabel}</span>
+                      <span className="mx-1 opacity-40">·</span>
+                      <span className="text-white/90">{liveCue.text}</span>
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
               </div>
             )}
 
