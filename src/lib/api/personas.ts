@@ -7,7 +7,7 @@ export async function syncPersonaToCloud(persona: Persona): Promise<boolean> {
   try {
     const res = await fetch('/api/personas', {
       method: 'POST',
-      headers: getApiHeaders(),
+      headers: await getApiHeaders(),
       body: JSON.stringify({
         id: persona.id,
         name: persona.name,

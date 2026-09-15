@@ -29,3 +29,12 @@ export function isCloudMigrationCompleted(): boolean {
 export function markCloudMigrationCompleted(): void {
   localStorage.setItem(MIGRATION_VERSION_KEY, 'done');
 }
+
+export function hasLocalDataToImport(
+  personas: Persona[],
+  messagesByPersona: Record<string, ChatMessage[]>
+): boolean {
+  const hasCustom = personas.some((p) => p.isCustom);
+  const hasMessages = Object.values(messagesByPersona).some((list) => list.length > 0);
+  return hasCustom || hasMessages;
+}
