@@ -478,10 +478,10 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.94, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 280 }}
-          className="relative w-full h-[100dvh] sm:h-auto sm:max-h-[92vh] sm:max-w-xl bg-gradient-to-b from-zinc-900 via-[#18181b] to-zinc-950 sm:rounded-3xl border-0 sm:border border-zinc-800 shadow-2xl flex flex-col justify-between overflow-hidden"
+          className="relative w-full h-[100dvh] sm:h-auto sm:max-h-[92vh] sm:max-w-xl bg-gradient-to-b from-zinc-900 via-[#18181b] to-zinc-950 sm:rounded-3xl border-0 sm:border border-zinc-800 shadow-2xl flex flex-col overflow-hidden"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 pt-6 pb-2 z-10">
+          <div className="flex items-center justify-between px-6 pt-6 pb-2 z-10 shrink-0">
             <div className="flex items-center gap-2">
               <span className="flex h-2 w-2 relative">
                 <span
@@ -525,10 +525,11 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
             </div>
           </div>
 
-          {/* Main Visualizer Stage */}
-          <div className="relative flex-1 flex flex-col items-center justify-center px-6 py-6 select-none overflow-hidden">
+          {/* Main stage — avatar, subtitles and controls as one centered cluster */}
+          <div className="relative flex-1 flex items-center justify-center min-h-0 w-full px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] select-none overflow-hidden">
+            <div className="w-full max-w-md flex flex-col items-center translate-y-[5%] sm:translate-y-[3%]">
             {/* Gentle ambient glow behind avatar */}
-            <div className="relative flex items-center justify-center my-4">
+            <div className="relative flex items-center justify-center">
               <div
                 className="absolute inset-0 rounded-full blur-2xl pointer-events-none transition-opacity duration-700"
                 style={{
@@ -556,7 +557,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
             </div>
 
             {/* Character Info */}
-            <div className="mt-4 text-center z-10">
+            <div className="mt-3 sm:mt-4 text-center z-10 w-full">
               <h2 className="text-2xl font-bold text-white tracking-tight">{character.name}</h2>
               <p className="text-sm text-white/60 mt-1 max-w-sm line-clamp-1">{character.tagline}</p>
 
@@ -621,8 +622,8 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
             )}
 
             {/* Quick Starters in Call (clean, minimal) */}
-            {status === 'connected' && (
-              <div className="flex flex-wrap items-center justify-center gap-1.5 mt-5 max-w-md">
+            {status === 'connected' && !liveCue && (
+              <div className="flex flex-wrap items-center justify-center gap-1.5 mt-4 w-full">
                 <button
                   onClick={() => sendQuickLivePrompt('Привет! Расскажи о себе.')}
                   className="px-3 py-1 rounded-full text-[11px] bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors border border-white/5"
@@ -637,47 +638,48 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                 </button>
               </div>
             )}
-          </div>
 
-          {/* Bottom Call Controls Bar */}
-          <div className="px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-4 bg-gradient-to-t from-black/40 to-transparent flex items-center justify-center gap-6 z-10">
-            {/* Mute Microphone */}
-            <button
-              id="call-mute-btn"
-              onClick={handleToggleMute}
-              className={`p-4 rounded-full transition-all duration-200 flex items-center justify-center ${
-                isMuted
-                  ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 ring-2 ring-rose-500/30'
-                  : 'bg-white/10 hover:bg-white/15 text-white border border-white/10'
-              }`}
-              title={isMuted ? 'Включить микрофон' : 'Отключить микрофон'}
+            {/* Call controls — slightly below visual center */}
+            <div
+              id="call-controls-bar"
+              className="flex items-center justify-center gap-5 sm:gap-6 mt-7 sm:mt-9 z-10"
             >
-              {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
-            </button>
+              <button
+                id="call-mute-btn"
+                onClick={handleToggleMute}
+                className={`p-4 rounded-full transition-all duration-200 flex items-center justify-center shrink-0 ${
+                  isMuted
+                    ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 ring-2 ring-rose-500/30'
+                    : 'bg-white/10 hover:bg-white/15 text-white border border-white/10'
+                }`}
+                title={isMuted ? 'Включить микрофон' : 'Отключить микрофон'}
+              >
+                {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+              </button>
 
-            {/* End Call Button (Big Red) */}
-            <button
-              id="call-hangup-btn"
-              onClick={handleEndCall}
-              className="p-5 rounded-full bg-rose-600 hover:bg-rose-700 active:scale-95 text-white shadow-xl shadow-rose-900/40 transition-all duration-200 flex items-center justify-center"
-              title="Завершить звонок"
-            >
-              <PhoneOff className="w-7 h-7" />
-            </button>
+              <button
+                id="call-hangup-btn"
+                onClick={handleEndCall}
+                className="p-5 rounded-full bg-rose-600 hover:bg-rose-700 active:scale-95 text-white shadow-xl shadow-rose-900/40 transition-all duration-200 flex items-center justify-center shrink-0"
+                title="Завершить звонок"
+              >
+                <PhoneOff className="w-7 h-7" />
+              </button>
 
-            {/* Speaker Mute */}
-            <button
-              id="call-speaker-btn"
-              onClick={handleToggleSpeaker}
-              className={`p-4 rounded-full transition-all duration-200 flex items-center justify-center ${
-                isSpeakerMuted
-                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 ring-2 ring-amber-500/30'
-                  : 'bg-white/10 hover:bg-white/15 text-white border border-white/10'
-              }`}
-              title={isSpeakerMuted ? 'Включить звук' : 'Заглушить динамик'}
-            >
-              {isSpeakerMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
-            </button>
+              <button
+                id="call-speaker-btn"
+                onClick={handleToggleSpeaker}
+                className={`p-4 rounded-full transition-all duration-200 flex items-center justify-center shrink-0 ${
+                  isSpeakerMuted
+                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 ring-2 ring-amber-500/30'
+                    : 'bg-white/10 hover:bg-white/15 text-white border border-white/10'
+                }`}
+                title={isSpeakerMuted ? 'Включить звук' : 'Заглушить динамик'}
+              >
+                {isSpeakerMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+              </button>
+            </div>
+            </div>
           </div>
         </motion.div>
       </div>
