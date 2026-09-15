@@ -22,11 +22,7 @@ import {
   sendCloudMessage,
 } from './lib/api/conversations';
 import { syncCustomPersonasToCloud, syncPersonaToCloud } from './lib/api/personas';
-import {
-  buildLocalExport,
-  hasLocalDataToImport,
-  isCloudMigrationCompleted,
-} from './lib/cloudMigration';
+import { hasLocalDataToImport, isCloudMigrationCompleted } from './lib/cloudMigration';
 import { CloudImportModal } from './components/CloudImportModal';
 import { DiscoverView } from './components/DiscoverView';
 import { PublicPersonaView } from './components/PublicPersonaView';
