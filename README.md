@@ -34,3 +34,11 @@ npm run deploy   # Деплой на Cloudflare Workers
 ## Стек
 
 React 19 · Vite 6 · Tailwind 4 · Hono · Cloudflare Workers · Gemini API
+
+## Лицензирование
+
+Open-source часть Persony распространяется по модели dual licensing: **AGPL-3.0-only** либо отдельная коммерческая лицензия от правообладателя.
+
+AGPL распространяется на код этого репозитория, если конкретный файл или каталог явно не указывает иное. Hosted Persony Cloud, инфраструктура, пользовательские данные, управляемые AI-ключи и права на бренд Persony не предоставляются автоматически этой лицензией.
+
+Подробнее: `LICENSE` и `COMMERCIAL-LICENSE.md`.
