@@ -14,7 +14,23 @@ import {
 } from './utils/callTranscriptPersistence';
 import { SseStreamParser } from './lib/sseParser';
 import { getApiHeaders } from './lib/api/headers';
+import {
+  cloudMessageToChatMessage,
+  ensureConversation,
+  fetchConversationMessages,
+  fetchMe,
+  sendCloudMessage,
+} from './lib/api/conversations';
 import { syncCustomPersonasToCloud, syncPersonaToCloud } from './lib/api/personas';
+import { hasLocalDataToImport, isCloudMigrationCompleted } from './lib/cloudMigration';
+import { CloudImportModal } from './components/CloudImportModal';
+import { DiscoverView } from './components/DiscoverView';
+import { PublicPersonaView } from './components/PublicPersonaView';
+import { MemoryPanel } from './components/MemoryPanel';
+import { RechargeModal } from './components/RechargeModal';
+import { BottomNav, type AppView } from './components/BottomNav';
+import { RoomsView } from './components/RoomsView';
+import { BatteryIndicator } from './components/BatteryIndicator';
 
 const STORAGE_KEY_PERSONAS = 'persony_personas_v1';
 const STORAGE_KEY_MESSAGES = 'persony_messages_v1';
@@ -150,9 +166,55 @@ export default function App() {
   // Collapsible sidebar state (ChatGPT-style)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
+  // Cloud mode state
+  const [isCloudAuthenticated, setIsCloudAuthenticated] = useState(false);
+  const [conversationByPersona, setConversationByPersona] = useState<Record<string, string>>({});
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [appView, setAppView] = useState<AppView | 'public-persona'>(() => {
+    const m = window.location.pathname.match(/^\/p\/([^/]+)/);
+    if (m) return 'public-persona';
+    if (window.location.pathname.startsWith('/discover')) return 'discover';
+    return 'chats';
+  });
+  const [publicSlug, setPublicSlug] = useState(() => {
+    const m = window.location.pathname.match(/^\/p\/([^/]+)/);
+    return m?.[1] || '';
+  });
+  const [showRecharge, setShowRecharge] = useState(false);
+  const [showMemory, setShowMemory] = useState(false);
+
+  const refreshCloudAuth = async () => {
+    const me = await fetchMe();
+    setIsCloudAuthenticated(me.isAuthenticated);
+    if (me.isAuthenticated && hasLocalDataToImport(personas, messagesByPersona) && !isCloudMigrationCompleted()) {
+      setShowImportModal(true);
+    }
+  };
+
   useEffect(() => {
+    void refreshCloudAuth();
     void syncCustomPersonasToCloud(personas.filter((p) => p.isCustom));
   }, []);
+
+  useEffect(() => {
+    const onFocus = () => void refreshCloudAuth();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [personas, messagesByPersona]);
+
+  const loadCloudMessages = async (personaId: string) => {
+    const conversation = await ensureConversation(personaId);
+    if (!conversation) return;
+
+    setConversationByPersona((prev) => ({ ...prev, [personaId]: conversation.id }));
+    const cloudMessages = await fetchConversationMessages(conversation.id);
+    if (cloudMessages.length === 0) return;
+
+    setMessagesByPersona((prev) => ({
+      ...prev,
+      [personaId]: cloudMessages.map((m) => cloudMessageToChatMessage(m, personaId)),
+    }));
+  };
 
   // Sync theme to root class
   useEffect(() => {
@@ -258,7 +320,7 @@ export default function App() {
         try {
           const transRes = await fetch('/api/transcribe', {
             method: 'POST',
-            headers: getApiHeaders(),
+            headers: await getApiHeaders(),
             body: JSON.stringify({
               audioBase64,
               mimeType: 'audio/wav',
@@ -293,37 +355,57 @@ export default function App() {
         });
       }
 
-      // Prepare history for Gemini chat stream
-      const messagesPayload = updatedHistory.slice(-10).map((m) => {
-        if (m.id === msgId && isVoiceNote) {
-          return {
-            sender: 'user',
-            text: transcriptText
-              ? `[Пользователь отправил голосовое аудиосообщение]: "${transcriptText}". Ответь на слова пользователя развернуто и естественно в твоем характерном стиле персонажа.`
-              : `[Пользователь отправил голосовое аудиосообщение длительностью ${audioDuration || 3} сек, но в записи была тишина или слова не распознаны]. Обрати на это внимание собеседника в стиле своего персонажа.`,
-          };
-        }
-        return {
-          sender: m.sender,
-          text: m.text,
-        };
-      });
+      const outboundText =
+        isVoiceNote && transcriptText
+          ? `[Пользователь отправил голосовое аудиосообщение]: "${transcriptText}". Ответь на слова пользователя развернуто и естественно в твоем характерном стиле персонажа.`
+          : isVoiceNote
+            ? `[Пользователь отправил голосовое аудиосообщение длительностью ${audioDuration || 3} сек, но в записи была тишина или слова не распознаны]. Обрати на это внимание собеседника в стиле своего персонажа.`
+            : text.trim();
 
-      // Request Gemini chat stream from server
       if (selectedPersona.isCustom) {
         await syncPersonaToCloud(selectedPersona);
       }
 
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: getApiHeaders(),
-        body: JSON.stringify({
-          personaId: selectedPersona.id,
-          messages: messagesPayload,
-        }),
-      });
+      let response: Response;
+
+      if (isCloudAuthenticated) {
+        let conversationId = conversationByPersona[selectedPersona.id];
+        if (!conversationId) {
+          const conversation = await ensureConversation(selectedPersona.id);
+          if (conversation) {
+            conversationId = conversation.id;
+            setConversationByPersona((prev) => ({ ...prev, [selectedPersona.id]: conversationId! }));
+          }
+        }
+
+        if (conversationId) {
+          response = await sendCloudMessage(conversationId, outboundText);
+        } else {
+          throw new Error('Failed to open cloud conversation');
+        }
+      } else {
+        const messagesPayload = updatedHistory.slice(-10).map((m) => {
+          if (m.id === msgId && isVoiceNote) {
+            return { sender: 'user', text: outboundText };
+          }
+          return { sender: m.sender, text: m.text };
+        });
+
+        response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: await getApiHeaders(),
+          body: JSON.stringify({
+            personaId: selectedPersona.id,
+            messages: messagesPayload,
+          }),
+        });
+      }
 
       if (!response.ok) {
+        if (response.status === 402) {
+          setShowRecharge(true);
+          throw new Error('Energy depleted — recharge to continue');
+        }
         throw new Error(`Server returned ${response.status}`);
       }
 
@@ -447,6 +529,9 @@ export default function App() {
   const handleSelectPersona = (persona: Persona) => {
     setSelectedPersona(persona);
     setMobileView('chat');
+    if (isCloudAuthenticated) {
+      void loadCloudMessages(persona.id);
+    }
   };
 
   const handleSavePersona = (newPersona: Persona) => {
@@ -487,6 +572,72 @@ export default function App() {
 
   const activeMessages = messagesByPersona[selectedPersona.id] || [];
 
+  const handleOpenPublicPersona = (slug: string) => {
+    setPublicSlug(slug);
+    setAppView('public-persona');
+    window.history.pushState({}, '', `/p/${slug}`);
+  };
+
+  if (appView === 'discover') {
+    return (
+      <div className="fixed inset-0 flex flex-col bg-py-app">
+        <DiscoverView
+          onOpenPersona={handleOpenPublicPersona}
+          onBack={() => setAppView('chats')}
+        />
+        <BottomNav active="discover" onChange={(v) => setAppView(v)} />
+      </div>
+    );
+  }
+
+  if (appView === 'public-persona' && publicSlug) {
+    return (
+      <PublicPersonaView
+        slug={publicSlug}
+        onBack={() => {
+          setAppView('chats');
+          window.history.pushState({}, '', '/');
+        }}
+        onChat={(personaId) => {
+          const p = personas.find((x) => x.id === personaId);
+          if (p) handleSelectPersona(p);
+          setAppView('chats');
+          window.history.pushState({}, '', '/');
+        }}
+      />
+    );
+  }
+
+  if (appView === 'rooms') {
+    return (
+      <div className="fixed inset-0 flex flex-col bg-py-app">
+        <RoomsView onBack={() => setAppView('chats')} />
+        <BottomNav active="rooms" onChange={(v) => setAppView(v)} />
+      </div>
+    );
+  }
+
+  if (appView === 'profile') {
+    return (
+      <div className="fixed inset-0 flex flex-col bg-py-app">
+        <div className="flex-1 p-6 max-w-lg mx-auto w-full">
+          <h1 className="text-xl font-bold mb-4">Profile</h1>
+          <BatteryIndicator onRecharge={() => setShowRecharge(true)} />
+          <button
+            type="button"
+            onClick={() => setShowMemory(true)}
+            className="mt-4 w-full rounded-xl border border-py-border py-3 text-sm hover:bg-py-hover"
+          >
+            What Persony remembers about you
+          </button>
+        </div>
+        <BottomNav active="profile" onChange={(v) => setAppView(v)} />
+        <MemoryPanel isOpen={showMemory} onClose={() => setShowMemory(false)} />
+        <RechargeModal isOpen={showRecharge} onClose={() => setShowRecharge(false)} />
+      </div>
+    );
+  }
+
   return (
     <div
       id="app-root"
@@ -496,7 +647,7 @@ export default function App() {
       <PwaInstallBanner />
 
       {/* Main Container */}
-      <div className="flex-1 flex w-full h-full overflow-hidden relative">
+      <div className="flex-1 flex w-full h-full overflow-hidden relative min-h-0">
         {/* Left Sidebar: Collapsible ChatGPT style */}
         <div
           className={`h-full transition-all duration-200 shrink-0 border-r border-py-border ${
@@ -556,6 +707,12 @@ export default function App() {
         </div>
       </div>
 
+      <div className="hidden sm:flex absolute top-3 right-3 z-10">
+        <BatteryIndicator onRecharge={() => setShowRecharge(true)} />
+      </div>
+
+      <BottomNav active="chats" onChange={(v) => setAppView(v)} />
+
       {/* Live Voice Call Modal (Gemini 3.1 Flash Live) */}
       <LiveVoiceCallModal
         character={callingPersona}
@@ -596,6 +753,25 @@ export default function App() {
         initialPersona={editingPersona}
       />
 
+      <CloudImportModal
+        isOpen={showImportModal}
+        personas={personas}
+        messagesByPersona={messagesByPersona}
+        onDismiss={() => setShowImportModal(false)}
+        onImported={(personaIdMap) => {
+          setShowImportModal(false);
+          if (Object.keys(personaIdMap).length > 0) {
+            setPersonas((prev) =>
+              prev.map((p) =>
+                personaIdMap[p.id] ? { ...p, id: personaIdMap[p.id], isCustom: true } : p
+              )
+            );
+          }
+          void refreshCloudAuth();
+          void loadCloudMessages(selectedPersona.id);
+        }}
+      />
+
       {/* Persona Profile & Dossier Drawer */}
       <PersonaProfileDrawer
         character={profilePersona}
@@ -610,6 +786,13 @@ export default function App() {
         onDelete={handleDeletePersona}
         onClearChat={handleClearChat}
       />
+
+      <MemoryPanel
+        isOpen={showMemory}
+        onClose={() => setShowMemory(false)}
+        personaId={profilePersona?.id}
+      />
+      <RechargeModal isOpen={showRecharge} onClose={() => setShowRecharge(false)} />
     </div>
   );
 }

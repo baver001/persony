@@ -1,6 +1,6 @@
 # 06 — Cloud data layer & authentication
 
-**Статус:** Phase 1 в работе  
+**Статус:** Phase 1 — locally verified (2026-09-15)  
 **Зависимости:** `specs/05-platform-roadmap.md`
 
 ## Цель
@@ -12,7 +12,7 @@
 ### D1 database
 
 - Binding: `DB` → `persony-db` (`wrangler.jsonc`)
-- Migration: `worker/db/migrations/0001_initial.sql`
+- Migrations: `worker/db/migrations/0001_initial.sql`, `0002_phase1_hardening.sql`
 - Таблицы: users, personas, persona_versions, conversations, messages, memories, energy_*, payments, webhook_events
 
 ```bash
@@ -22,7 +22,8 @@ npm run db:migrate:remote   # production D1
 
 ### Server-authoritative inference
 
-- `POST /api/chat` принимает `{ personaId, messages, conversationId? }`
+- `POST /api/chat` — server-authoritative `{ conversationId, text }` или legacy `{ personaId, messages }`
+- `POST /api/conversations/:id/messages` — cloud chat + SSE + D1 persistence
 - `systemPrompt` загружается на Worker из seed/D1
 - Live WS `init` принимает `personaId` (не `systemPrompt`)
 
@@ -32,13 +33,17 @@ npm run db:migrate:remote   # production D1
 |----------|----------|
 | `GET /api/personas` | Публичные метаданные (без prompt) |
 | `GET /api/personas/:id` | Метаданные; полный prompt — только owner |
-| `POST /api/personas` | Upsert custom persona (auth required) |
+| `POST /api/personas` | Create custom persona (server-generated id) |
+| `PATCH /api/personas/:id` | Update owner persona |
+| `DELETE /api/personas/:id` | Soft delete owner persona |
+| `POST /api/import/legacy` | Idempotent localStorage import |
 | `GET /api/me` | Статус auth |
 
 ### Auth boundary
 
-- `worker/middleware/auth.ts` — `AuthContext`, `getAuthContext()`, `requireUser()`
-- Clerk: `CLERK_SECRET_KEY` + `Authorization: Bearer`
+- `worker/middleware/auth.ts` — internal `userId`, `authProvider`, lazy provisioning
+- `worker/middleware/ai-entitlement.ts` — billable AI gate (auth today; Energy in Phase 3)
+- Clerk: `CLERK_SECRET_KEY` + `Authorization: Bearer` → Persony `users` row
 - Dev: `PERSONY_DEV_MODE=true` + `X-Persony-Dev-User-Id` (только local)
 
 ### Shared seed
@@ -50,15 +55,15 @@ npm run db:migrate:remote   # production D1
 
 - `src/lib/api/headers.ts`, `personas.ts`
 - Sync custom personas перед chat/call
-- `src/lib/cloudMigration.ts` — заготовка import после login
+- `src/lib/cloudMigration.ts` + `CloudImportModal` — import после login
+- `src/components/AuthBar.tsx` — Clerk sign-in / user menu
+- `src/lib/api/conversations.ts` — cloud chat client
 
 ## Не реализовано (следующие шаги)
 
-- Clerk UI (sign-in / sign-up)
-- Webhook user sync → `users` table
-- Cloud conversations/messages (пока localStorage)
-- localStorage import modal после login
 - Trial battery grant on signup (Phase 3)
+- Production Clerk secrets + smoke test
+- Webhook user sync (optional; lazy provisioning on login достаточно)
 
 ## Переменные окружения
 

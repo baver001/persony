@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://persony.org/schemas/persony.persona.json",
+  "title": "Persony Portable Persona Format",
+  "type": "object",
+  "required": ["schemaVersion", "identity", "instructions"],
+  "properties": {
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "identity": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "tagline": { "type": "string" },
+        "description": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "voice": { "type": "string" },
+        "category": { "type": "string" }
+      }
+    },
+    "instructions": {
+      "type": "object",
+      "required": ["systemPrompt"],
+      "properties": {
+        "systemPrompt": { "type": "string" },
+        "starterMessages": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "voice": {
+      "type": "object",
+      "properties": {
+        "voiceName": { "type": "string" }
+      }
+    },
+    "memoryPolicy": {
+      "type": "object",
+      "properties": {
+        "userMemory": { "type": "boolean" },
+        "relationshipMemory": { "type": "boolean" },
+        "roomMemory": { "type": "boolean" }
+      }
+    },
+    "knowledge": { "type": "array", "items": { "type": "object" } },
+    "tools": { "type": "array", "items": { "type": "string" } },
+    "modelPreferences": {
+      "type": "object",
+      "properties": {
+        "textProvider": { "type": "string" },
+        "textModel": { "type": "string" }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "author": { "type": "string" },
+        "sourcePersonaId": { "type": "string" },
+        "visibility": { "enum": ["private", "unlisted", "public"] }
+      }
+    }
+  }
+}

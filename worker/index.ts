@@ -6,7 +6,8 @@ import { formatCleanErrorMessage } from './lib/errors';
 import { initLiveSession } from './lib/gemini';
 import { liveInitSchema } from './lib/validation';
 import { apiCors } from './middleware/cors';
-import { getAuthContext } from './middleware/auth';
+import { InsufficientEnergyError, requireAIEntitlement } from './middleware/ai-entitlement';
+import { AuthRequiredError } from './middleware/auth';
 import { apiRoutes } from './routes/api';
 import { PersonaNotFoundError, resolvePersonaForInference } from './services/persona-service';
 import type { PersonyEnv } from './types/env';
@@ -42,11 +43,25 @@ app.get(
             }
 
             try {
-              const auth = await getAuthContext(c);
+              let userId: string;
+              try {
+                userId = await requireAIEntitlement(c);
+              } catch (authErr) {
+                if (authErr instanceof AuthRequiredError) {
+                  ws.send(JSON.stringify({ type: 'error', message: 'Authentication required' }));
+                  return;
+                }
+                if (authErr instanceof InsufficientEnergyError) {
+                  ws.send(JSON.stringify({ type: 'error', message: authErr.message, code: 'energy_empty' }));
+                  return;
+                }
+                throw authErr;
+              }
+
               const persona = await resolvePersonaForInference(
                 c.env,
                 parsed.data.personaId,
-                auth.userId
+                userId
               );
 
               session = await initLiveSession(c.env.GEMINI_API_KEY, toLiveSocket(ws), {
