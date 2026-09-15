@@ -10,5 +10,12 @@
   },
   "observability": {
     "enabled": true
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "persony-db",
+      "database_id": "4a8aa2cb-14c2-4688-be62-eca9aa522872"
+    }
+  ]
 }

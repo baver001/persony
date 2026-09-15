@@ -48,11 +48,17 @@ flowchart TD
 - CF Workers + GitHub Actions deploy
 - Дизайн-токены Persony
 
-### В работе — Phase 0 (baseline hardening)
+### В работе — Phase 1 (cloud foundation)
 
-- SSE parser с persistent buffer + Vitest
-- Классификация ошибок provider / selective model fallback
-- `npm test` в CI
+- D1 `persony-db` + migration `0001_initial.sql`
+- Server-authoritative chat/live (`personaId`, не `systemPrompt` с клиента)
+- `AuthContext` + optional Clerk JWT
+- `POST /api/personas` sync custom personas (dev mode / auth)
+- `specs/06-cloud-data-auth.md`
+
+### Готово (Phase 0)
+
+- SSE parser, provider error fallback, Vitest + CI
 - `specs/05-platform-roadmap.md`
 
 ### Дальше (по фазам roadmap)

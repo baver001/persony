@@ -10,6 +10,7 @@ import { classifyProviderError, shouldFallbackToNextModel } from './provider-err
 
 export interface Env {
   GEMINI_API_KEY: string;
+  DB?: D1Database;
 }
 
 export function getAIClient(apiKey: string): GoogleGenAI {
@@ -69,11 +70,11 @@ export async function streamGeminiWithFallback(
 
 export async function handleChat(
   apiKey: string,
-  character: { systemPrompt?: string } | undefined,
+  systemPrompt: string,
   messages: Array<{ sender: string; text: string }>
 ): Promise<ReadableStream<Uint8Array>> {
   const ai = getAIClient(apiKey);
-  const systemPrompt = character?.systemPrompt || 'You are a helpful AI character in a messenger.';
+  const prompt = systemPrompt.trim() || 'You are a helpful AI character in a messenger.';
 
   const contents = messages.map((m) => ({
     role: m.sender === 'user' ? 'user' : 'model',
@@ -81,7 +82,7 @@ export async function handleChat(
   }));
 
   const streamConfig = {
-    systemInstruction: `${systemPrompt}\n\n[ВАЖНО ДЛЯ ФОРМАТИРОВАНИЯ В МЕССЕНДЖЕРЕ]:
+    systemInstruction: `${prompt}\n\n[ВАЖНО ДЛЯ ФОРМАТИРОВАНИЯ В МЕССЕНДЖЕРЕ]:
 - Отвечай в стиле мессенджера Persony: лаконично, естественно, живым языком персонажа.
 - Сохраняй характер, тон и словарный запас персонажа.
 - Если сообщение — расшифровка голосового, отвечай так, будто только что услышал.

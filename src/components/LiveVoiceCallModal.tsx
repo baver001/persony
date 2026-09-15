@@ -16,6 +16,7 @@ import { AudioStreamer } from '../utils/audioStreamer';
 import { soundFX } from '../utils/soundEffects';
 import { callDiagnostics } from '../utils/callDiagnostics';
 import { isMobileDevice } from '../utils/pcmAudio';
+import { syncPersonaToCloud } from '../lib/api/personas';
 
 interface LiveVoiceCallModalProps {
   character: Persona;
@@ -217,6 +218,10 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
     transcriptsRef.current = [];
     durationRef.current = 0;
 
+    if (character.isCustom) {
+      await syncPersonaToCloud(character);
+    }
+
     // Play initial call ringtone
     soundFX.playCallingTone();
     ringtoneTimerRef.current = window.setInterval(() => {
@@ -256,12 +261,11 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
       wsRef.current = ws;
 
       ws.onopen = () => {
-        // Send initialization payload with character identity, voice config, and recent chat history
         ws.send(
           JSON.stringify({
             type: 'init',
+            personaId: character.id,
             characterName: character.name,
-            systemPrompt: character.systemPrompt,
             voiceName: character.voice,
             recentChatContext: recentMessages?.slice(-6),
           })

@@ -1,70 +1,20 @@
 import { Hono } from 'hono';
-import { cors } from 'hono/cors';
 import { upgradeWebSocket } from 'hono/cloudflare-workers';
 import type { WSContext } from 'hono/ws';
-import type { Env, LiveSessionHandle } from './lib/gemini';
+import type { LiveSessionHandle } from './lib/gemini';
 import { formatCleanErrorMessage } from './lib/errors';
-import { handleChat, handleGenerateCharacter, handleTranscribe, initLiveSession } from './lib/gemini';
+import { initLiveSession } from './lib/gemini';
+import { liveInitSchema } from './lib/validation';
+import { apiCors } from './middleware/cors';
+import { getAuthContext } from './middleware/auth';
+import { apiRoutes } from './routes/api';
+import { PersonaNotFoundError, resolvePersonaForInference } from './services/persona-service';
+import type { PersonyEnv } from './types/env';
 
-type Bindings = Env;
+const app = new Hono<{ Bindings: PersonyEnv }>();
 
-const app = new Hono<{ Bindings: Bindings }>();
-
-app.use('/api/*', cors());
-
-app.get('/api/health', (c) => {
-  return c.json({
-    status: 'ok',
-    service: 'persony',
-    hasApiKey: !!c.env.GEMINI_API_KEY,
-    timestamp: Date.now(),
-  });
-});
-
-app.post('/api/chat', async (c) => {
-  const body = await c.req.json<{
-    character?: { systemPrompt?: string };
-    messages?: Array<{ sender: string; text: string }>;
-  }>();
-  if (!body.messages || !Array.isArray(body.messages)) {
-    return c.json({ error: 'Invalid messages payload' }, 400);
-  }
-
-  const stream = await handleChat(c.env.GEMINI_API_KEY, body.character, body.messages);
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
-    },
-  });
-});
-
-app.post('/api/transcribe', async (c) => {
-  try {
-    const { audioBase64, mimeType } = await c.req.json<{ audioBase64?: string; mimeType?: string }>();
-    if (!audioBase64) {
-      return c.json({ error: 'audioBase64 is required' }, 400);
-    }
-    const result = await handleTranscribe(c.env.GEMINI_API_KEY, audioBase64, mimeType);
-    return c.json(result);
-  } catch (err) {
-    return c.json({ error: formatCleanErrorMessage(err) }, 500);
-  }
-});
-
-app.post('/api/generate-character', async (c) => {
-  try {
-    const { prompt } = await c.req.json<{ prompt?: string }>();
-    if (!prompt) {
-      return c.json({ error: 'Prompt is required' }, 400);
-    }
-    const result = await handleGenerateCharacter(c.env.GEMINI_API_KEY, prompt);
-    return c.json(result);
-  } catch (err) {
-    return c.json({ error: formatCleanErrorMessage(err) }, 500);
-  }
-});
+app.use('/api/*', apiCors);
+app.route('/api', apiRoutes);
 
 function toLiveSocket(ws: WSContext<WebSocket>) {
   return {
@@ -85,17 +35,34 @@ app.get(
           const msg = JSON.parse(String(event.data));
 
           if (msg.type === 'init') {
+            const parsed = liveInitSchema.safeParse(msg);
+            if (!parsed.success) {
+              ws.send(JSON.stringify({ type: 'error', message: 'Invalid live init payload' }));
+              return;
+            }
+
             try {
+              const auth = await getAuthContext(c);
+              const persona = await resolvePersonaForInference(
+                c.env,
+                parsed.data.personaId,
+                auth.userId
+              );
+
               session = await initLiveSession(c.env.GEMINI_API_KEY, toLiveSocket(ws), {
-                characterName: msg.characterName,
-                systemPrompt: msg.systemPrompt,
-                voiceName: msg.voiceName,
-                recentChatContext: msg.recentChatContext,
+                characterName: parsed.data.characterName || persona.name,
+                systemPrompt: persona.systemPrompt,
+                voiceName: parsed.data.voiceName || persona.voice,
+                recentChatContext: parsed.data.recentChatContext,
               });
               isConnected = true;
               ws.send(JSON.stringify({ type: 'connected' }));
             } catch (err) {
-              ws.send(JSON.stringify({ type: 'error', message: formatCleanErrorMessage(err) }));
+              const message =
+                err instanceof PersonaNotFoundError
+                  ? err.message
+                  : formatCleanErrorMessage(err);
+              ws.send(JSON.stringify({ type: 'error', message }));
             }
           } else if (msg.type === 'audio' && session && isConnected) {
             session.sendAudio(msg.data);

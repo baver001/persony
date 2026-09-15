@@ -13,6 +13,8 @@ import {
   isCallSessionAlreadySaved,
 } from './utils/callTranscriptPersistence';
 import { SseStreamParser } from './lib/sseParser';
+import { getApiHeaders } from './lib/api/headers';
+import { syncCustomPersonasToCloud, syncPersonaToCloud } from './lib/api/personas';
 
 const STORAGE_KEY_PERSONAS = 'persony_personas_v1';
 const STORAGE_KEY_MESSAGES = 'persony_messages_v1';
@@ -148,6 +150,10 @@ export default function App() {
   // Collapsible sidebar state (ChatGPT-style)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
+  useEffect(() => {
+    void syncCustomPersonasToCloud(personas.filter((p) => p.isCustom));
+  }, []);
+
   // Sync theme to root class
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_THEME, theme);
@@ -252,14 +258,14 @@ export default function App() {
         try {
           const transRes = await fetch('/api/transcribe', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getApiHeaders(),
             body: JSON.stringify({
               audioBase64,
               mimeType: 'audio/wav',
             }),
           });
           if (transRes.ok) {
-            const transData = await transRes.json();
+            const transData = (await transRes.json()) as { transcript?: string };
             if (transData.transcript && transData.transcript.trim()) {
               transcriptText = transData.transcript.trim();
             }
@@ -304,11 +310,15 @@ export default function App() {
       });
 
       // Request Gemini chat stream from server
+      if (selectedPersona.isCustom) {
+        await syncPersonaToCloud(selectedPersona);
+      }
+
       const response = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getApiHeaders(),
         body: JSON.stringify({
-          character: selectedPersona,
+          personaId: selectedPersona.id,
           messages: messagesPayload,
         }),
       });
@@ -440,17 +450,19 @@ export default function App() {
   };
 
   const handleSavePersona = (newPersona: Persona) => {
+    const saved = { ...newPersona, isCustom: true };
     setPersonas((prev) => {
-      const idx = prev.findIndex((p) => p.id === newPersona.id);
+      const idx = prev.findIndex((p) => p.id === saved.id);
       if (idx !== -1) {
         const copy = [...prev];
-        copy[idx] = newPersona;
+        copy[idx] = saved;
         return copy;
       }
-      return [newPersona, ...prev];
+      return [saved, ...prev];
     });
-    setSelectedPersona(newPersona);
+    setSelectedPersona(saved);
     setMobileView('chat');
+    void syncPersonaToCloud(saved);
   };
 
   const handleDeletePersona = (id: string) => {

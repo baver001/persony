@@ -74,26 +74,31 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
       });
 
       if (!res.ok) {
-        const errJson = await res.json().catch(() => null);
+        const errJson = (await res.json().catch(() => null)) as { error?: string } | null;
         throw new Error(errJson?.error || 'Не удалось сгенерировать персонажа. Повторите попытку.');
       }
 
-      const data = await res.json();
-      if (data.name) setName(data.name);
-      if (data.tagline) setTagline(data.tagline);
-      if (data.description) setDescription(data.description);
-      if (data.systemPrompt) setSystemPrompt(data.systemPrompt);
-      if (data.voice && VOICES.some((v) => v.id === data.voice)) {
+      const data = (await res.json()) as Record<string, unknown>;
+      if (typeof data.name === 'string') setName(data.name);
+      if (typeof data.tagline === 'string') setTagline(data.tagline);
+      if (typeof data.description === 'string') setDescription(data.description);
+      if (typeof data.systemPrompt === 'string') setSystemPrompt(data.systemPrompt);
+      if (typeof data.voice === 'string' && VOICES.some((v) => v.id === data.voice)) {
         setVoice(data.voice as VoiceName);
       }
-      if (data.category && CATEGORIES.some((c) => c.id === data.category)) {
+      if (typeof data.category === 'string' && CATEGORIES.some((c) => c.id === data.category)) {
         setCategory(data.category);
       }
-      if (data.starterMessages?.[0]) {
-        setStarter1(data.starterMessages[0]);
+      const starters = data.starterMessages;
+      if (Array.isArray(starters) && typeof starters[0] === 'string') {
+        setStarter1(starters[0]);
       }
 
-      const svgAvatar = generateSvgAvatar(data.name || aiPrompt, data.category || 'custom', Date.now().toString());
+      const svgAvatar = generateSvgAvatar(
+        (typeof data.name === 'string' ? data.name : aiPrompt),
+        (typeof data.category === 'string' ? data.category : 'custom'),
+        Date.now().toString()
+      );
       setAvatar(svgAvatar);
     } catch (err: any) {
       setGenerationError(err.message || 'Ошибка генерации');
