@@ -7,6 +7,8 @@ type UserRow = {
   username: string | null;
   display_name: string | null;
   avatar_url: string | null;
+  preferred_locale?: string | null;
+  conversation_locale?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -62,4 +64,24 @@ export async function createUser(
     createdAt: now,
     updatedAt: now,
   };
+}
+
+export async function getUserLocale(db: D1Database, userId: string): Promise<string> {
+  const row = await db
+    .prepare(`SELECT preferred_locale FROM users WHERE id = ? LIMIT 1`)
+    .bind(userId)
+    .first<{ preferred_locale?: string | null }>();
+  return row?.preferred_locale || 'en';
+}
+
+export async function updateUserLocale(
+  db: D1Database,
+  userId: string,
+  preferredLocale: string
+): Promise<void> {
+  const now = new Date().toISOString();
+  await db
+    .prepare(`UPDATE users SET preferred_locale = ?, updated_at = ? WHERE id = ?`)
+    .bind(preferredLocale, now, userId)
+    .run();
 }

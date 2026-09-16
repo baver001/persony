@@ -1,4 +1,6 @@
-import { DEFAULT_PERSONAS } from '../../shared/default-personas';
+import { DEFAULT_PERSONAS, LEGACY_PERSONAS } from '../../shared/default-personas';
+import { ATHENA_PERSONA_ID, ATHENA_SPEC_V1 } from '../../shared/personas/athena-spec';
+import { compilePersonaInstructions } from '../services/persona-compiler';
 import type { PersonaRecord, PersonaPublicMeta, CreatePersonaInput, UpdatePersonaInput } from '../domain/persona';
 import { PersonaOwnershipError } from '../middleware/auth';
 import { generateId } from '../lib/ids';
@@ -24,10 +26,11 @@ type PersonaRow = {
   starter_messages_json: string | null;
   source_persona_id: string | null;
   system_prompt: string;
+  configuration_json?: string | null;
 };
 
 const MEMORY_SEED = new Map(
-  DEFAULT_PERSONAS.map((p) => [
+  [...DEFAULT_PERSONAS, ...LEGACY_PERSONAS].map((p) => [
     p.id,
     {
       id: p.id,
@@ -40,7 +43,11 @@ const MEMORY_SEED = new Map(
       category: p.category,
       visibility: 'public' as const,
       currentVersion: 1,
-      systemPrompt: p.systemPrompt,
+      systemPrompt:
+        p.systemPrompt ||
+        (p.id === ATHENA_PERSONA_ID
+          ? compilePersonaInstructions(ATHENA_SPEC_V1, 'Athena', { locale: 'en' })
+          : p.systemPrompt),
       badge: p.badge,
       color: p.color,
       starterMessages: p.starterMessages,
@@ -77,6 +84,7 @@ function rowToRecord(row: PersonaRow): PersonaRecord {
     visibility: row.visibility as PersonaRecord['visibility'],
     currentVersion: row.current_version,
     systemPrompt: row.system_prompt,
+    configurationJson: row.configuration_json ?? null,
     badge: row.badge || undefined,
     color: row.color || undefined,
     starterMessages: row.starter_messages_json
@@ -89,7 +97,7 @@ function rowToRecord(row: PersonaRow): PersonaRecord {
 async function fetchPersonaRow(db: D1Database, personaId: string): Promise<PersonaRow | null> {
   return db
     .prepare(
-      `SELECT p.*, pv.system_prompt
+      `SELECT p.*, pv.system_prompt, pv.configuration_json
        FROM personas p
        JOIN persona_versions pv ON pv.persona_id = p.id AND pv.version = p.current_version
        WHERE p.id = ? AND p.status = 'active'`
@@ -102,42 +110,45 @@ export async function ensureDefaultPersonasSeeded(db: D1Database): Promise<void>
   if (!(await isDbReady(db))) return;
 
   const now = new Date().toISOString();
+  const athena = DEFAULT_PERSONAS[0];
+  if (!athena) return;
 
-  for (const persona of DEFAULT_PERSONAS) {
-    const insert = await db
+  const athenaConfigJson = JSON.stringify(ATHENA_SPEC_V1);
+  const athenaPrompt = compilePersonaInstructions(ATHENA_SPEC_V1, 'Athena', { locale: 'en' });
+
+  const insert = await db
+    .prepare(
+      `INSERT OR IGNORE INTO personas (
+        id, owner_user_id, slug, name, tagline, description, avatar_url, voice, category,
+        visibility, status, current_version, badge, color, starter_messages_json, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'public', 'active', 1, ?, ?, ?, ?, ?)`
+    )
+    .bind(
+      ATHENA_PERSONA_ID,
+      SYSTEM_OWNER,
+      ATHENA_PERSONA_ID,
+      athena.name,
+      athena.tagline,
+      athena.description,
+      athena.avatar,
+      athena.voice,
+      athena.category,
+      athena.badge || 'Official',
+      athena.color || null,
+      athena.starterMessages ? JSON.stringify(athena.starterMessages) : null,
+      now,
+      now
+    )
+    .run();
+
+  if ((insert.meta?.changes ?? 0) > 0) {
+    await db
       .prepare(
-        `INSERT OR IGNORE INTO personas (
-          id, owner_user_id, slug, name, tagline, description, avatar_url, voice, category,
-          visibility, status, current_version, badge, color, starter_messages_json, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'public', 'active', 1, ?, ?, ?, ?, ?)`
+        `INSERT INTO persona_versions (id, persona_id, version, system_prompt, configuration_json, created_at)
+         VALUES (?, ?, 1, ?, ?, ?)`
       )
-      .bind(
-        persona.id,
-        SYSTEM_OWNER,
-        persona.id,
-        persona.name,
-        persona.tagline,
-        persona.description,
-        persona.avatar,
-        persona.voice,
-        persona.category,
-        persona.badge || null,
-        persona.color || null,
-        persona.starterMessages ? JSON.stringify(persona.starterMessages) : null,
-        now,
-        now
-      )
+      .bind(`${ATHENA_PERSONA_ID}_v1`, ATHENA_PERSONA_ID, athenaPrompt, athenaConfigJson, now)
       .run();
-
-    if ((insert.meta?.changes ?? 0) > 0) {
-      await db
-        .prepare(
-          `INSERT INTO persona_versions (id, persona_id, version, system_prompt, configuration_json, created_at)
-           VALUES (?, ?, 1, ?, NULL, ?)`
-        )
-        .bind(`${persona.id}_v1`, persona.id, persona.systemPrompt, now)
-        .run();
-    }
   }
 }
 
@@ -148,7 +159,7 @@ async function fetchPersonaVersionRow(
 ): Promise<PersonaRow | null> {
   return db
     .prepare(
-      `SELECT p.*, pv.system_prompt
+      `SELECT p.*, pv.system_prompt, pv.configuration_json
        FROM personas p
        JOIN persona_versions pv ON pv.persona_id = p.id AND pv.version = ?
        WHERE p.id = ? AND p.status = 'active'`

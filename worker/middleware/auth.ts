@@ -45,7 +45,7 @@ export async function resolveAuthContext(
       if (!clerkUserId) return UNAUTHENTICATED;
 
       if (isDbConfigured(env) && env.DB) {
-        const user = await getOrCreateUserByAuthIdentity(env.DB, 'clerk', clerkUserId);
+        const user = await getOrCreateUserByAuthIdentity(env.DB, 'clerk', clerkUserId, env);
         return {
           userId: user.id,
           authProvider: 'clerk',
@@ -71,7 +71,7 @@ export async function resolveAuthContext(
     const authProviderId = devUserId.startsWith('dev_') ? devUserId : `dev_${devUserId}`;
 
     if (isDbConfigured(env) && env.DB) {
-      const user = await getOrCreateUserByAuthIdentity(env.DB, 'dev', authProviderId);
+      const user = await getOrCreateUserByAuthIdentity(env.DB, 'dev', authProviderId, env);
       return {
         userId: user.id,
         authProvider: 'dev',

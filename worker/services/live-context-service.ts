@@ -2,12 +2,15 @@ import { getConversationForUser } from '../repositories/conversation-repository'
 import { getRecentMessagesForContext } from '../repositories/message-repository';
 import { getPersonaVersion } from '../repositories/persona-repository';
 import { ConversationAccessError } from './chat-service';
+import { buildMemoryContextBlocks } from './memory-service';
+import { resolveCompiledInstructions } from './persona-compiler';
 import { PersonaNotFoundError, resolvePersonaForInference } from './persona-service';
 import type { PersonaRecord } from '../domain/persona';
 import type { PersonyEnv } from '../types/env';
 
 export type LiveConversationContext = {
   persona: PersonaRecord;
+  compiledSystemPrompt: string;
   recentChatContext: Array<{ sender: string; text: string }>;
 };
 
@@ -21,7 +24,12 @@ export async function resolveLiveConversationContext(
 
   if (!conversationId?.trim()) {
     const persona = await resolvePersonaForInference(env, personaId, userId);
-    return { persona, recentChatContext: [] };
+    const compiledSystemPrompt = resolveCompiledInstructions(
+      persona.configurationJson,
+      persona.name,
+      persona.systemPrompt
+    );
+    return { persona, compiledSystemPrompt, recentChatContext: [] };
   }
 
   const conversation = await getConversationForUser(env.DB, conversationId, userId);
@@ -44,6 +52,23 @@ export async function resolveLiveConversationContext(
   }
 
   const recentChatContext = await getRecentMessagesForContext(env.DB, conversationId, 6);
+  const latestUserText =
+    [...recentChatContext].reverse().find((m) => m.sender === 'user')?.text ?? '';
+  const memoryBlocks = await buildMemoryContextBlocks(
+    env.DB,
+    userId,
+    persona.id,
+    latestUserText
+  );
+  const compiledSystemPrompt = resolveCompiledInstructions(
+    persona.configurationJson,
+    persona.name,
+    persona.systemPrompt,
+    {
+      userMemoryBlock: memoryBlocks.userBlock,
+      relationshipMemoryBlock: memoryBlocks.relationshipBlock,
+    }
+  );
 
-  return { persona, recentChatContext };
+  return { persona, compiledSystemPrompt, recentChatContext };
 }

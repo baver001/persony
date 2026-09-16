@@ -10,4 +10,6 @@ export interface PersonyEnv {
   PERSONY_DEV_USER_ID?: string;
   /** Canonical public app URL (OAuth redirects, self-links). */
   APP_URL?: string;
+  /** Comma-separated Clerk user IDs granted OWNER on first auth. */
+  PERSONY_OWNER_CLERK_IDS?: string;
 }

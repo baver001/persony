@@ -9,6 +9,9 @@ import type { PersonyEnv } from '../types/env';
 import { conversationRoutes } from './conversations';
 import { healthRoutes } from './health';
 import { importRoutes } from './import';
+import { meRoutes } from './me';
+import { memoryRoutes } from './memories';
+import { ownerRoutes } from './owner';
 import { personaRoutes } from './personas';
 
 export const apiRoutes = new Hono<{ Bindings: PersonyEnv }>();
@@ -19,6 +22,9 @@ apiRoutes.route('/', healthRoutes);
 apiRoutes.route('/', personaRoutes);
 apiRoutes.route('/', conversationRoutes);
 apiRoutes.route('/', importRoutes);
+apiRoutes.route('/', memoryRoutes);
+apiRoutes.route('/', meRoutes);
+apiRoutes.route('/', ownerRoutes);
 
 apiRoutes.post('/transcribe', async (c) => {
   try {

@@ -108,7 +108,7 @@ app.get(
 
               session = await initLiveSession(c.env.GEMINI_API_KEY, toLiveSocket(ws), {
                 characterName: parsed.data.characterName || liveContext.persona.name,
-                systemPrompt: liveContext.persona.systemPrompt,
+                systemPrompt: liveContext.compiledSystemPrompt,
                 voiceName: parsed.data.voiceName || liveContext.persona.voice,
                 recentChatContext: liveContext.recentChatContext,
               });

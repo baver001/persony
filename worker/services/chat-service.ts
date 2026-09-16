@@ -18,6 +18,8 @@ import {
 } from '../repositories/message-repository';
 import { getConversationForUser, touchConversation } from '../repositories/conversation-repository';
 import { getPersonaVersion } from '../repositories/persona-repository';
+import { buildMemoryContextBlocks, persistMemoryCandidates } from './memory-service';
+import { resolveCompiledInstructions } from './persona-compiler';
 import { PersonaNotFoundError } from './persona-service';
 import type { PersonyEnv } from '../types/env';
 
@@ -245,6 +247,32 @@ export async function streamConversationReply(
     run = (await findInferenceRunByClientRequest(env.DB, conversationId, clientRequestId))!;
   }
 
+  void persistMemoryCandidates(
+    env.DB,
+    userId,
+    persona.id,
+    conversationId,
+    userMessage.id,
+    text
+  ).catch(() => undefined);
+
+  const memoryBlocks = await buildMemoryContextBlocks(
+    env.DB,
+    userId,
+    persona.id,
+    text
+  );
+
+  const compiledPrompt = resolveCompiledInstructions(
+    persona.configurationJson,
+    persona.name,
+    persona.systemPrompt,
+    {
+      userMemoryBlock: memoryBlocks.userBlock,
+      relationshipMemoryBlock: memoryBlocks.relationshipBlock,
+    }
+  );
+
   const history = applyModelTextToLatestUserTurn(
     await getRecentMessagesForContext(env.DB, conversationId, 10),
     modelText
@@ -254,7 +282,7 @@ export async function streamConversationReply(
     env,
     run,
     userMessage.id,
-    persona.systemPrompt,
+    compiledPrompt,
     history,
     persona.id
   );
