@@ -1,51 +1,55 @@
 # Goal mode state
 
-**Objective:** Развить Persony из локального MVP-мессенджера в платформу persistent AI personas (create · share · work) без переписывания рабочего приложения с нуля.
+**Objective:** Open platform for persistent AI personas — autonomous roadmap execution.
 
 **Last updated:** 2026-09-16 UTC  
-**Current phase:** Phase 1.1 — Integrity Hardening (complete locally; deploy verification pending)
+**Current phase:** Phase 1.2 — Persona + Memory + Data + Trust + i18n Foundation (in progress)
 
-## Master roadmap (v2)
+## Roadmap
 
-| Phase | Scope |
+| Phase | Status |
 |-------|--------|
-| **1.1** | Integrity Hardening — idempotency, soft delete, pinning, pagination, Live server context |
-| **1.2** | Persona + Memory + Data + Trust Foundation |
-| **1.3** | Curated Discover |
-| **2** | Multi-provider AI |
-| **3** | Energy + Trial |
-| **4** | Payments (Paddle) |
-| **5+** | Catalog, Rooms, tools, OSS |
+| 1.1 Integrity Hardening | **Complete** (local + production deploy) |
+| 1.2 Persona + Memory + Trust + i18n | **In progress** |
+| 1.3 Curated Discover | Planned |
+| 2 Multi-provider AI | Planned |
+| 3 Energy + Trial | Planned |
+| 4 Payments | Planned |
 
-## Phase 1.1 gate table
+## Phase 1.1 gate — passed
 
-| Gate | Status | Evidence |
-|------|--------|----------|
-| `inference_runs` + E2E idempotency | local verified | migration `0003`, `chat-service`, `inference-run-repository` |
-| Retry reuses `clientRequestId` (no duplicate user bubble) | local verified | `App.tsx` `runChatInference` / `handleRetryMessage` |
-| Import fully idempotent (user + persona messages) | local verified | `import-service` keys `import:local_v1:*`, integration test |
-| Conversation soft delete (`status`, `deleted_at`) | local verified | `conversation-repository`, DELETE route |
-| Persona version pinned per conversation | local verified | `getPersonaVersion` in chat + Live |
-| Frontend history pagination (scroll-up) | local verified | `ChatArea` + `App.tsx` `handleLoadOlderMessages` |
-| Clear Chat → server soft-delete | local verified | `handleClearChat` + `deleteConversation` API |
-| Live context server-authoritative | local verified | `live-context-service`, WS init without client history |
-| Integration tests (D1 SQLite harness) | local verified | `worker/integration/phase11-integrity.test.ts` (7 cases) |
-| lint / build / test | local verified | 39 tests, `tsc --noEmit`, `vite build` |
-| D1 migration `0003` remote | open | `npm run db:migrate:remote` on deploy |
-| CI green after push | open | GitHub Actions |
-| Production smoke test | open | beta.persony.org after deploy |
+| Gate | Status |
+|------|--------|
+| inference_runs idempotency | verified |
+| Retry / import / soft delete / pinning / pagination / Clear Chat / Live context | verified |
+| Integration tests | 40 tests |
+| lint / build / test | green |
+| CI | pushed (`0085fde`+) |
+| Production | migration `0003`, deploy OK |
 
-## External tasks
+## Phase 1.2 progress
 
-1. Push branch + confirm CI green.
-2. Apply D1 migration `0003` on production (`db:migrate:remote`).
-3. Smoke: retry, clear chat, scroll history, Live call init.
+| Component | Status |
+|-----------|--------|
+| PersonaSpec + PersonaCompiler | implemented |
+| Athena redesign + auto-install only | implemented |
+| Memory service + API + UI | implemented (MVP extraction) |
+| i18n EN/RU foundation | implemented |
+| Owner RBAC + `/owner` overview | implemented (set `PERSONY_OWNER_CLERK_IDS`) |
+| Legal drafts / consent UI | schema only |
+| Data export / account deletion | planned |
+| Vertical slice E2E in production | pending verification |
 
-## Next independent task
+## External configuration
 
-**Stop before Phase 1.2.** After production smoke: audit Phase 1.1 with user, then start PersonaSpec / Memory / Owner Console (Phase 1.2).
+- `PERSONY_OWNER_CLERK_IDS` — comma-separated Clerk user IDs for OWNER role
+- Legal review before public launch
+- Paddle / DeepSeek — later phases
 
-## Phase transition
+## Next
 
-- **Phase 1.1** → complete after: CI verified + production smoke + migration `0003` applied
-- **Phase 1.2** → Persona + Memory + Data + Trust Foundation (not started)
+1. Commit + push Phase 1.2 foundation
+2. Apply migration `0004` remote + deploy
+3. Production smoke: memory flow, locale switch, owner console
+4. Complete Phase 1.2 acceptance (feedback UI, legal acceptance flow, export)
+5. Phase 1.3 Discover

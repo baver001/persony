@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "name": "ConversationMessage",
+      "classification": "PRIVATE",
+      "purpose": "provide_ai_conversation",
+      "storage": "D1",
+      "exportable": true,
+      "deletable": true,
+      "training_allowed": "opt_in_only"
+    },
+    {
+      "name": "MemoryRecord",
+      "classification": "PRIVATE",
+      "purpose": "personalisation",
+      "storage": "D1",
+      "exportable": true,
+      "deletable": true,
+      "training_allowed": false
+    },
+    {
+      "name": "ProductAnalyticsEvent",
+      "classification": "ANALYTICS",
+      "purpose": "product_improvement",
+      "storage": "D1",
+      "exportable": false,
+      "deletable": true,
+      "training_allowed": false
+    }
+  ]
+}

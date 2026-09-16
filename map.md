@@ -69,11 +69,18 @@ flowchart TD
 - Live Voice: server loads pinned persona + history (`live-context-service`)
 - 39 tests incl. `worker/integration/phase11-integrity.test.ts`
 
-### Проверить для закрытия Phase 1.1
+### Готово — Phase 1.1 gate
 
-- Push → CI green
-- `npm run db:migrate:remote` (migration `0003`)
-- Production smoke: retry, clear chat, history scroll, Live init
+- Commits pushed; migration `0003` applied; production deploy verified (health)
+
+### В работе — Phase 1.2 Persona + Memory + Trust + i18n
+
+- Migration `0004`: roles, memory fields, legal/consent, audit, analytics, settings
+- PersonaSpec v1 + PersonaCompiler + Athena-only default install
+- Memory extraction/retrieval + `/memory` UI
+- i18next EN/RU (default English UI)
+- Owner RBAC + `/owner` console shell + audit log for settings
+- `docs/data-registry.json`, specs `08`/`09`
 
 ### Готово (Phase 0)
 
