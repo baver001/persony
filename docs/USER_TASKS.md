@@ -29,10 +29,14 @@
 1. Получить API key DeepSeek.
 2. Secret: `DEEPSEEK_API_KEY` (после реализации provider adapter).
 
-## 4. Домен persony.org
+## 4. Домен beta.persony.org
 
-1. Привязать custom domain к Worker в Cloudflare Dashboard.
-2. Обновить Clerk authorized origins / redirect URLs.
+1. Зона `persony.org` в Cloudflare (DNS на Cloudflare nameservers).
+2. В `wrangler.jsonc` уже настроен custom domain `beta.persony.org` — после `npm run deploy` Worker привяжется к поддомену.
+3. В Clerk Production instance указать **Application domain:** `beta.persony.org`.
+4. В Clerk → **Domains** добавить:
+   - Allowed origins: `https://beta.persony.org`, `http://localhost:5173`
+   - Redirect URLs: `https://beta.persony.org`, `http://localhost:5173`
 
 ## 5. Безопасность
 

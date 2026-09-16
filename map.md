@@ -35,7 +35,7 @@ flowchart TD
 | `DESIGN.md` | Дизайн-система |
 | `wrangler.jsonc` | Cloudflare конфиг |
 
-**Production:** https://persony.pavel-9e7.workers.dev  
+**Production:** https://beta.persony.org (fallback: https://persony.pavel-9e7.workers.dev)  
 **Repo:** https://github.com/baver001/persony
 
 ## Статусы
@@ -62,7 +62,7 @@ flowchart TD
 ### Проверить для закрытия Phase 1
 
 - GitHub Actions CI green после push
-- Clerk production secrets + smoke test на workers.dev
+- Clerk production secrets + smoke test на beta.persony.org
 
 ### Готово (Phase 0)
 

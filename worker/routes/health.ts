@@ -20,8 +20,11 @@ healthRoutes.get('/config', (c) => {
   const authRequired =
     c.env.ENVIRONMENT === 'production' || Boolean(c.env.CLERK_SECRET_KEY);
 
+  const appUrl = c.env.APP_URL?.replace(/\/$/, '') || null;
+
   return c.json({
     authRequired,
     clerkPublishableKey,
+    appUrl,
   });
 });
