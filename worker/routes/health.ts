@@ -13,3 +13,15 @@ healthRoutes.get('/health', async (c) => {
     timestamp: Date.now(),
   });
 });
+
+/** Public runtime config for the SPA (publishable keys only). */
+healthRoutes.get('/config', (c) => {
+  const clerkPublishableKey = c.env.CLERK_PUBLISHABLE_KEY || null;
+  const authRequired =
+    c.env.ENVIRONMENT === 'production' || Boolean(c.env.CLERK_SECRET_KEY);
+
+  return c.json({
+    authRequired,
+    clerkPublishableKey,
+  });
+});

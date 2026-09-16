@@ -17,6 +17,7 @@ import { soundFX } from '../utils/soundEffects';
 import { callDiagnostics } from '../utils/callDiagnostics';
 import { isMobileDevice } from '../utils/pcmAudio';
 import { getLiveInitCredentials } from '../lib/api/headers';
+import { usePersonyAuth } from './PersonyAuthProvider';
 
 interface LiveVoiceCallModalProps {
   character: Persona;
@@ -70,6 +71,9 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
   const isSpeakerMutedRef = useRef<boolean>(false);
   const interruptTimerRef = useRef<number | null>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+  const liveSessionReadyRef = useRef(false);
+
+  const { isSignedIn, authRequired, clerkEnabled, isLoaded: isAuthLoaded } = usePersonyAuth();
 
   const appendTranscript = (sender: 'user' | 'character', text: string) => {
     setTranscripts((prev) => {
@@ -206,6 +210,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
       audioStreamerRef.current.stop();
       audioStreamerRef.current = null;
     }
+    liveSessionReadyRef.current = false;
     setModelAudioLevel(0);
     setUserAudioLevel(0);
   };
@@ -217,6 +222,17 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
     setTranscripts([]);
     transcriptsRef.current = [];
     durationRef.current = 0;
+    liveSessionReadyRef.current = false;
+
+    if (isAuthLoaded && authRequired && !isSignedIn) {
+      setErrorMessage(
+        clerkEnabled
+          ? 'Войдите в аккаунт, чтобы начать голосовой звонок.'
+          : 'Сервис авторизации не настроен.'
+      );
+      setStatus('error');
+      return;
+    }
 
     // Play initial call ringtone
     soundFX.playCallingTone();
@@ -237,27 +253,14 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
     };
 
     try {
-      // 1. Microphone capture setup
-      await streamer.startRecording((pcm16Base64) => {
-        if (isMutedRef.current) return;
-        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-          wsRef.current.send(
-            JSON.stringify({
-              type: 'audio',
-              data: pcm16Base64,
-            })
-          );
-        }
-      });
+      const credentials = await getLiveInitCredentials();
 
-      // 2. Setup WebSocket connection to server Live API endpoint
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.host}/api/live`;
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
-      ws.onopen = async () => {
-        const credentials = await getLiveInitCredentials();
+      ws.onopen = () => {
         ws.send(
           JSON.stringify({
             type: 'init',
@@ -273,11 +276,24 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
         );
       };
 
+      await streamer.startRecording((pcm16Base64) => {
+        if (!liveSessionReadyRef.current || isMutedRef.current) return;
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          wsRef.current.send(
+            JSON.stringify({
+              type: 'audio',
+              data: pcm16Base64,
+            })
+          );
+        }
+      });
+
       ws.onmessage = (event) => {
         try {
           const msg = JSON.parse(event.data);
 
           if (msg.type === 'connected') {
+            liveSessionReadyRef.current = true;
             if (ringtoneTimerRef.current) {
               clearInterval(ringtoneTimerRef.current);
               ringtoneTimerRef.current = null;
@@ -394,7 +410,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
   };
 
   const sendQuickLivePrompt = (text: string) => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+    if (liveSessionReadyRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'text', text }));
       setTranscripts((prev) => [...prev, { id: Math.random().toString(), sender: 'user', text }]);
       onNewMessageFromCall?.(text, 'user');

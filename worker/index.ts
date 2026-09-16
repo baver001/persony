@@ -129,6 +129,7 @@ app.get(
           }
 
           if (!initDone || !session || !isConnected) {
+            if (initInProgress) return;
             ws.send(JSON.stringify({ type: 'error', message: 'Send init before audio or text' }));
             return;
           }

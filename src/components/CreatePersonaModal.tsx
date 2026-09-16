@@ -166,7 +166,7 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
         {/* Compact Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800 bg-[#18181b] shrink-0">
           <div className="flex items-center gap-2.5">
-            <PersonyLogo size={32} theme="dark" className="rounded-lg shrink-0" />
+            <PersonyLogo size={32} theme="dark" className="shrink-0" />
             <div>
               <h2 className="text-sm sm:text-base font-bold text-white leading-tight">
                 {initialPersona ? 'Редактировать персонажа' : 'Создать нового персонажа'}

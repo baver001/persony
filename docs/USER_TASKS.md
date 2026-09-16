@@ -12,10 +12,9 @@
    ```bash
    wrangler secret put CLERK_SECRET_KEY
    ```
-4. Добавить publishable key в Cloudflare/Vite build env:
-   ```
-   VITE_CLERK_PUBLISHABLE_KEY=pk_...
-   ```
+4. Добавить publishable key (один из вариантов):
+   - **Runtime (рекомендуется):** `wrangler secret put CLERK_PUBLISHABLE_KEY` — SPA подхватит через `GET /api/config`
+   - **Build-time:** GitHub secret `VITE_CLERK_PUBLISHABLE_KEY` или локально `VITE_CLERK_PUBLISHABLE_KEY=pk_...`
 5. Убедиться, что Worker имеет `ENVIRONMENT=production` (уже в `wrangler.jsonc` vars).
 6. Проверка после deploy: sign-in → chat → reload → история из D1; `GET /api/me` → `isAuthenticated: true`.
 

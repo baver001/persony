@@ -121,7 +121,7 @@ function cloudMessageToChat(message: CloudMessage, personaId: string): ChatMessa
 
 export default function App() {
   migrateLegacyStorageKeys();
-  const { isLoaded: isAuthLoaded, isSignedIn, clerkEnabled } = usePersonyAuth();
+  const { isLoaded: isAuthLoaded, isSignedIn, clerkEnabled, authRequired } = usePersonyAuth();
 
   // Theme state
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -300,12 +300,16 @@ export default function App() {
   ) => {
     if ((!text.trim() && !audioBase64) || isStreaming) return;
 
-    if (clerkEnabled && !isSignedIn) {
+    if (!isAuthLoaded) return;
+
+    if (authRequired && !isSignedIn) {
       const errMessage: ChatMessage = {
         id: `err_${Date.now()}`,
         characterId: selectedPersona.id,
         sender: 'character',
-        text: 'Войдите в аккаунт, чтобы отправлять сообщения.',
+        text: clerkEnabled
+          ? 'Войдите в аккаунт, чтобы отправлять сообщения.'
+          : 'Сервис авторизации не настроен. Обратитесь к администратору.',
         timestamp: Date.now(),
         isError: true,
       };
@@ -400,7 +404,10 @@ export default function App() {
       if (!conversationId) {
         const conversation = await ensureDirectConversation(selectedPersona.id);
         if (!conversation?.id) {
-          throw new Error('Failed to open cloud conversation');
+          if (authRequired && !isSignedIn) {
+            throw new Error('Войдите в аккаунт, чтобы отправлять сообщения.');
+          }
+          throw new Error('Не удалось открыть облачный диалог. Проверьте вход в аккаунт.');
         }
         conversationId = conversation.id;
         setConversationIds((prev) => ({ ...prev, [selectedPersona.id]: conversationId }));
