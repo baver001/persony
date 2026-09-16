@@ -48,34 +48,46 @@ flowchart TD
 - CF Workers + GitHub Actions deploy
 - Дизайн-токены Persony
 
-### Готово — Phase 1 (cloud foundation, local verified)
+### Готово — Phase 1.0 (cloud foundation)
 
-- D1 `persony-db` + migrations `0001` / `0002` (`wrangler d1 migrations apply`)
-- Internal user identity: Clerk/dev → `users.id` (lazy provisioning, без webhook)
-- Persona CRUD: server ID, owner check, soft delete, public/owner DTO
-- Cloud conversations/messages — server-authoritative chat history + SSE persist
-- Security: strict CORS, anonymous billable blocked, dev bypass только non-production
-- `POST /api/import/local-v1` + import modal
-- Clerk React UI (`@clerk/clerk-react`)
-- 32 integration/unit tests; `specs/06-cloud-data-auth.md`
+- D1 `persony-db` + migrations `0001` / `0002`
+- Internal user identity: Clerk/dev → `users.id` (lazy provisioning)
+- Persona CRUD, cloud conversations/messages, SSE persist
+- Security: strict CORS, anonymous billable blocked
+- `POST /api/import/local-v1` + import modal; Clerk React UI
+- `specs/06-cloud-data-auth.md`
 
-### Проверить для закрытия Phase 1
+### Готово — Phase 1.1 Integrity Hardening (local verified)
 
-- GitHub Actions CI green после push
-- Clerk production secrets + smoke test на beta.persony.org
+- Migration `0003`: `inference_runs`, `conversations.status` / `deleted_at`
+- E2E idempotency: `clientRequestId` → один user message, один inference, один persona reply
+- Failed inference retry без дубля user bubble; completed run replay
+- Import idempotent для user **и** persona messages (`import:local_v1:{id}`)
+- Conversation soft delete; queries игнорируют `deleted`
+- Persona version pinned (`conversation.persona_version` → `getPersonaVersion`)
+- Frontend: pagination (scroll-up), Clear Chat = `DELETE` conversation
+- Live Voice: server loads pinned persona + history (`live-context-service`)
+- 39 tests incl. `worker/integration/phase11-integrity.test.ts`
+
+### Проверить для закрытия Phase 1.1
+
+- Push → CI green
+- `npm run db:migrate:remote` (migration `0003`)
+- Production smoke: retry, clear chat, history scroll, Live init
 
 ### Готово (Phase 0)
 
 - SSE parser, provider error fallback, Vitest + CI
 - `specs/05-platform-roadmap.md`
 
-### Дальше (по фазам roadmap)
+### Дальше (Master Implementation v2)
 
-1. **Phase 2** — Multi-provider (DeepSeek + Gemini), ModelRouter, eval
-3. **Phase 3** — Energy wallet, trial battery, CostEngine
-4. **Phase 4** — Paddle recharge
-5. **Phase 5** — Public catalog, share, remix
-6. **Phase 6–10** — Memory, Rooms, tools, voice hardening, OSS
+1. **Phase 1.2** — Persona + Memory + Data + Trust Foundation
+2. **Phase 1.3** — Curated Discover
+3. **Phase 2** — Multi-provider AI (DeepSeek + Gemini), ModelRouter
+4. **Phase 3** — Energy + Trial
+5. **Phase 4** — Payments (Paddle)
+6. **Phase 5+** — Public catalog, Rooms, tools, voice hardening, OSS
 
 ### Проверить
 
@@ -85,7 +97,7 @@ flowchart TD
 ## Решения
 
 - **Инкрементальное развитие** — не big-bang rewrite (`specs/05-platform-roadmap.md`)
-- **Backend authoritative** — клиент перестанет слать `systemPrompt` (Phase 1)
+- **Backend authoritative** — persona version, history, inference lifecycle на сервере (Phase 1.1)
 - **Нет free tier** — одна trial-батарея, далее Energy (Phase 3)
 - **D1** как system of record; **localStorage** только UI prefs (Phase 1)
 - Деплой на Workers; Express `server.ts` — legacy dev only
