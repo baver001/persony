@@ -1,25 +1,57 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchOwnerOverview } from '../lib/api/me';
+import { usePersonyAuth } from '../components/PersonyAuthProvider';
+import { fetchMeProfile, fetchOwnerOverview } from '../lib/api/me';
 
 type Props = {
   onBack: () => void;
 };
 
+function useOwnerNoIndex() {
+  useEffect(() => {
+    const existing = document.querySelector('meta[name="robots"]');
+    const tag = existing ?? document.createElement('meta');
+    tag.setAttribute('name', 'robots');
+    tag.setAttribute('content', 'noindex, nofollow, noarchive');
+    if (!existing) document.head.appendChild(tag);
+    document.title = 'Owner Console';
+    return () => {
+      tag.setAttribute('content', 'index,follow');
+      document.title = 'Persony — AI Messenger';
+    };
+  }, []);
+}
+
 export function OwnerConsole({ onBack }: Props) {
   const { t } = useTranslation('common');
+  const { isSignedIn, isLoaded } = usePersonyAuth();
   const [overview, setOverview] = useState<Record<string, unknown> | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<'AUTH_REQUIRED' | 'FORBIDDEN' | 'INTERNAL_ERROR' | null>(
+    null
+  );
+
+  useOwnerNoIndex();
 
   useEffect(() => {
+    if (!isLoaded) return;
+    if (!isSignedIn) {
+      setError('AUTH_REQUIRED');
+      return;
+    }
+
     void (async () => {
       try {
+        const profile = await fetchMeProfile();
+        if (!profile.isOwner) {
+          setError('FORBIDDEN');
+          return;
+        }
         setOverview(await fetchOwnerOverview());
-      } catch {
-        setError('FORBIDDEN');
+      } catch (e) {
+        setError(e instanceof Error ? (e.message as typeof error) : 'INTERNAL_ERROR');
       }
     })();
-  }, []);
+  }, [isLoaded, isSignedIn]);
 
   const metrics = (overview?.metrics as Record<string, unknown>) || {};
 
@@ -30,8 +62,12 @@ export function OwnerConsole({ onBack }: Props) {
           ← {t('back')}
         </button>
         <h1 className="text-2xl font-semibold">{t('ownerConsole')}</h1>
-        {error ? (
+        {error === 'AUTH_REQUIRED' ? (
+          <p className="text-zinc-400">Sign in required.</p>
+        ) : error === 'FORBIDDEN' ? (
           <p className="text-red-300">Access denied</p>
+        ) : error === 'INTERNAL_ERROR' ? (
+          <p className="text-red-300">Server error. Try again later.</p>
         ) : !overview ? (
           <p className="text-zinc-500">{t('loading')}</p>
         ) : (

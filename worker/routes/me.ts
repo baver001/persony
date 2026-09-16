@@ -8,6 +8,7 @@ import {
   listInstalledPersonas,
   uninstallPersonaForUser,
 } from '../repositories/user-persona-repository';
+import { getUserRoles, userHasRole } from '../repositories/role-repository';
 import { getUserLocale, updateUserLocale } from '../repositories/user-repository';
 import type { PersonyEnv } from '../types/env';
 
@@ -22,7 +23,9 @@ meRoutes.get('/me', async (c) => {
     const userId = await requireUser(c);
     if (!c.env.DB) return c.json({ error_code: 'DB_NOT_CONFIGURED' }, 503);
     const locale = await getUserLocale(c.env.DB, userId);
-    return c.json({ userId, preferredLocale: locale });
+    const roles = await getUserRoles(c.env.DB, userId);
+    const isOwner = await userHasRole(c.env.DB, userId, 'OWNER');
+    return c.json({ userId, preferredLocale: locale, roles, isOwner });
   } catch (err) {
     if (err instanceof AuthRequiredError) return c.json({ error_code: 'AUTH_REQUIRED' }, 401);
     return c.json({ error_code: 'INTERNAL_ERROR' }, 500);

@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+
+# Private operator surfaces — do not crawl
+Disallow: /owner
+Disallow: /api/owner

@@ -43,8 +43,23 @@ export async function updatePreferredLocale(locale: 'en' | 'ru'): Promise<void> 
   if (!res.ok) throw new Error('Failed to update locale');
 }
 
+export type MeProfile = {
+  userId: string;
+  preferredLocale: string;
+  roles: string[];
+  isOwner: boolean;
+};
+
+export async function fetchMeProfile(): Promise<MeProfile> {
+  const res = await fetch('/api/me', { headers: await getApiHeaders() });
+  if (!res.ok) throw new Error('AUTH_REQUIRED');
+  return res.json() as Promise<MeProfile>;
+}
+
 export async function fetchOwnerOverview(): Promise<Record<string, unknown>> {
   const res = await fetch('/api/owner/overview', { headers: await getApiHeaders() });
-  if (!res.ok) throw new Error('FORBIDDEN');
+  if (res.status === 401) throw new Error('AUTH_REQUIRED');
+  if (res.status === 403) throw new Error('FORBIDDEN');
+  if (!res.ok) throw new Error('INTERNAL_ERROR');
   return res.json();
 }
