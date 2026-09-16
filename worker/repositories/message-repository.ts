@@ -90,8 +90,14 @@ export async function insertPersonaMessage(
   db: D1Database,
   conversationId: string,
   personaId: string,
-  text: string
+  text: string,
+  idempotencyKey?: string
 ): Promise<MessageRecord> {
+  if (idempotencyKey) {
+    const existing = await findMessageByIdempotencyKey(db, conversationId, idempotencyKey);
+    if (existing) return existing;
+  }
+
   const id = generateId();
   const now = new Date().toISOString();
 
@@ -99,9 +105,9 @@ export async function insertPersonaMessage(
     .prepare(
       `INSERT INTO messages (
         id, conversation_id, sender_type, sender_user_id, sender_persona_id, text, created_at, idempotency_key
-      ) VALUES (?, ?, 'persona', NULL, ?, ?, ?, NULL)`
+      ) VALUES (?, ?, 'persona', NULL, ?, ?, ?, ?)`
     )
-    .bind(id, conversationId, personaId, text, now)
+    .bind(id, conversationId, personaId, text, now, idempotencyKey || null)
     .run();
 
   return {
@@ -112,8 +118,20 @@ export async function insertPersonaMessage(
     senderPersonaId: personaId,
     text,
     createdAt: now,
-    idempotencyKey: null,
+    idempotencyKey: idempotencyKey || null,
   };
+}
+
+export async function getMessageById(
+  db: D1Database,
+  messageId: string
+): Promise<MessageRecord | null> {
+  const row = await db
+    .prepare(`SELECT * FROM messages WHERE id = ? LIMIT 1`)
+    .bind(messageId)
+    .first<MessageRow>();
+
+  return row ? rowToMessage(row) : null;
 }
 
 export async function listMessages(

@@ -12,6 +12,7 @@ import { listMessages } from '../repositories/message-repository';
 import { ensureDefaultPersonasSeeded, getAccessiblePersona } from '../repositories/persona-repository';
 import {
   ConversationAccessError,
+  InferenceInProgressError,
   streamConversationReply,
 } from '../services/chat-service';
 import { PersonaNotFoundError } from '../services/persona-service';
@@ -107,7 +108,8 @@ conversationRoutes.post('/conversations/:id/messages', async (c) => {
       userId,
       c.req.param('id'),
       parsed.data.text,
-      parsed.data.idempotencyKey
+      parsed.data.clientRequestId,
+      parsed.data.modelText
     );
 
     return new Response(stream, {
@@ -120,6 +122,7 @@ conversationRoutes.post('/conversations/:id/messages', async (c) => {
   } catch (err) {
     if (err instanceof AuthRequiredError) return c.json({ error: 'Authentication required' }, 401);
     if (err instanceof ConversationAccessError) return c.json({ error: err.message }, 403);
+    if (err instanceof InferenceInProgressError) return c.json({ error: err.message }, 409);
     if (err instanceof PersonaNotFoundError) return c.json({ error: err.message }, 404);
     throw err;
   }

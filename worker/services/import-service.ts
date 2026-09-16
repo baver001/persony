@@ -20,6 +20,10 @@ function legacyPersonaSlug(localId: string): string {
   return `legacy_v1_${localId}`;
 }
 
+function importMessageKey(localId: string): string {
+  return `import:local_v1:${localId}`;
+}
+
 export async function importLocalV1(
   db: D1Database,
   userId: string,
@@ -28,11 +32,14 @@ export async function importLocalV1(
   const personaIdMap: Record<string, string> = {};
   const conversationIdMap: Record<string, string> = {};
 
+  const personaVersions: Record<string, number> = {};
+
   for (const p of payload.personas) {
     const slug = legacyPersonaSlug(p.localId);
     const existing = await findPersonaBySlugForOwner(db, userId, slug);
     if (existing) {
       personaIdMap[p.localId] = existing.id;
+      personaVersions[p.localId] = existing.currentVersion;
       continue;
     }
 
@@ -55,24 +62,28 @@ export async function importLocalV1(
       { slug }
     );
     personaIdMap[p.localId] = created.id;
+    personaVersions[p.localId] = created.currentVersion;
   }
 
   for (const conv of payload.conversations) {
     const cloudPersonaId = personaIdMap[conv.localPersonaId];
     if (!cloudPersonaId) continue;
 
+    const personaVersion = personaVersions[conv.localPersonaId] || 1;
+
     let conversation = await findDirectConversationByPersona(db, userId, cloudPersonaId);
     if (!conversation) {
-      conversation = await createDirectConversation(db, userId, cloudPersonaId, 1);
+      conversation = await createDirectConversation(db, userId, cloudPersonaId, personaVersion);
     }
 
     conversationIdMap[conv.localPersonaId] = conversation.id;
 
     for (const msg of conv.messages) {
+      const messageKey = importMessageKey(msg.localId);
       if (msg.sender === 'user') {
-        await insertUserMessage(db, conversation.id, userId, msg.text, `import:${msg.localId}`);
+        await insertUserMessage(db, conversation.id, userId, msg.text, messageKey);
       } else {
-        await insertPersonaMessage(db, conversation.id, cloudPersonaId, msg.text);
+        await insertPersonaMessage(db, conversation.id, cloudPersonaId, msg.text, messageKey);
       }
     }
 

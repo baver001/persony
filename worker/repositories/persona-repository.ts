@@ -141,6 +141,39 @@ export async function ensureDefaultPersonasSeeded(db: D1Database): Promise<void>
   }
 }
 
+async function fetchPersonaVersionRow(
+  db: D1Database,
+  personaId: string,
+  version: number
+): Promise<PersonaRow | null> {
+  return db
+    .prepare(
+      `SELECT p.*, pv.system_prompt
+       FROM personas p
+       JOIN persona_versions pv ON pv.persona_id = p.id AND pv.version = ?
+       WHERE p.id = ? AND p.status = 'active'`
+    )
+    .bind(version, personaId)
+    .first<PersonaRow>();
+}
+
+export async function getPersonaVersion(
+  env: PersonyEnv,
+  db: D1Database,
+  personaId: string,
+  version: number,
+  requesterUserId: string
+): Promise<PersonaRecord | null> {
+  const accessible = await getAccessiblePersona(env, db, personaId, requesterUserId);
+  if (!accessible) return null;
+
+  const row = await fetchPersonaVersionRow(db, personaId, version);
+  if (!row) return null;
+
+  const record = rowToRecord(row);
+  return { ...record, currentVersion: version };
+}
+
 export async function getPersonaRecord(
   env: PersonyEnv,
   db: D1Database | undefined,

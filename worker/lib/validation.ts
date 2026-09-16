@@ -5,10 +5,21 @@ export const MAX_TRANSCRIBE_BASE64_CHARS = 8_000_000;
 export const MAX_WS_JSON_BYTES = 256_000;
 export const MAX_WS_AUDIO_CHUNK_CHARS = 512_000;
 
-export const conversationMessageSchema = z.object({
-  text: z.string().min(1).max(MAX_CHAT_MESSAGE_CHARS),
-  idempotencyKey: z.string().min(1).max(128).optional(),
-});
+export const conversationMessageSchema = z
+  .object({
+    text: z.string().min(1).max(MAX_CHAT_MESSAGE_CHARS),
+    clientRequestId: z.string().min(1).max(128).optional(),
+    idempotencyKey: z.string().min(1).max(128).optional(),
+    modelText: z.string().min(1).max(MAX_CHAT_MESSAGE_CHARS).optional(),
+  })
+  .transform((data) => ({
+    text: data.text,
+    modelText: data.modelText,
+    clientRequestId: data.clientRequestId || data.idempotencyKey,
+  }))
+  .refine((data) => Boolean(data.clientRequestId), {
+    message: 'clientRequestId is required',
+  });
 
 export const createConversationSchema = z.object({
   personaId: z.string().min(1).max(128),
@@ -44,17 +55,9 @@ export const generateCharacterSchema = z.object({
 export const liveInitSchema = z.object({
   type: z.literal('init'),
   personaId: z.string().min(1).max(128),
+  conversationId: z.string().min(1).max(128).optional(),
   characterName: z.string().max(120).optional(),
   voiceName: z.string().max(32).optional(),
-  recentChatContext: z
-    .array(
-      z.object({
-        sender: z.string().max(32),
-        text: z.string().max(MAX_CHAT_MESSAGE_CHARS),
-      })
-    )
-    .max(20)
-    .optional(),
   authToken: z.string().max(4096).optional(),
   devUserId: z.string().max(128).optional(),
 });

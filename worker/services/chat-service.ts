@@ -1,11 +1,23 @@
 import { handleChat } from '../lib/gemini';
+import { GEMINI_CHAT_MODELS } from '../lib/models';
+import { formatCleanErrorMessage } from '../lib/errors';
 import {
+  createInferenceRun,
+  findInferenceRunByClientRequest,
+  markInferenceRunCompleted,
+  markInferenceRunFailed,
+  markInferenceRunStreaming,
+  resetInferenceRunForRetry,
+  type InferenceRunRecord,
+} from '../repositories/inference-run-repository';
+import {
+  getMessageById,
   getRecentMessagesForContext,
   insertPersonaMessage,
   insertUserMessage,
 } from '../repositories/message-repository';
 import { getConversationForUser, touchConversation } from '../repositories/conversation-repository';
-import { getAccessiblePersona } from '../repositories/persona-repository';
+import { getPersonaVersion } from '../repositories/persona-repository';
 import { PersonaNotFoundError } from './persona-service';
 import type { PersonyEnv } from '../types/env';
 
@@ -16,6 +28,17 @@ export class ConversationAccessError extends Error {
     this.name = 'ConversationAccessError';
   }
 }
+
+export class InferenceInProgressError extends Error {
+  readonly status = 409;
+  constructor() {
+    super('Inference already in progress for this request');
+    this.name = 'InferenceInProgressError';
+  }
+}
+
+const DEFAULT_PROVIDER = 'google';
+const DEFAULT_MODEL = GEMINI_CHAT_MODELS[0] ?? 'gemini-2.5-flash';
 
 function extractTextFromSseChunk(chunk: string, onText: (text: string) => void): void {
   const blocks = chunk.split('\n\n');
@@ -32,32 +55,70 @@ function extractTextFromSseChunk(chunk: string, onText: (text: string) => void):
   }
 }
 
-export async function streamConversationReply(
-  env: PersonyEnv,
-  userId: string,
-  conversationId: string,
-  text: string,
-  idempotencyKey?: string
+function applyModelTextToLatestUserTurn(
+  history: Array<{ sender: string; text: string }>,
+  modelText?: string
+): Array<{ sender: string; text: string }> {
+  if (!modelText?.trim()) return history;
+
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].sender === 'user') {
+      const next = [...history];
+      next[i] = { ...next[i], text: modelText.trim() };
+      return next;
+    }
+  }
+  return history;
+}
+
+function sseEncode(payload: Record<string, unknown>): Uint8Array {
+  return new TextEncoder().encode(`data: ${JSON.stringify(payload)}\n\n`);
+}
+
+async function replayCompletedInference(
+  db: D1Database,
+  run: InferenceRunRecord
 ): Promise<ReadableStream<Uint8Array>> {
-  if (!env.DB) throw new Error('Database not configured');
+  const personaMessage = run.personaMessageId
+    ? await getMessageById(db, run.personaMessageId)
+    : null;
 
-  const conversation = await getConversationForUser(env.DB, conversationId, userId);
-  if (!conversation?.personaId) throw new ConversationAccessError();
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(sseEncode({ status: 'started', reused: true }));
+      if (personaMessage?.text) {
+        controller.enqueue(sseEncode({ text: personaMessage.text }));
+      }
+      controller.enqueue(
+        sseEncode({
+          done: true,
+          personaMessageId: run.personaMessageId,
+          inferenceRunId: run.id,
+        })
+      );
+      controller.close();
+    },
+  });
+}
 
-  const persona = await getAccessiblePersona(env, env.DB, conversation.personaId, userId);
-  if (!persona?.systemPrompt?.trim()) throw new PersonaNotFoundError(conversation.personaId);
+async function executeInferenceStream(
+  env: PersonyEnv,
+  run: InferenceRunRecord,
+  userMessageId: string,
+  systemPrompt: string,
+  history: Array<{ sender: string; text: string }>,
+  personaId: string
+): Promise<ReadableStream<Uint8Array>> {
+  const db = env.DB!;
+  await markInferenceRunStreaming(db, run.id, userMessageId);
 
-  await insertUserMessage(env.DB, conversationId, userId, text, idempotencyKey);
-  await touchConversation(env.DB, conversationId);
-
-  const history = await getRecentMessagesForContext(env.DB, conversationId, 10);
-  const upstream = await handleChat(env.GEMINI_API_KEY, persona.systemPrompt, history);
-
-  const db = env.DB;
-  const personaId = persona.id;
+  const upstream = await handleChat(env.GEMINI_API_KEY, systemPrompt, history);
+  const personaMessageKey = `persona:${run.clientRequestId}`;
 
   return new ReadableStream({
     async start(controller) {
+      controller.enqueue(sseEncode({ status: 'started', inferenceRunId: run.id }));
+
       const reader = upstream.getReader();
       const decoder = new TextDecoder();
       let sseBuffer = '';
@@ -84,14 +145,117 @@ export async function streamConversationReply(
         }
 
         if (accumulated.trim()) {
-          await insertPersonaMessage(db, conversationId, personaId, accumulated.trim());
-          await touchConversation(db, conversationId);
+          const personaMessage = await insertPersonaMessage(
+            db,
+            run.conversationId,
+            personaId,
+            accumulated.trim(),
+            personaMessageKey
+          );
+          await markInferenceRunCompleted(db, run.id, personaMessage.id);
+          await touchConversation(db, run.conversationId);
+          controller.enqueue(
+            sseEncode({
+              done: true,
+              personaMessageId: personaMessage.id,
+              inferenceRunId: run.id,
+            })
+          );
+        } else {
+          await markInferenceRunFailed(db, run.id, 'empty_model_response');
+          controller.enqueue(sseEncode({ error: 'Пустой ответ модели' }));
         }
 
         controller.close();
       } catch (err) {
-        controller.error(err);
+        const clean = formatCleanErrorMessage(err);
+        await markInferenceRunFailed(db, run.id, clean);
+        controller.enqueue(sseEncode({ error: clean }));
+        controller.close();
       }
     },
   });
+}
+
+export async function streamConversationReply(
+  env: PersonyEnv,
+  userId: string,
+  conversationId: string,
+  text: string,
+  clientRequestId?: string,
+  modelText?: string
+): Promise<ReadableStream<Uint8Array>> {
+  if (!env.DB) throw new Error('Database not configured');
+  if (!clientRequestId?.trim()) {
+    throw new Error('clientRequestId is required');
+  }
+
+  const conversation = await getConversationForUser(env.DB, conversationId, userId);
+  if (!conversation?.personaId || conversation.personaVersion == null) {
+    throw new ConversationAccessError();
+  }
+
+  const persona = await getPersonaVersion(
+    env,
+    env.DB,
+    conversation.personaId,
+    conversation.personaVersion,
+    userId
+  );
+  if (!persona?.systemPrompt?.trim()) {
+    throw new PersonaNotFoundError(conversation.personaId);
+  }
+
+  const existingRun = await findInferenceRunByClientRequest(
+    env.DB,
+    conversationId,
+    clientRequestId
+  );
+
+  if (existingRun?.status === 'completed') {
+    return replayCompletedInference(env.DB, existingRun);
+  }
+
+  if (existingRun && (existingRun.status === 'pending' || existingRun.status === 'streaming')) {
+    throw new InferenceInProgressError();
+  }
+
+  const userMessage = await insertUserMessage(
+    env.DB,
+    conversationId,
+    userId,
+    text,
+    clientRequestId
+  );
+  await touchConversation(env.DB, conversationId);
+
+  let run = existingRun;
+  if (!run) {
+    run = await createInferenceRun(env.DB, {
+      userId,
+      conversationId,
+      clientRequestId,
+      personaId: persona.id,
+      personaVersion: conversation.personaVersion,
+      provider: DEFAULT_PROVIDER,
+      model: DEFAULT_MODEL,
+    });
+  } else if (existingRun?.status === 'failed') {
+    await resetInferenceRunForRetry(env.DB, existingRun.id);
+    run = (await findInferenceRunByClientRequest(env.DB, conversationId, clientRequestId))!;
+  }
+
+  const history = applyModelTextToLatestUserTurn(
+    await getRecentMessagesForContext(env.DB, conversationId, 10),
+    modelText
+  );
+
+  return executeInferenceStream(
+    env,
+    run,
+    userMessage.id,
+    persona.systemPrompt,
+    history,
+    persona.id
+  );
 }

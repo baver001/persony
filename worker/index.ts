@@ -13,7 +13,9 @@ import {
 import { apiCors } from './middleware/cors';
 import { AuthRequiredError, resolveAuthContext } from './middleware/auth';
 import { apiRoutes } from './routes/api';
-import { PersonaNotFoundError, resolvePersonaForInference } from './services/persona-service';
+import { ConversationAccessError } from './services/chat-service';
+import { resolveLiveConversationContext } from './services/live-context-service';
+import { PersonaNotFoundError } from './services/persona-service';
 import type { PersonyEnv } from './types/env';
 
 const LIVE_SESSION_TIMEOUT_MS = 30 * 60 * 1000;
@@ -97,17 +99,18 @@ app.get(
                 throw new AuthRequiredError();
               }
 
-              const persona = await resolvePersonaForInference(
+              const liveContext = await resolveLiveConversationContext(
                 c.env,
+                auth.userId,
                 parsed.data.personaId,
-                auth.userId
+                parsed.data.conversationId
               );
 
               session = await initLiveSession(c.env.GEMINI_API_KEY, toLiveSocket(ws), {
-                characterName: parsed.data.characterName || persona.name,
-                systemPrompt: persona.systemPrompt,
-                voiceName: parsed.data.voiceName || persona.voice,
-                recentChatContext: parsed.data.recentChatContext,
+                characterName: parsed.data.characterName || liveContext.persona.name,
+                systemPrompt: liveContext.persona.systemPrompt,
+                voiceName: parsed.data.voiceName || liveContext.persona.voice,
+                recentChatContext: liveContext.recentChatContext,
               });
 
               initDone = true;
@@ -118,6 +121,8 @@ app.get(
               const message =
                 err instanceof AuthRequiredError
                   ? 'Authentication required'
+                  : err instanceof ConversationAccessError
+                    ? 'Conversation access denied'
                   : err instanceof PersonaNotFoundError
                     ? err.message
                     : formatCleanErrorMessage(err);
