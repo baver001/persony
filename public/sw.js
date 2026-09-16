@@ -1,5 +1,5 @@
 // Persony PWA Service Worker
-const CACHE_NAME = 'persony-cache-v1';
+const CACHE_NAME = 'persony-cache-v3';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

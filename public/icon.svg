@@ -1,62 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <defs>
-    <linearGradient id="py-bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#18181b" />
-      <stop offset="100%" stop-color="#09090b" />
-    </linearGradient>
-    <linearGradient id="py-accent" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#3db892" />
-      <stop offset="100%" stop-color="#6ee7b7" />
-    </linearGradient>
-    <filter id="py-glow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#4ec9a0" flood-opacity="0.4" />
-    </filter>
-  </defs>
-
-  <rect width="512" height="512" rx="112" fill="url(#py-bg)" />
-  <rect x="12" y="12" width="488" height="488" rx="100" fill="none" stroke="#27272a" stroke-width="4" />
-
-  <!-- Rounded messenger plane (visible through P counter) -->
-  <g filter="url(#py-glow)">
-    <path
-      fill="url(#py-accent)"
-      d="M 334 156
-         C 348 144 368 156 364 174
-         L 348 228
-         C 344 242 328 248 314 240
-         L 252 212
-         C 236 204 232 186 244 176
-         L 288 158
-         L 262 188
-         L 274 206
-         L 306 190
-         L 334 156 Z"
-    />
-  </g>
-
-  <!-- Bold P: bowl only on upper half; stem runs full height -->
-  <path
-    fill="#f4f4f5"
-    fill-rule="evenodd"
-    d="M 118 96
-       V 416
-       H 168
-       V 388
-       H 196
-       C 310 388 382 316 382 228
-       C 382 140 310 96 196 96
-       H 118
-       Z
-       M 334 156
-       C 348 144 368 156 364 174
-       L 348 228
-       C 344 242 328 248 314 240
-       L 252 212
-       C 236 204 232 186 244 176
-       L 288 158
-       L 262 188
-       L 274 206
-       L 306 190
-       L 334 156 Z"
-  />
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Persony">
+  <rect width="32" height="32" rx="7" fill="#0a0a0b"/>
+  <svg x="3.5" y="2" width="25" height="28" viewBox="0 0 120.564 140.437" overflow="visible">
+    <path d="m61.894,0H7.815C3.499,0,0,3.499,0,7.815v124.806c0,4.316,3.499,7.815,7.815,7.815h25.633c4.316,0,7.815-3.499,7.815-7.815v-17.997c0-4.316,3.499-7.815,7.815-7.815h12.816c36.319,0,58.67-24.714,58.67-53.512S98.213,0,61.894,0Zm16.533,41.37l-8.893,33.188c-1.525,5.692-9.482,6.011-11.458.459l-4.162-11.694c-.59-1.659-1.879-2.975-3.525-3.6l-13.749-5.222c-5.448-2.069-5.052-9.906.578-11.414l33.855-9.071c4.465-1.196,8.551,2.889,7.355,7.355Z" fill="#ebe5d8"/>
+    <circle cx="108.614" cy="128.486" r="11.95" fill="#1affd3"/>
+  </svg>
 </svg>
