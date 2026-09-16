@@ -14,6 +14,7 @@ import {
 } from './utils/callTranscriptPersistence';
 import { SseStreamParser } from './lib/sseParser';
 import { getApiHeaders } from './lib/api/headers';
+import { getClerkToken } from './lib/api/auth';
 import {
   createPersonaOnCloud,
   deletePersonaOnCloud,
@@ -21,11 +22,16 @@ import {
   updatePersonaOnCloud,
 } from './lib/api/personas';
 import {
+  deleteConversation,
   ensureDirectConversation,
   fetchConversationMessages,
   sendConversationMessage,
-  type CloudMessage,
 } from './lib/api/conversations';
+import {
+  buildVoiceNoteDisplayText,
+  buildVoiceNoteModelText,
+  cloudMessageToChat,
+} from './utils/chatMessageDisplay';
 import {
   hasLegacyLocalData,
   importLocalDataToCloud,
@@ -40,6 +46,7 @@ const STORAGE_KEY_PERSONAS = 'persony_personas_v1';
 const STORAGE_KEY_MESSAGES = 'persony_messages_v1';
 const STORAGE_KEY_THEME = 'persony_theme_v1';
 const STORAGE_KEY_SOUND = 'persony_sound_v1';
+const MESSAGE_PAGE_SIZE = 50;
 
 const LEGACY_STORAGE_KEYS: Record<string, string> = {
   personagram_personas_v1: STORAGE_KEY_PERSONAS,
@@ -99,6 +106,9 @@ function cleanModelError(err: any): string {
   if (lower.includes('failed to fetch') || lower.includes('networkerror')) {
     return 'Ошибка связи с сервером. Проверьте интернет-соединение.';
   }
+  if (lower.includes('524') || lower.includes('timeout') || lower.includes('timed out')) {
+    return 'Сервер не успел ответить вовремя. Повторите запрос — обычно со второй попытки срабатывает.';
+  }
 
   // Strip raw JSON artifacts if any remain
   if (msg.includes('{"error":') || msg.includes('"code":')) {
@@ -108,14 +118,52 @@ function cleanModelError(err: any): string {
   return msg.length > 250 ? msg.slice(0, 250) + '...' : msg;
 }
 
-function cloudMessageToChat(message: CloudMessage, personaId: string): ChatMessage {
+async function consumeChatStream(
+  response: Response,
+  onText: (text: string) => void
+): Promise<{ text: string; error?: string; personaMessageId?: string }> {
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('No readable stream returned');
+
+  const decoder = new TextDecoder('utf-8');
+  const sseParser = new SseStreamParser();
+  let accumulated = '';
+  let errorReceived = '';
+  let personaMessageId: string | undefined;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    const chunk = decoder.decode(value, { stream: true });
+    for (const event of sseParser.push(chunk)) {
+      try {
+        const data = JSON.parse(event.data) as {
+          text?: string;
+          error?: string;
+          done?: boolean;
+          personaMessageId?: string;
+        };
+        if (data.text) {
+          accumulated += data.text;
+          onText(accumulated);
+        }
+        if (data.error) {
+          errorReceived = cleanModelError(data.error);
+        }
+        if (data.done && data.personaMessageId) {
+          personaMessageId = data.personaMessageId;
+        }
+      } catch {
+        // malformed event payload — skip
+      }
+    }
+  }
+
   return {
-    id: message.id,
-    characterId: personaId,
-    sender: message.senderType === 'user' ? 'user' : 'character',
-    text: message.text,
-    timestamp: new Date(message.createdAt).getTime(),
-    status: 'sent',
+    text: accumulated.trim(),
+    error: errorReceived || undefined,
+    personaMessageId,
   };
 }
 
@@ -183,13 +231,18 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const [conversationIds, setConversationIds] = useState<Record<string, string>>({});
+  const [hasOlderMessages, setHasOlderMessages] = useState<Record<string, boolean>>({});
+  const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [cloudPersonasLoaded, setCloudPersonasLoaded] = useState(false);
 
   useEffect(() => {
-    if (!isAuthLoaded || !isSignedIn || cloudPersonasLoaded) return;
+    if (!isAuthLoaded || !isSignedIn || !clerkEnabled || cloudPersonasLoaded) return;
 
     void (async () => {
+      const token = await getClerkToken();
+      if (!token) return;
+
       const cloudPersonas = await fetchMyPersonas();
       if (cloudPersonas.length > 0) {
         setPersonas((prev) => {
@@ -202,12 +255,15 @@ export default function App() {
         setIsImportModalOpen(true);
       }
     })();
-  }, [isAuthLoaded, isSignedIn, cloudPersonasLoaded]);
+  }, [isAuthLoaded, isSignedIn, clerkEnabled, cloudPersonasLoaded]);
 
   useEffect(() => {
-    if (!isAuthLoaded || !isSignedIn || !selectedPersona) return;
+    if (!isAuthLoaded || !isSignedIn || !clerkEnabled || !selectedPersona) return;
 
     void (async () => {
+      const token = await getClerkToken();
+      if (!token) return;
+
       const existingId = conversationIds[selectedPersona.id];
       const conversation =
         existingId
@@ -222,7 +278,15 @@ export default function App() {
           : { ...prev, [selectedPersona.id]: conversation.id }
       );
 
-      const cloudMessages = await fetchConversationMessages(conversation.id);
+      const cloudMessages = await fetchConversationMessages(conversation.id, {
+        limit: MESSAGE_PAGE_SIZE,
+      });
+
+      setHasOlderMessages((prev) => ({
+        ...prev,
+        [selectedPersona.id]: cloudMessages.length >= MESSAGE_PAGE_SIZE,
+      }));
+
       if (cloudMessages.length === 0) return;
 
       setMessagesByPersona((prev) => ({
@@ -232,7 +296,50 @@ export default function App() {
         ),
       }));
     })();
-  }, [isAuthLoaded, isSignedIn, selectedPersona.id]);
+  }, [isAuthLoaded, isSignedIn, clerkEnabled, selectedPersona.id]);
+
+  const handleLoadOlderMessages = async () => {
+    const personaId = selectedPersona.id;
+    const conversationId = conversationIds[personaId];
+    const currentMessages = messagesByPersona[personaId] || [];
+    if (!conversationId || !hasOlderMessages[personaId] || isLoadingOlderMessages) return;
+    const oldest = currentMessages[0];
+    if (!oldest?.id) return;
+
+    setIsLoadingOlderMessages(true);
+    try {
+      const older = await fetchConversationMessages(conversationId, {
+        before: oldest.id,
+        limit: MESSAGE_PAGE_SIZE,
+      });
+      if (older.length === 0) {
+        setHasOlderMessages((prev) => ({ ...prev, [personaId]: false }));
+        return;
+      }
+
+      const mapped = older.map((m) => cloudMessageToChat(m, personaId));
+      const existingIds = new Set(currentMessages.map((m) => m.id));
+      const deduped = mapped.filter((m) => !existingIds.has(m.id));
+
+      setMessagesByPersona((prev) => ({
+        ...prev,
+        [personaId]: [...deduped, ...currentMessages],
+      }));
+
+      if (older.length < MESSAGE_PAGE_SIZE) {
+        setHasOlderMessages((prev) => ({ ...prev, [personaId]: false }));
+      }
+    } finally {
+      setIsLoadingOlderMessages(false);
+    }
+  };
+
+  const handleDeleteMessage = (messageId: string) => {
+    setMessagesByPersona((prev) => ({
+      ...prev,
+      [selectedPersona.id]: (prev[selectedPersona.id] || []).filter((m) => m.id !== messageId),
+    }));
+  };
 
   // Sync theme to root class
   useEffect(() => {
@@ -289,7 +396,95 @@ export default function App() {
     }
   }
 
-  // Handle sending a text message or voice note to Gemini with automatic speech transcription
+  const appendInferenceError = (personaId: string, message: string) => {
+    const errMessage: ChatMessage = {
+      id: `err_${Date.now()}`,
+      characterId: personaId,
+      sender: 'character',
+      text: message,
+      timestamp: Date.now(),
+      isError: true,
+    };
+    setMessagesByPersona((prev) => ({
+      ...prev,
+      [personaId]: [...(prev[personaId] || []), errMessage],
+    }));
+  };
+
+  const runChatInference = async (
+    personaId: string,
+    clientRequestId: string,
+    displayText: string,
+    modelText?: string
+  ) => {
+    setIsStreaming(true);
+    setStreamingText('');
+
+    try {
+      let conversationId = conversationIds[personaId];
+      const conversation = conversationId
+        ? { id: conversationId }
+        : await ensureDirectConversation(personaId);
+
+      if (!conversation?.id) {
+        throw new Error('Не удалось открыть облачный диалог. Проверьте вход в аккаунт.');
+      }
+
+      conversationId = conversation.id;
+      if (conversationIds[personaId] !== conversationId) {
+        setConversationIds((prev) => ({ ...prev, [personaId]: conversationId }));
+      }
+
+      const response = await sendConversationMessage(
+        conversationId,
+        displayText,
+        clientRequestId,
+        modelText
+      );
+
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
+      }
+
+      let hasChimed = false;
+      const result = await consumeChatStream(response, (streamText) => {
+        if (!hasChimed && streamText) {
+          soundFX.playReceive();
+          hasChimed = true;
+        }
+        setStreamingText(streamText);
+      });
+
+      setMessagesByPersona((prev) => ({
+        ...prev,
+        [personaId]: (prev[personaId] || []).filter((m) => !m.isError),
+      }));
+
+      if (result.text) {
+        const charMessage: ChatMessage = {
+          id: result.personaMessageId || `char_${Date.now()}`,
+          characterId: personaId,
+          sender: 'character',
+          text: result.text,
+          timestamp: Date.now(),
+          status: 'sent',
+        };
+        setMessagesByPersona((prev) => ({
+          ...prev,
+          [personaId]: [...(prev[personaId] || []), charMessage],
+        }));
+      } else if (result.error) {
+        appendInferenceError(personaId, result.error);
+      }
+    } catch (err: unknown) {
+      console.error('Failed to run chat inference:', err);
+      appendInferenceError(personaId, cleanModelError(err));
+    } finally {
+      setIsStreaming(false);
+      setStreamingText('');
+    }
+  };
+
   const handleSendMessage = async (
     text: string,
     isVoiceNote = false,
@@ -299,30 +494,22 @@ export default function App() {
     initialTranscript?: string
   ) => {
     if ((!text.trim() && !audioBase64) || isStreaming) return;
-
     if (!isAuthLoaded) return;
 
     if (authRequired && !isSignedIn) {
-      const errMessage: ChatMessage = {
-        id: `err_${Date.now()}`,
-        characterId: selectedPersona.id,
-        sender: 'character',
-        text: clerkEnabled
+      appendInferenceError(
+        selectedPersona.id,
+        clerkEnabled
           ? 'Войдите в аккаунт, чтобы отправлять сообщения.'
-          : 'Сервис авторизации не настроен. Обратитесь к администратору.',
-        timestamp: Date.now(),
-        isError: true,
-      };
-      setMessagesByPersona((prev) => ({
-        ...prev,
-        [selectedPersona.id]: [...(prev[selectedPersona.id] || []), errMessage],
-      }));
+          : 'Сервис авторизации не настроен. Обратитесь к администратору.'
+      );
       return;
     }
 
-    const msgId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+    const clientRequestId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
     const userMessage: ChatMessage = {
-      id: msgId,
+      id: clientRequestId,
+      clientRequestId,
       characterId: selectedPersona.id,
       sender: 'user',
       text: isVoiceNote
@@ -339,195 +526,92 @@ export default function App() {
       transcript: initialTranscript || '',
     };
 
-    const currentHistory = messagesByPersona[selectedPersona.id] || [];
-    const updatedHistory = [...currentHistory, userMessage];
-
     setMessagesByPersona((prev) => ({
       ...prev,
-      [selectedPersona.id]: updatedHistory,
+      [selectedPersona.id]: [...(prev[selectedPersona.id] || []), userMessage],
     }));
-
-    setIsStreaming(true);
-    setStreamingText('');
 
     try {
       let transcriptText = initialTranscript || '';
 
-      // If this is a voice message with audio data, transcribe it with Gemini
-      if (isVoiceNote && audioBase64) {
-        try {
-          const transRes = await fetch('/api/transcribe', {
-            method: 'POST',
-            headers: await getApiHeaders(),
-            body: JSON.stringify({
-              audioBase64,
-              mimeType: 'audio/wav',
-            }),
-          });
-          if (transRes.ok) {
-            const transData = (await transRes.json()) as { transcript?: string };
-            if (transData.transcript && transData.transcript.trim()) {
-              transcriptText = transData.transcript.trim();
-            }
-          }
-        } catch (transErr) {
-          console.error('Failed to transcribe voice note with Gemini:', transErr);
-        }
+      const transcribePromise =
+        isVoiceNote && audioBase64
+          ? fetch('/api/transcribe', {
+              method: 'POST',
+              headers: await getApiHeaders(),
+              body: JSON.stringify({
+                audioBase64,
+                mimeType: 'audio/wav',
+              }),
+            })
+              .then(async (transRes) => {
+                if (!transRes.ok) return '';
+                const transData = (await transRes.json()) as { transcript?: string };
+                return transData.transcript?.trim() || '';
+              })
+              .catch((transErr) => {
+                console.error('Failed to transcribe voice note with Gemini:', transErr);
+                return '';
+              })
+          : Promise.resolve('');
 
-        // Update the voice note message with its verbatim transcript
-        setMessagesByPersona((prev) => {
-          const charMessages = prev[selectedPersona.id] || [];
-          return {
-            ...prev,
-            [selectedPersona.id]: charMessages.map((m) =>
-              m.id === msgId
-                ? {
-                    ...m,
-                    isTranscribing: false,
-                    transcript: transcriptText,
-                    text: transcriptText ? `🎤 "${transcriptText}"` : m.text,
-                  }
-                : m
-            ),
-          };
-        });
-      }
+      const transcribed = await transcribePromise;
+      if (transcribed) transcriptText = transcribed;
 
-      const outboundText =
-        isVoiceNote
-          ? transcriptText
-            ? `[Пользователь отправил голосовое аудиосообщение]: "${transcriptText}". Ответь на слова пользователя развернуто и естественно в твоем характерном стиле персонажа.`
-            : `[Пользователь отправил голосовое аудиосообщение длительностью ${audioDuration || 3} сек, но в записи была тишина или слова не распознаны]. Обрати на это внимание собеседника в стиле своего персонажа.`
-          : text.trim();
-
-      let conversationId = conversationIds[selectedPersona.id];
-      if (!conversationId) {
-        const conversation = await ensureDirectConversation(selectedPersona.id);
-        if (!conversation?.id) {
-          if (authRequired && !isSignedIn) {
-            throw new Error('Войдите в аккаунт, чтобы отправлять сообщения.');
-          }
-          throw new Error('Не удалось открыть облачный диалог. Проверьте вход в аккаунт.');
-        }
-        conversationId = conversation.id;
-        setConversationIds((prev) => ({ ...prev, [selectedPersona.id]: conversationId }));
-      }
-
-      const response = await sendConversationMessage(conversationId, outboundText, msgId);
-
-      if (!response.ok) {
-        throw new Error(`Server returned ${response.status}`);
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('No readable stream returned');
-
-      const decoder = new TextDecoder('utf-8');
-      const sseParser = new SseStreamParser();
-      let accumulated = '';
-      let hasChimed = false;
-      let errorReceived = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        for (const event of sseParser.push(chunk)) {
-          try {
-            const data = JSON.parse(event.data);
-            if (data.text) {
-              if (!hasChimed) {
-                soundFX.playReceive();
-                hasChimed = true;
-              }
-              accumulated += data.text;
-              setStreamingText(accumulated);
-            }
-            if (data.error) {
-              console.error('Chat stream error:', data.error);
-              errorReceived = cleanModelError(data.error);
-            }
-          } catch {
-            // malformed event payload — skip
-          }
-        }
-      }
-
-      // Commit finalized message or clean error card
-      if (accumulated.trim()) {
-        const charMessage: ChatMessage = {
-          id: `char_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-          characterId: selectedPersona.id,
-          sender: 'character',
-          text: accumulated.trim(),
-          timestamp: Date.now(),
-          status: 'sent',
-        };
-
+      if (isVoiceNote) {
         setMessagesByPersona((prev) => ({
           ...prev,
-          [selectedPersona.id]: [...(prev[selectedPersona.id] || []), charMessage],
-        }));
-      } else if (errorReceived) {
-        const errMessage: ChatMessage = {
-          id: `err_${Date.now()}`,
-          characterId: selectedPersona.id,
-          sender: 'character',
-          text: errorReceived,
-          timestamp: Date.now(),
-          isError: true,
-        };
-        setMessagesByPersona((prev) => ({
-          ...prev,
-          [selectedPersona.id]: [...(prev[selectedPersona.id] || []), errMessage],
+          [selectedPersona.id]: (prev[selectedPersona.id] || []).map((m) =>
+            m.clientRequestId === clientRequestId
+              ? {
+                  ...m,
+                  isTranscribing: false,
+                  transcript: transcriptText,
+                  text: transcriptText
+                    ? buildVoiceNoteDisplayText(transcriptText)
+                    : m.text,
+                }
+              : m
+          ),
         }));
       }
-    } catch (err: any) {
+
+      const displayText = isVoiceNote
+        ? transcriptText
+          ? buildVoiceNoteDisplayText(transcriptText)
+          : '🎤 Голосовое сообщение'
+        : text.trim();
+
+      const modelText = isVoiceNote
+        ? buildVoiceNoteModelText(transcriptText, audioDuration)
+        : undefined;
+
+      await runChatInference(selectedPersona.id, clientRequestId, displayText, modelText);
+    } catch (err: unknown) {
       console.error('Failed to send message:', err);
-      const cleanErr = cleanModelError(err);
-      const errMessage: ChatMessage = {
-        id: `err_${Date.now()}`,
-        characterId: selectedPersona.id,
-        sender: 'character',
-        text: cleanErr,
-        timestamp: Date.now(),
-        isError: true,
-      };
-      setMessagesByPersona((prev) => ({
-        ...prev,
-        [selectedPersona.id]: [...(prev[selectedPersona.id] || []), errMessage],
-      }));
-    } finally {
-      setIsStreaming(false);
-      setStreamingText('');
+      appendInferenceError(selectedPersona.id, cleanModelError(err));
     }
   };
 
-  // Re-submit the last user message when an error occurred
   const handleRetryLastMessage = () => {
     const chatMsgs = messagesByPersona[selectedPersona.id] || [];
     const lastUserMsg = [...chatMsgs].reverse().find((m) => m.sender === 'user');
-    if (lastUserMsg) {
-      // Remove any trailing error message from the chat history
-      setMessagesByPersona((prev) => ({
-        ...prev,
-        [selectedPersona.id]: (prev[selectedPersona.id] || []).filter((m) => !m.isError),
-      }));
-      // Resend prompt to the resilient model cascade
-      if (lastUserMsg.isVoiceNote) {
-        handleSendMessage(
-          lastUserMsg.text,
-          true,
-          lastUserMsg.audioBlobUrl,
-          lastUserMsg.audioDuration,
-          undefined,
-          lastUserMsg.transcript
-        );
-      } else {
-        handleSendMessage(lastUserMsg.text);
-      }
-    }
+    const clientRequestId = lastUserMsg?.clientRequestId || lastUserMsg?.id;
+    if (!lastUserMsg || !clientRequestId) return;
+
+    setMessagesByPersona((prev) => ({
+      ...prev,
+      [selectedPersona.id]: (prev[selectedPersona.id] || []).filter((m) => !m.isError),
+    }));
+
+    void runChatInference(
+      selectedPersona.id,
+      clientRequestId,
+      lastUserMsg.text,
+      lastUserMsg.isVoiceNote
+        ? buildVoiceNoteModelText(lastUserMsg.transcript, lastUserMsg.audioDuration)
+        : undefined
+    );
   };
 
   // Launch Gemini 3.1 Flash Live Realtime Voice Call
@@ -594,7 +678,22 @@ export default function App() {
     setCloudPersonasLoaded(false);
   };
 
-  const handleClearChat = (characterId: string) => {
+  const handleClearChat = async (characterId: string) => {
+    const convId = conversationIds[characterId];
+    if (convId && isSignedIn && clerkEnabled) {
+      await deleteConversation(convId);
+    }
+
+    setConversationIds((prev) => {
+      const next = { ...prev };
+      delete next[characterId];
+      return next;
+    });
+    setHasOlderMessages((prev) => {
+      const next = { ...prev };
+      delete next[characterId];
+      return next;
+    });
     setMessagesByPersona((prev) => ({
       ...prev,
       [characterId]: [],
@@ -675,6 +774,10 @@ export default function App() {
             isSidebarOpen={isSidebarOpen}
             onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
             onRetryMessage={handleRetryLastMessage}
+            onDeleteMessage={handleDeleteMessage}
+            hasOlderMessages={hasOlderMessages[selectedPersona.id] ?? false}
+            isLoadingOlderMessages={isLoadingOlderMessages}
+            onLoadOlderMessages={handleLoadOlderMessages}
           />
         </div>
       </div>
@@ -684,7 +787,7 @@ export default function App() {
         character={callingPersona}
         isOpen={isCallOpen}
         onClose={() => setIsCallOpen(false)}
-        recentMessages={messagesByPersona[callingPersona.id] || []}
+        conversationId={conversationIds[callingPersona.id]}
         onEndCallSummary={(durationSecs, transcripts, sessionId) => {
           if (!sessionId || (durationSecs <= 0 && transcripts.length === 0)) return;
 

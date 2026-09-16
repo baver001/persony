@@ -34,6 +34,17 @@ import {
 import { Persona, ChatMessage } from '../types';
 import { soundFX } from '../utils/soundEffects';
 import { audioBlobToWav } from '../utils/audioUtils';
+import {
+  copyTextToClipboard,
+  formatDialogCopyText,
+  formatMessageCopyText,
+} from '../utils/chatClipboard';
+import {
+  MessageContextMenu,
+  messageMenuIcons,
+  type MessageContextMenuItem,
+} from './MessageContextMenu';
+import { normalizeUserMessageForDisplay } from '../utils/chatMessageDisplay';
 
 interface ChatAreaProps {
   character: Persona;
@@ -58,6 +69,10 @@ interface ChatAreaProps {
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
   onRetryMessage?: () => void;
+  onDeleteMessage?: (messageId: string) => void;
+  hasOlderMessages?: boolean;
+  isLoadingOlderMessages?: boolean;
+  onLoadOlderMessages?: () => void;
 }
 
 const EMOJI_LIST = ['👍', '🔥', '❤️', '💡', '⚡', '🚀', '👏', '😂', '🤔', '🎉', '👋', '☕'];
@@ -313,12 +328,22 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   isSidebarOpen = true,
   onToggleSidebar,
   onRetryMessage,
+  onDeleteMessage,
+  hasOlderMessages = false,
+  isLoadingOlderMessages = false,
+  onLoadOlderMessages,
 }) => {
   const [inputText, setInputText] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
-  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [expandedCallId, setExpandedCallId] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    messageId: string;
+  } | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const longPressTimerRef = useRef<number | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchInChat, setSearchInChat] = useState('');
   const [showPinnedMessage, setShowPinnedMessage] = useState(true);
@@ -334,6 +359,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const localTranscriptRef = useRef<string>('');
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const pendingScrollRestoreRef = useRef<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const scrollToBottom = (smooth = true) => {
@@ -344,9 +371,29 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     scrollToBottom(false);
   }, [character.id]);
 
+  const lastMessageId = messages[messages.length - 1]?.id;
+
   useEffect(() => {
+    if (pendingScrollRestoreRef.current !== null) return;
     scrollToBottom(true);
-  }, [messages, streamingText, isStreaming]);
+  }, [lastMessageId, streamingText, isStreaming]);
+
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el || pendingScrollRestoreRef.current === null) return;
+    const previousHeight = pendingScrollRestoreRef.current;
+    pendingScrollRestoreRef.current = null;
+    el.scrollTop = el.scrollHeight - previousHeight;
+  }, [messages]);
+
+  const handleMessagesScroll = () => {
+    const el = scrollContainerRef.current;
+    if (!el || !onLoadOlderMessages || !hasOlderMessages || isLoadingOlderMessages) return;
+    if (el.scrollTop <= 48) {
+      pendingScrollRestoreRef.current = el.scrollHeight;
+      onLoadOlderMessages();
+    }
+  };
 
   // Autosize textarea without unwanted scrollbars and smoothly expand upwards
   useEffect(() => {
@@ -505,10 +552,52 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     setIsRecordingVoice(false);
   };
 
-  const copyToClipboard = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedMessageId(id);
-    setTimeout(() => setCopiedMessageId(null), 2000);
+  const showCopyFeedback = (label: string) => {
+    setCopyFeedback(label);
+    window.setTimeout(() => setCopyFeedback(null), 1600);
+  };
+
+  const openMessageMenu = (clientX: number, clientY: number, messageId: string) => {
+    setContextMenu({ x: clientX, y: clientY, messageId });
+  };
+
+  const handleMessageContextMenu = (
+    event: React.MouseEvent,
+    messageId: string
+  ) => {
+    event.preventDefault();
+    openMessageMenu(event.clientX, event.clientY, messageId);
+  };
+
+  const handleMessageTouchStart = (
+    event: React.TouchEvent,
+    messageId: string
+  ) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+    }
+    longPressTimerRef.current = window.setTimeout(() => {
+      openMessageMenu(touch.clientX, touch.clientY, messageId);
+    }, 480);
+  };
+
+  const handleMessageTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handleCopyMessage = async (message: ChatMessage) => {
+    const ok = await copyTextToClipboard(formatMessageCopyText(message));
+    if (ok) showCopyFeedback('Сообщение скопировано');
+  };
+
+  const handleCopyDialog = async () => {
+    const ok = await copyTextToClipboard(formatDialogCopyText(messages, character.name));
+    if (ok) showCopyFeedback('Диалог скопирован');
   };
 
   const formatTime = (ts: number) => {
@@ -745,6 +834,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       {/* 3. Messages Stream */}
       <div
         id="messages-scroll-container"
+        ref={scrollContainerRef}
+        onScroll={handleMessagesScroll}
         className={`flex-1 overflow-y-auto p-3 sm:p-6 space-y-3.5 scrollbar-thin scrollbar-thumb-white/10 min-h-0 ${
           isCallingActive ? 'py-call-pill-offset' : ''
         }`}
@@ -848,9 +939,22 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           </div>
         )}
 
+        {isLoadingOlderMessages && (
+          <div className="flex justify-center py-2 text-xs text-zinc-500">
+            Загрузка истории…
+          </div>
+        )}
+
         {/* Render Message List */}
         {displayedMessages.map((msg) => {
           const isUser = msg.sender === 'user';
+          const displayMsg =
+            isUser && !msg.isVoiceNote
+              ? (() => {
+                  const normalized = normalizeUserMessageForDisplay(msg.text);
+                  return normalized.isVoiceNote ? { ...msg, ...normalized } : msg;
+                })()
+              : msg;
           const isCallSummary = msg.isCallSummary;
 
           if (isCallSummary) {
@@ -858,7 +962,14 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             const isExpanded = expandedCallId === msg.id;
 
             return (
-              <div key={msg.id} className="flex justify-end my-2">
+              <div
+                key={msg.id}
+                className="flex justify-end my-2"
+                onContextMenu={(e) => handleMessageContextMenu(e, msg.id)}
+                onTouchStart={(e) => handleMessageTouchStart(e, msg.id)}
+                onTouchEnd={handleMessageTouchEnd}
+                onTouchCancel={handleMessageTouchEnd}
+              >
                 <div className={`rounded-2xl p-3 shadow-md w-full max-w-[min(90vw,20rem)] sm:max-w-sm border ${
                   isDark
                     ? 'bg-zinc-800 text-white border-zinc-700'
@@ -929,7 +1040,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           return (
             <div
               key={msg.id}
-              className={`flex items-end gap-2 ${isUser ? 'justify-end' : 'justify-start'} group`}
+              className={`flex items-end gap-2 ${isUser ? 'justify-end' : 'justify-start'}`}
+              onContextMenu={(e) => handleMessageContextMenu(e, msg.id)}
+              onTouchStart={(e) => handleMessageTouchStart(e, msg.id)}
+              onTouchEnd={handleMessageTouchEnd}
+              onTouchCancel={handleMessageTouchEnd}
             >
               {!isUser && (
                 <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 mb-1 ring-1 ring-white/10">
@@ -949,29 +1064,18 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 }`}
               >
                 {!isUser && (
-                  <div className="text-[11px] font-bold text-zinc-400 mb-1 flex items-center justify-between">
-                    <span>{character.name}</span>
-                    <button
-                      onClick={() => copyToClipboard(msg.text, msg.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-zinc-400 hover:text-white ml-2 cursor-pointer"
-                      title="Копировать"
-                    >
-                      {copiedMessageId === msg.id ? (
-                        <Check className="w-3 h-3 text-emerald-400" />
-                      ) : (
-                        <Copy className="w-3 h-3" />
-                      )}
-                    </button>
+                  <div className="text-[11px] font-semibold text-zinc-400 mb-1">
+                    {character.name}
                   </div>
                 )}
 
-                {msg.isVoiceNote ? (
+                {displayMsg.isVoiceNote ? (
                   <VoiceNoteBubble
-                    audioUrl={msg.audioBlobUrl}
-                    duration={msg.audioDuration}
+                    audioUrl={displayMsg.audioBlobUrl}
+                    duration={displayMsg.audioDuration}
                     isUser={isUser}
-                    transcript={msg.transcript}
-                    isTranscribing={msg.isTranscribing}
+                    transcript={displayMsg.transcript}
+                    isTranscribing={displayMsg.isTranscribing}
                   />
                 ) : msg.isError ? (
                   <div className="flex flex-col gap-2 py-0.5">
@@ -990,7 +1094,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     )}
                   </div>
                 ) : (
-                  <PersonyMarkdown content={msg.text} isUser={isUser} />
+                  <PersonyMarkdown content={displayMsg.text} isUser={isUser} />
                 )}
 
                 {/* Bubble Footer */}
@@ -1070,13 +1174,13 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       {/* Bottom Input Bar */}
       <div
         id="chat-input-bar"
-        className={`relative z-10 px-3 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-3 border-t transition-all ${
+        className={`relative z-10 px-3 sm:px-4 py-composer-bar border-t transition-all ${
           isDark
             ? 'bg-[#18181b] border-zinc-800'
             : 'bg-white border-neutral-200'
         }`}
       >
-        <div className="flex items-end gap-1 sm:gap-2 max-w-4xl mx-auto">
+        <div className="flex items-center gap-2 w-full">
           {isRecordingVoice ? (
             <div className="flex-1 flex items-center justify-between bg-rose-500/15 border border-rose-500/30 rounded-[22px] px-4 py-2 text-xs text-rose-400 min-h-[44px]">
               <div className="flex items-center gap-2.5">
@@ -1106,32 +1210,30 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             </div>
           ) : (
             <>
-              {/* Paperclip Attachment Button — desktop only */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (character.starterMessages && character.starterMessages[0]) {
-                    setInputText(character.starterMessages[0]);
-                  }
-                }}
-                className={`hidden sm:inline-flex py-touch-target p-2 rounded-full mb-0.5 transition-colors shrink-0 cursor-pointer ${
-                  isDark
-                    ? 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'
-                    : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100'
-                }`}
-                title="Прикрепить (Подставить тему)"
-              >
-                <Paperclip className="w-5 h-5" />
-              </button>
-
-              {/* Text Input Capsule */}
               <div
-                className={`flex-1 flex items-end min-h-[44px] rounded-[22px] px-3 sm:px-3.5 py-2 sm:py-2.5 transition-all border min-w-0 ${
+                className={`flex-1 flex items-center min-h-[44px] rounded-[22px] px-1.5 sm:px-2 py-1 transition-all border min-w-0 gap-0.5 ${
                   isDark
                     ? 'bg-zinc-800/90 border-zinc-700/80 focus-within:border-zinc-500'
                     : 'bg-[#f4f4f5] border-transparent focus-within:border-neutral-400'
                 }`}
               >
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (character.starterMessages && character.starterMessages[0]) {
+                      setInputText(character.starterMessages[0]);
+                    }
+                  }}
+                  className={`p-2 rounded-full transition-colors shrink-0 cursor-pointer ${
+                    isDark
+                      ? 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700/60'
+                      : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200/80'
+                  }`}
+                  title="Прикрепить (Подставить тему)"
+                >
+                  <Paperclip className="w-5 h-5" />
+                </button>
+
                 <textarea
                   ref={textareaRef}
                   rows={1}
@@ -1139,89 +1241,135 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Сообщение..."
-                  className={`w-full resize-none bg-transparent text-sm leading-relaxed focus:outline-none overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden p-0 m-0 ${
+                  className={`flex-1 min-w-0 resize-none bg-transparent text-sm leading-relaxed focus:outline-none overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-1 py-1.5 ${
                     isDark
                       ? 'text-zinc-100 placeholder-zinc-500'
                       : 'text-neutral-900 placeholder-neutral-400'
                   }`}
                   style={{ height: '24px', maxHeight: '160px' }}
                 />
-              </div>
 
-              {/* Emoji Button */}
-              <button
-                type="button"
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                className={`py-touch-target p-2 rounded-full mb-0.5 transition-colors shrink-0 cursor-pointer ${
-                  showEmojiPicker
-                    ? isDark
-                      ? 'text-zinc-200 bg-zinc-700'
-                      : 'text-neutral-900 bg-neutral-200'
-                    : isDark
-                    ? 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'
-                    : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100'
-                }`}
-                title="Эмодзи"
-              >
-                <Smile className="w-5 h-5" />
-              </button>
-
-              {/* Send Button or Mic Button */}
-              {inputText.trim() ? (
                 <button
-                  id="send-message-btn"
                   type="button"
-                  onClick={handleSend}
-                  disabled={isStreaming}
-                  className={`w-10 h-10 rounded-full mb-0.5 active:scale-95 transition-all shadow-sm flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50 ${
-                    isDark
-                      ? 'bg-white hover:bg-zinc-200 text-zinc-900'
-                      : 'bg-neutral-900 hover:bg-neutral-800 text-white'
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  className={`p-2 rounded-full transition-colors shrink-0 cursor-pointer ${
+                    showEmojiPicker
+                      ? isDark
+                        ? 'text-zinc-200 bg-zinc-700'
+                        : 'text-neutral-900 bg-neutral-200'
+                      : isDark
+                      ? 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700/60'
+                      : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200/80'
                   }`}
-                  title="Отправить (Enter)"
+                  title="Эмодзи"
                 >
-                  <ArrowUp className="w-5 h-5 stroke-[2.5]" />
+                  <Smile className="w-5 h-5" />
                 </button>
-              ) : (
-                <div className="flex items-center gap-0.5 sm:gap-1 mb-0.5 shrink-0">
-                  {/* Voice note mic button */}
+
+                {inputText.trim() ? (
+                  <button
+                    id="send-message-btn"
+                    type="button"
+                    onClick={handleSend}
+                    disabled={isStreaming}
+                    className={`w-9 h-9 rounded-full active:scale-95 transition-all shadow-sm flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50 ${
+                      isDark
+                        ? 'bg-white hover:bg-zinc-200 text-zinc-900'
+                        : 'bg-neutral-900 hover:bg-neutral-800 text-white'
+                    }`}
+                    title="Отправить (Enter)"
+                  >
+                    <ArrowUp className="w-4 h-4 stroke-[2.5]" />
+                  </button>
+                ) : (
                   <button
                     id="record-voice-note-btn"
                     type="button"
                     onClick={startVoiceRecording}
                     disabled={isStreaming}
-                    className={`py-touch-target p-2 rounded-full transition-all shrink-0 disabled:opacity-40 disabled:cursor-not-allowed ${
+                    className={`p-2 rounded-full transition-all shrink-0 disabled:opacity-40 disabled:cursor-not-allowed ${
                       isDark
-                        ? 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'
-                        : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100'
+                        ? 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700/60'
+                        : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200/80'
                     }`}
                     title={isStreaming ? 'Ожидание ответа...' : 'Записать аудиосообщение'}
                   >
                     <Mic className="w-5 h-5" />
                   </button>
+                )}
+              </div>
 
-                  {/* Direct Voice Call button — hidden on mobile (call is in header) */}
-                  <button
-                    id="quick-live-call-btn"
-                    type="button"
-                    onClick={() => (isCallingActive ? onExpandCall?.() : onStartCall(character))}
-                    className={`hidden sm:inline-flex py-touch-target p-2 rounded-full transition-all shrink-0 cursor-pointer ${
-                      isCallingActive
-                        ? 'bg-py-accent/15 text-py-accent border border-py-accent/40 hover:bg-py-accent/25'
-                        : isDark
-                        ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700'
-                        : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-800'
-                    }`}
-                    title={isCallingActive ? 'Развернуть звонок' : 'Голосовой звонок'}
-                  >
-                    {isCallingActive ? <Maximize2 className="w-5 h-5" /> : <Phone className="w-5 h-5" />}
-                  </button>
-                </div>
-              )}
+              <button
+                id="quick-live-call-btn"
+                type="button"
+                onClick={() => (isCallingActive ? onExpandCall?.() : onStartCall(character))}
+                className={`w-11 h-11 rounded-full transition-all shrink-0 cursor-pointer flex items-center justify-center ${
+                  isCallingActive
+                    ? 'bg-py-accent/15 text-py-accent border border-py-accent/40 hover:bg-py-accent/25'
+                    : isDark
+                    ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700'
+                    : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-800 border border-neutral-200'
+                }`}
+                title={isCallingActive ? 'Развернуть звонок' : 'Голосовой звонок'}
+              >
+                {isCallingActive ? <Maximize2 className="w-5 h-5" /> : <Phone className="w-5 h-5" />}
+              </button>
             </>
           )}
         </div>
       </div>
+
+      {contextMenu && (() => {
+        const targetMessage = messages.find((m) => m.id === contextMenu.messageId);
+        if (!targetMessage) return null;
+
+        const items: MessageContextMenuItem[] = [
+          {
+            id: 'copy-message',
+            label: 'Копировать сообщение',
+            icon: messageMenuIcons.copy,
+            onSelect: () => {
+              void handleCopyMessage(targetMessage);
+            },
+          },
+          {
+            id: 'copy-dialog',
+            label: 'Копировать диалог',
+            icon: messageMenuIcons.copyDialog,
+            onSelect: () => {
+              void handleCopyDialog();
+            },
+          },
+        ];
+
+        if (onDeleteMessage) {
+          items.push({
+            id: 'delete-message',
+            label: 'Удалить сообщение',
+            icon: messageMenuIcons.delete,
+            destructive: true,
+            onSelect: () => onDeleteMessage(targetMessage.id),
+          });
+        }
+
+        return (
+          <MessageContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            items={items}
+            onClose={() => setContextMenu(null)}
+          />
+        );
+      })()}
+
+      {copyFeedback && (
+        <div
+          className="pointer-events-none fixed bottom-24 left-1/2 z-[70] -translate-x-1/2 rounded-full border border-py-border bg-py-elevated/95 px-4 py-2 text-xs text-py-text shadow-lg backdrop-blur-sm"
+          role="status"
+        >
+          {copyFeedback}
+        </div>
+      )}
     </div>
   );
 };

@@ -34,9 +34,18 @@ export interface ChatMessage {
   isFromVoiceCall?: boolean;
   voiceCallSessionId?: string;
   isError?: boolean;
+  clientRequestId?: string;
 }
 
-export type CallStatus = 'idle' | 'requesting_permissions' | 'connecting' | 'connected' | 'reconnecting' | 'ended' | 'error';
+export type CallStatus =
+  | 'idle'
+  | 'requesting_permissions'
+  | 'connecting'
+  | 'connected'
+  | 'reconnecting'
+  | 'ended'
+  | 'error'
+  | 'auth_required';
 
 export interface CallState {
   characterId: string | null;

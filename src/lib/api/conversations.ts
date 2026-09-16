@@ -59,11 +59,24 @@ export async function fetchConversationMessages(
 export async function sendConversationMessage(
   conversationId: string,
   text: string,
-  idempotencyKey?: string
+  clientRequestId: string,
+  modelText?: string
 ): Promise<Response> {
   return fetch(`/api/conversations/${conversationId}/messages`, {
     method: 'POST',
     headers: await getApiHeaders(),
-    body: JSON.stringify({ text, idempotencyKey }),
+    body: JSON.stringify({
+      text,
+      clientRequestId,
+      ...(modelText ? { modelText } : {}),
+    }),
   });
+}
+
+export async function deleteConversation(conversationId: string): Promise<boolean> {
+  const res = await fetch(`/api/conversations/${conversationId}`, {
+    method: 'DELETE',
+    headers: await getApiHeaders(),
+  });
+  return res.ok;
 }

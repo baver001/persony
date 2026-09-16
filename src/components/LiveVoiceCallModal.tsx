@@ -7,11 +7,12 @@ import {
   Volume2,
   VolumeX,
   Subtitles,
-  AlertCircle,
   Minimize2,
-  Maximize2
+  Maximize2,
+  Phone,
 } from 'lucide-react';
-import { Persona, CallStatus, ChatMessage } from '../types';
+import { SignInButton, SignUpButton } from '@clerk/clerk-react';
+import { Persona, CallStatus } from '../types';
 import { AudioStreamer } from '../utils/audioStreamer';
 import { soundFX } from '../utils/soundEffects';
 import { callDiagnostics } from '../utils/callDiagnostics';
@@ -24,7 +25,7 @@ interface LiveVoiceCallModalProps {
   isOpen: boolean;
   onClose: () => void;
   onNewMessageFromCall?: (text: string, sender: 'user' | 'character') => void;
-  recentMessages?: ChatMessage[];
+  conversationId?: string;
   onEndCallSummary?: (
     durationSecs: number,
     transcripts: Array<{ id: string; sender: 'user' | 'character'; text: string }>,
@@ -37,7 +38,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
   isOpen,
   onClose,
   onNewMessageFromCall,
-  recentMessages,
+  conversationId,
   onEndCallSummary,
 }) => {
   const [status, setStatus] = useState<CallStatus>('connecting');
@@ -132,7 +133,11 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
 
     callDiagnostics.reset();
     callDiagnostics.startConsoleLogging();
-    startCall();
+    if (isAuthLoaded) {
+      startCall();
+    } else {
+      setStatus('connecting');
+    }
     requestWakeLock();
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -165,7 +170,14 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
       callDiagnostics.stopConsoleLogging();
       cleanupCall();
     };
-  }, [isOpen, character.id]);
+  }, [isOpen, character.id, isAuthLoaded]);
+
+  useEffect(() => {
+    if (!isOpen || !isAuthLoaded) return;
+    if (statusRef.current === 'auth_required' && isSignedIn) {
+      startCall();
+    }
+  }, [isSignedIn, isAuthLoaded, isOpen]);
 
   const requestWakeLock = async () => {
     if (!isMobileDevice() || !('wakeLock' in navigator)) return;
@@ -225,12 +237,9 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
     liveSessionReadyRef.current = false;
 
     if (isAuthLoaded && authRequired && !isSignedIn) {
-      setErrorMessage(
-        clerkEnabled
-          ? 'Войдите в аккаунт, чтобы начать голосовой звонок.'
-          : 'Сервис авторизации не настроен.'
-      );
-      setStatus('error');
+      setErrorMessage(null);
+      setStatus('auth_required');
+      statusRef.current = 'auth_required';
       return;
     }
 
@@ -265,12 +274,9 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
           JSON.stringify({
             type: 'init',
             personaId: character.id,
+            conversationId,
             characterName: character.name,
             voiceName: character.voice,
-            recentChatContext: recentMessages?.slice(-6).map((m) => ({
-              sender: m.sender,
-              text: m.text,
-            })),
             ...credentials,
           })
         );
@@ -420,6 +426,16 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
   const liveCue = transcripts.length > 0 ? transcripts[transcripts.length - 1] : null;
   const liveCueSpeakerLabel =
     liveCue?.sender === 'user' ? 'Вы' : character.name.split(' ')[0];
+  const characterFirstName = character.name.split(' ')[0];
+  const showCallControls = status === 'connected' || status === 'connecting';
+  const headerLabel =
+    status === 'connected'
+      ? 'Голосовой звонок'
+      : status === 'auth_required'
+        ? 'Голосовой звонок'
+        : status === 'error'
+          ? 'Звонок'
+          : 'Подключение…';
 
   if (!isOpen) return null;
 
@@ -492,32 +508,34 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
     <AnimatePresence>
       <div
         id="live-call-backdrop"
-        className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md transition-all duration-300"
+        className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-6 bg-black/70 backdrop-blur-sm transition-all duration-300"
       >
         <motion.div
-          initial={{ opacity: 0, scale: 0.94, y: 20 }}
+          initial={{ opacity: 0, scale: 0.97, y: 12 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.94, y: 20 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 280 }}
-          className="relative w-full h-[100dvh] sm:h-auto sm:max-h-[92vh] sm:max-w-xl bg-gradient-to-b from-zinc-900 via-[#18181b] to-zinc-950 sm:rounded-3xl border-0 sm:border border-zinc-800 shadow-2xl flex flex-col overflow-hidden"
+          exit={{ opacity: 0, scale: 0.97, y: 12 }}
+          transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+          className="relative w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-lg bg-gradient-to-b from-zinc-900/95 via-[#18181b] to-zinc-950 sm:rounded-[28px] border-0 sm:border border-zinc-800/80 shadow-2xl flex flex-col overflow-hidden"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 pt-6 pb-2 z-10 shrink-0">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between px-7 sm:px-8 pt-7 pb-3 z-10 shrink-0">
+            <div className="flex items-center gap-2.5">
               <span className="flex h-2 w-2 relative">
-                <span
-                  className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                    status === 'connected' ? 'bg-emerald-400' : 'bg-amber-400'
-                  }`}
-                />
+                {status === 'connected' && (
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+                )}
                 <span
                   className={`relative inline-flex rounded-full h-2 w-2 ${
-                    status === 'connected' ? 'bg-emerald-500' : 'bg-amber-500'
+                    status === 'connected'
+                      ? 'bg-emerald-500'
+                      : status === 'connecting'
+                        ? 'bg-zinc-500'
+                        : 'bg-zinc-600'
                   }`}
                 />
               </span>
-              <span className="text-xs text-white/60 font-medium">
-                {status === 'connected' ? 'Голосовой звонок' : 'Вызов...'}
+              <span className="text-xs text-white/50 font-medium tracking-wide">
+                {headerLabel}
               </span>
             </div>
 
@@ -547,8 +565,8 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
           </div>
 
           {/* Main stage — avatar, subtitles and controls as one centered cluster */}
-          <div className="relative flex-1 flex items-center justify-center min-h-0 w-full px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] select-none overflow-hidden">
-            <div className="w-full max-w-md flex flex-col items-center translate-y-[5%] sm:translate-y-[3%]">
+          <div className="relative flex-1 flex items-center justify-center min-h-0 w-full px-7 sm:px-8 pb-[max(1.75rem,env(safe-area-inset-bottom))] select-none overflow-hidden">
+            <div className="w-full max-w-sm flex flex-col items-center">
             {/* Gentle ambient glow behind avatar */}
             <div className="relative flex items-center justify-center">
               <div
@@ -578,33 +596,81 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
             </div>
 
             {/* Character Info */}
-            <div className="mt-3 sm:mt-4 text-center z-10 w-full">
-              <h2 className="text-2xl font-bold text-white tracking-tight">{character.name}</h2>
-              <p className="text-sm text-white/60 mt-1 max-w-sm line-clamp-1">{character.tagline}</p>
+            <div className="mt-5 sm:mt-6 text-center z-10 w-full">
+              <h2 className="text-[1.65rem] font-semibold text-white tracking-tight">{character.name}</h2>
+              <p className="text-sm text-white/45 mt-1.5 max-w-xs mx-auto line-clamp-2 leading-relaxed">
+                {character.tagline}
+              </p>
 
-              {/* Stable Status Pill (No jumping or jitter during speech) */}
-              <div className="inline-flex items-center justify-center min-w-[90px] h-7 mt-3 px-3 rounded-full bg-white/5 border border-white/10 text-xs select-none">
-                {status === 'connecting' && <span className="text-amber-300">Соединение...</span>}
-                {status === 'connected' && (
-                  <span className="font-mono text-emerald-400 font-medium tracking-wider">
-                    {formatDuration(duration)}
-                  </span>
-                )}
-                {status === 'ended' && <span className="text-rose-400">Звонок завершён</span>}
-                {status === 'error' && <span className="text-rose-400">Ошибка вызова</span>}
-              </div>
+              {(status === 'connecting' || status === 'connected') && (
+                <div className="inline-flex items-center justify-center min-w-[88px] h-8 mt-5 px-4 rounded-full bg-white/[0.04] text-xs select-none">
+                  {status === 'connecting' && (
+                    <span className="text-white/50">Соединение…</span>
+                  )}
+                  {status === 'connected' && (
+                    <span className="font-mono text-emerald-400/90 font-medium tracking-wider tabular-nums">
+                      {formatDuration(duration)}
+                    </span>
+                  )}
+                </div>
+              )}
 
-              {errorMessage && (
-                <div className="mt-3 text-xs text-rose-300 bg-rose-950/40 border border-rose-800/40 px-3 py-2 rounded-xl max-w-md mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-left">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-                    <span>{errorMessage}</span>
+              {status === 'auth_required' && (
+                <div className="mt-8 w-full max-w-xs mx-auto text-left rounded-2xl bg-white/[0.03] border border-white/[0.06] px-5 py-5 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-white/70">
+                      <Phone className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 space-y-1.5">
+                      <p className="text-sm font-medium text-white/90 leading-snug">
+                        Войдите, чтобы позвонить
+                      </p>
+                      <p className="text-xs text-white/45 leading-relaxed">
+                        {clerkEnabled
+                          ? `После входа можно сразу говорить с ${characterFirstName} — это займёт пару секунд.`
+                          : 'Сервис авторизации временно недоступен.'}
+                      </p>
+                    </div>
                   </div>
+                  {clerkEnabled ? (
+                    <div className="flex flex-col gap-2.5 pt-1">
+                      <SignInButton mode="modal">
+                        <button
+                          type="button"
+                          className="w-full rounded-xl bg-white text-zinc-900 text-sm font-medium py-2.5 hover:bg-white/90 transition-colors"
+                        >
+                          Войти и позвонить
+                        </button>
+                      </SignInButton>
+                      <SignUpButton mode="modal">
+                        <button
+                          type="button"
+                          className="w-full rounded-xl bg-white/[0.06] text-white/80 text-sm py-2.5 hover:bg-white/[0.1] transition-colors"
+                        >
+                          Создать аккаунт
+                        </button>
+                      </SignUpButton>
+                    </div>
+                  ) : null}
                   <button
-                    onClick={startCall}
-                    className="px-2.5 py-1 rounded-lg bg-rose-900/60 hover:bg-rose-800 text-white text-[11px] font-semibold shrink-0 transition-colors border border-rose-700/50 cursor-pointer"
+                    type="button"
+                    onClick={onClose}
+                    className="w-full text-xs text-white/35 hover:text-white/55 transition-colors pt-1"
                   >
-                    Повторить
+                    Не сейчас
+                  </button>
+                </div>
+              )}
+
+              {status === 'error' && errorMessage && (
+                <div className="mt-8 w-full max-w-xs mx-auto text-left rounded-2xl bg-white/[0.03] border border-white/[0.06] px-5 py-4 space-y-3">
+                  <p className="text-sm text-white/75 leading-relaxed">{errorMessage}</p>
+                  <button
+                    type="button"
+                    onClick={startCall}
+                    className="w-full rounded-xl bg-white/[0.08] hover:bg-white/[0.12] text-white/85 text-sm py-2.5 transition-colors"
+                  >
+                    Попробовать снова
                   </button>
                 </div>
               )}
@@ -614,31 +680,25 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
             {showSubtitles && liveCue && (
               <div
                 id="live-call-subtitle"
-                className="relative w-full max-w-md mt-4 h-[4.25rem] overflow-hidden rounded-xl bg-black/30 border border-white/5"
+                className="relative w-full max-w-md mt-5 h-[3.75rem] overflow-hidden rounded-xl bg-white/[0.04] border border-white/[0.06] px-3.5 py-2"
                 aria-live="polite"
               >
-                <div
-                  className="pointer-events-none absolute inset-x-0 top-0 z-10 h-8 bg-gradient-to-b from-[#18181b]/90 to-transparent"
-                  aria-hidden
-                />
-                <div className="relative h-full px-3.5 pb-2.5 pt-1">
-                  <AnimatePresence initial={false}>
-                    <motion.div
-                      key={liveCue.id}
-                      initial={{ y: 20, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      exit={{ y: -24, opacity: 0 }}
-                      transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-                      className={`absolute inset-x-3.5 bottom-2.5 text-xs leading-relaxed line-clamp-3 ${
-                        liveCue.sender === 'user' ? 'text-emerald-300 text-right' : 'text-zinc-100 text-left'
-                      }`}
-                    >
-                      <span className="font-semibold opacity-80">{liveCueSpeakerLabel}</span>
-                      <span className="mx-1 opacity-40">·</span>
-                      <span className="text-white/90">{liveCue.text}</span>
-                    </motion.div>
-                  </AnimatePresence>
-                </div>
+                <AnimatePresence initial={false}>
+                  <motion.div
+                    key={liveCue.id}
+                    initial={{ y: 14, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: -18, opacity: 0 }}
+                    transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                    className={`absolute inset-x-3.5 bottom-2 text-xs leading-relaxed line-clamp-3 ${
+                      liveCue.sender === 'user' ? 'text-emerald-300/90 text-right' : 'text-zinc-100 text-left'
+                    }`}
+                  >
+                    <span className="font-medium opacity-75">{liveCueSpeakerLabel}</span>
+                    <span className="mx-1 opacity-35">·</span>
+                    <span className="text-white/85">{liveCue.text}</span>
+                  </motion.div>
+                </AnimatePresence>
               </div>
             )}
 
@@ -660,46 +720,56 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
               </div>
             )}
 
-            {/* Call controls — slightly below visual center */}
-            <div
-              id="call-controls-bar"
-              className="flex items-center justify-center gap-5 sm:gap-6 mt-7 sm:mt-9 z-10"
-            >
-              <button
-                id="call-mute-btn"
-                onClick={handleToggleMute}
-                className={`p-4 rounded-full transition-all duration-200 flex items-center justify-center shrink-0 ${
-                  isMuted
-                    ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 ring-2 ring-rose-500/30'
-                    : 'bg-white/10 hover:bg-white/15 text-white border border-white/10'
-                }`}
-                title={isMuted ? 'Включить микрофон' : 'Отключить микрофон'}
+            {/* Call controls */}
+            {showCallControls ? (
+              <div
+                id="call-controls-bar"
+                className="flex items-center justify-center gap-6 sm:gap-7 mt-10 sm:mt-12 z-10"
               >
-                {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
-              </button>
+                <button
+                  id="call-mute-btn"
+                  onClick={handleToggleMute}
+                  className={`p-4 rounded-full transition-all duration-200 flex items-center justify-center shrink-0 ${
+                    isMuted
+                      ? 'bg-white/15 text-white/90'
+                      : 'bg-white/[0.07] hover:bg-white/[0.11] text-white/80'
+                  }`}
+                  title={isMuted ? 'Включить микрофон' : 'Отключить микрофон'}
+                >
+                  {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+                </button>
 
-              <button
-                id="call-hangup-btn"
-                onClick={handleEndCall}
-                className="p-5 rounded-full bg-rose-600 hover:bg-rose-700 active:scale-95 text-white shadow-xl shadow-rose-900/40 transition-all duration-200 flex items-center justify-center shrink-0"
-                title="Завершить звонок"
-              >
-                <PhoneOff className="w-7 h-7" />
-              </button>
+                <button
+                  id="call-hangup-btn"
+                  onClick={handleEndCall}
+                  className="p-5 rounded-full bg-rose-600 hover:bg-rose-500 active:scale-[0.98] text-white shadow-lg shadow-black/30 transition-all duration-200 flex items-center justify-center shrink-0"
+                  title="Завершить звонок"
+                >
+                  <PhoneOff className="w-7 h-7" />
+                </button>
 
+                <button
+                  id="call-speaker-btn"
+                  onClick={handleToggleSpeaker}
+                  className={`p-4 rounded-full transition-all duration-200 flex items-center justify-center shrink-0 ${
+                    isSpeakerMuted
+                      ? 'bg-white/15 text-white/90'
+                      : 'bg-white/[0.07] hover:bg-white/[0.11] text-white/80'
+                  }`}
+                  title={isSpeakerMuted ? 'Включить звук' : 'Заглушить динамик'}
+                >
+                  {isSpeakerMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+                </button>
+              </div>
+            ) : status === 'error' ? (
               <button
-                id="call-speaker-btn"
-                onClick={handleToggleSpeaker}
-                className={`p-4 rounded-full transition-all duration-200 flex items-center justify-center shrink-0 ${
-                  isSpeakerMuted
-                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 ring-2 ring-amber-500/30'
-                    : 'bg-white/10 hover:bg-white/15 text-white border border-white/10'
-                }`}
-                title={isSpeakerMuted ? 'Включить звук' : 'Заглушить динамик'}
+                type="button"
+                onClick={onClose}
+                className="mt-10 text-sm text-white/40 hover:text-white/60 transition-colors"
               >
-                {isSpeakerMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+                Закрыть
               </button>
-            </div>
+            ) : null}
             </div>
           </div>
         </motion.div>
