@@ -1,0 +1,17 @@
+{
+  "appName": "Persony",
+  "delete": "Delete",
+  "edit": "Edit",
+  "save": "Save",
+  "cancel": "Cancel",
+  "loading": "Loading…",
+  "back": "Back",
+  "settings": "Settings",
+  "memory": "Memory",
+  "ownerConsole": "Owner Console",
+  "aiLabel": "AI Persona",
+  "aiDisclaimer": "AI personas can make mistakes.",
+  "localePrompt": "Persony is also available in Russian.",
+  "switchToRussian": "Switch to Russian",
+  "keepEnglish": "Keep English"
+}

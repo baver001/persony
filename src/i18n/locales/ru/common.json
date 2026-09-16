@@ -1,0 +1,17 @@
+{
+  "appName": "Persony",
+  "delete": "Удалить",
+  "edit": "Изменить",
+  "save": "Сохранить",
+  "cancel": "Отмена",
+  "loading": "Загрузка…",
+  "back": "Назад",
+  "settings": "Настройки",
+  "memory": "Память",
+  "ownerConsole": "Панель владельца",
+  "aiLabel": "AI-персона",
+  "aiDisclaimer": "AI-персоны могут ошибаться.",
+  "localePrompt": "Persony также доступен на русском языке.",
+  "switchToRussian": "Переключить на русский",
+  "keepEnglish": "Оставить English"
+}

@@ -8,7 +8,15 @@ export interface Persona {
   systemPrompt: string;
   avatar: string; // URL, data URL, or SVG
   voice: VoiceName;
-  category: 'tech' | 'philosophy' | 'creative' | 'mentor' | 'fantasy' | 'custom';
+  category:
+    | 'tech'
+    | 'philosophy'
+    | 'creative'
+    | 'mentor'
+    | 'fantasy'
+    | 'custom'
+    | 'official'
+    | 'legacy';
   color: string; // Hex color or gradient name
   badge?: string;
   isCustom?: boolean;

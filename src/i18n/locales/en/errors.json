@@ -1,0 +1,7 @@
+{
+  "AUTH_REQUIRED": "Please sign in to continue.",
+  "CONVERSATION_NOT_FOUND": "Conversation not found.",
+  "FORBIDDEN": "You do not have access to this resource.",
+  "MEMORY_NOT_FOUND": "Memory not found.",
+  "INTERNAL_ERROR": "Something went wrong. Please try again."
+}

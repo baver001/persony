@@ -1,0 +1,11 @@
+{
+  "title": "What Persony remembers about you",
+  "empty": "No memories yet. Tell Athena something you want remembered, e.g. \"Remember that I work on Persony.\"",
+  "aboutYou": "About you",
+  "projects": "Projects",
+  "goals": "Goals",
+  "preferences": "Preferences",
+  "other": "Other",
+  "disable": "Disable",
+  "relationshipTitle": "What {{name}} remembers about you"
+}

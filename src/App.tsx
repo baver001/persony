@@ -41,6 +41,10 @@ import {
 import { AuthMenu } from './components/AuthMenu';
 import { ImportLocalDataModal } from './components/ImportLocalDataModal';
 import { usePersonyAuth } from './components/PersonyAuthProvider';
+import { fetchInstalledPersonas } from './lib/api/me';
+import { MemoryPage } from './pages/MemoryPage';
+import { OwnerConsole } from './pages/OwnerConsole';
+import { SettingsPage } from './pages/SettingsPage';
 
 const STORAGE_KEY_PERSONAS = 'persony_personas_v1';
 const STORAGE_KEY_MESSAGES = 'persony_messages_v1';
@@ -167,9 +171,31 @@ async function consumeChatStream(
   };
 }
 
+function navigateHome() {
+  window.history.pushState({}, '', '/');
+  window.dispatchEvent(new PopStateEvent('popstate'));
+}
+
 export default function App() {
   migrateLegacyStorageKeys();
   const { isLoaded: isAuthLoaded, isSignedIn, clerkEnabled, authRequired } = usePersonyAuth();
+  const [pathname, setPathname] = useState(() => window.location.pathname);
+
+  useEffect(() => {
+    const onPopState = () => setPathname(window.location.pathname);
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  if (pathname.startsWith('/memory')) {
+    return <MemoryPage onBack={navigateHome} />;
+  }
+  if (pathname.startsWith('/owner')) {
+    return <OwnerConsole onBack={navigateHome} />;
+  }
+  if (pathname.startsWith('/settings')) {
+    return <SettingsPage onBack={navigateHome} isSignedIn={Boolean(isSignedIn)} />;
+  }
 
   // Theme state
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -243,13 +269,20 @@ export default function App() {
       const token = await getClerkToken();
       if (!token) return;
 
-      const cloudPersonas = await fetchMyPersonas();
-      if (cloudPersonas.length > 0) {
-        setPersonas((prev) => {
-          const builtins = prev.filter((p) => !p.isCustom);
-          return [...builtins, ...cloudPersonas];
-        });
-      }
+      const installedPersonas = await fetchInstalledPersonas();
+      const cloudCustomPersonas = await fetchMyPersonas();
+      setPersonas((prev) => {
+        const customOnly = [
+          ...prev.filter((p) => p.isCustom),
+          ...cloudCustomPersonas.filter((p) => p.isCustom),
+        ];
+        const uniqueCustom = customOnly.filter(
+          (p, idx, arr) => arr.findIndex((x) => x.id === p.id) === idx
+        );
+        const installed =
+          installedPersonas.length > 0 ? installedPersonas : DEFAULT_PERSONAS;
+        return [...installed, ...uniqueCustom];
+      });
       setCloudPersonasLoaded(true);
       if (hasLegacyLocalData()) {
         setIsImportModalOpen(true);
