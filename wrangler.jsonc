@@ -11,11 +11,15 @@
   "observability": {
     "enabled": true
   },
+  "vars": {
+    "ENVIRONMENT": "production"
+  },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "persony-db",
-      "database_id": "4a8aa2cb-14c2-4688-be62-eca9aa522872"
+      "database_id": "4a8aa2cb-14c2-4688-be62-eca9aa522872",
+      "migrations_dir": "worker/db/migrations"
     }
   ]
 }

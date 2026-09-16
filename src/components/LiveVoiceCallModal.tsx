@@ -16,7 +16,7 @@ import { AudioStreamer } from '../utils/audioStreamer';
 import { soundFX } from '../utils/soundEffects';
 import { callDiagnostics } from '../utils/callDiagnostics';
 import { isMobileDevice } from '../utils/pcmAudio';
-import { syncPersonaToCloud } from '../lib/api/personas';
+import { getLiveInitCredentials } from '../lib/api/headers';
 
 interface LiveVoiceCallModalProps {
   character: Persona;
@@ -218,10 +218,6 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
     transcriptsRef.current = [];
     durationRef.current = 0;
 
-    if (character.isCustom) {
-      await syncPersonaToCloud(character);
-    }
-
     // Play initial call ringtone
     soundFX.playCallingTone();
     ringtoneTimerRef.current = window.setInterval(() => {
@@ -260,14 +256,19 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
-      ws.onopen = () => {
+      ws.onopen = async () => {
+        const credentials = await getLiveInitCredentials();
         ws.send(
           JSON.stringify({
             type: 'init',
             personaId: character.id,
             characterName: character.name,
             voiceName: character.voice,
-            recentChatContext: recentMessages?.slice(-6),
+            recentChatContext: recentMessages?.slice(-6).map((m) => ({
+              sender: m.sender,
+              text: m.text,
+            })),
+            ...credentials,
           })
         );
       };

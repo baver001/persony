@@ -31,6 +31,7 @@ interface SidebarProps {
   onResetDefaults?: () => void;
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
+  authMenu?: React.ReactNode;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -46,6 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleSound,
   onResetDefaults,
   onToggleSidebar,
+  authMenu,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
@@ -100,6 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           <div className="flex items-center gap-1">
+            {authMenu}
             {/* Create Persona Button */}
             <button
               id="sidebar-create-persona-btn"

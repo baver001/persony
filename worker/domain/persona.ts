@@ -32,8 +32,7 @@ export type PersonaPublicMeta = {
   starterMessages?: string[];
 };
 
-export type UpsertPersonaInput = {
-  id: string;
+export type CreatePersonaInput = {
   name: string;
   tagline: string;
   description: string;
@@ -47,3 +46,5 @@ export type UpsertPersonaInput = {
   visibility?: PersonaVisibility;
   sourcePersonaId?: string;
 };
+
+export type UpdatePersonaInput = CreatePersonaInput;

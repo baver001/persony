@@ -2,19 +2,27 @@ import { Hono } from 'hono';
 import { formatCleanErrorMessage } from '../lib/errors';
 import { handleGenerateCharacter, handleTranscribe } from '../lib/gemini';
 import { generateCharacterSchema, transcribeRequestSchema } from '../lib/validation';
+import { AuthRequiredError } from '../middleware/auth';
+import { bodySizeLimit } from '../middleware/body-limit';
+import { requireAIEntitlement } from '../middleware/entitlement';
 import type { PersonyEnv } from '../types/env';
-import { chatRoutes } from './chat';
+import { conversationRoutes } from './conversations';
 import { healthRoutes } from './health';
+import { importRoutes } from './import';
 import { personaRoutes } from './personas';
 
 export const apiRoutes = new Hono<{ Bindings: PersonyEnv }>();
 
+apiRoutes.use('*', bodySizeLimit(10 * 1024 * 1024));
+
 apiRoutes.route('/', healthRoutes);
-apiRoutes.route('/', chatRoutes);
 apiRoutes.route('/', personaRoutes);
+apiRoutes.route('/', conversationRoutes);
+apiRoutes.route('/', importRoutes);
 
 apiRoutes.post('/transcribe', async (c) => {
   try {
+    await requireAIEntitlement(c);
     const body = await c.req.json();
     const parsed = transcribeRequestSchema.safeParse(body);
     if (!parsed.success) {
@@ -27,12 +35,14 @@ apiRoutes.post('/transcribe', async (c) => {
     );
     return c.json(result);
   } catch (err) {
+    if (err instanceof AuthRequiredError) return c.json({ error: 'Authentication required' }, 401);
     return c.json({ error: formatCleanErrorMessage(err) }, 500);
   }
 });
 
 apiRoutes.post('/generate-character', async (c) => {
   try {
+    await requireAIEntitlement(c);
     const body = await c.req.json();
     const parsed = generateCharacterSchema.safeParse(body);
     if (!parsed.success) {
@@ -41,6 +51,7 @@ apiRoutes.post('/generate-character', async (c) => {
     const result = await handleGenerateCharacter(c.env.GEMINI_API_KEY, parsed.data.prompt);
     return c.json(result);
   } catch (err) {
+    if (err instanceof AuthRequiredError) return c.json({ error: 'Authentication required' }, 401);
     return c.json({ error: formatCleanErrorMessage(err) }, 500);
   }
 });

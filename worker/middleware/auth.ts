@@ -1,45 +1,101 @@
 import type { Context } from 'hono';
 import { verifyToken } from '@clerk/backend';
+import type { AuthProvider } from '../domain/user';
+import { isDevModeAllowed, isDbConfigured } from '../lib/env';
+import { getOrCreateUserByAuthIdentity } from '../services/user-service';
 import type { PersonyEnv } from '../types/env';
 
 export type AuthContext = {
   userId: string | null;
-  clerkUserId: string | null;
+  authProvider: AuthProvider | null;
+  authProviderUserId: string | null;
   isAuthenticated: boolean;
 };
 
-export async function getAuthContext(c: Context<{ Bindings: PersonyEnv }>): Promise<AuthContext> {
-  const env = c.env;
-  const authHeader = c.req.header('Authorization');
+export type AuthCredentialInput = {
+  authorizationHeader?: string | null;
+  bearerToken?: string | null;
+  devUserId?: string | null;
+};
 
-  if (env.CLERK_SECRET_KEY && authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.slice(7);
+const UNAUTHENTICATED: AuthContext = {
+  userId: null,
+  authProvider: null,
+  authProviderUserId: null,
+  isAuthenticated: false,
+};
+
+function extractBearerToken(input: AuthCredentialInput): string | null {
+  if (input.bearerToken?.trim()) return input.bearerToken.trim();
+  const header = input.authorizationHeader;
+  if (header?.startsWith('Bearer ')) return header.slice(7);
+  return null;
+}
+
+export async function resolveAuthContext(
+  env: PersonyEnv,
+  input: AuthCredentialInput
+): Promise<AuthContext> {
+  const bearer = extractBearerToken(input);
+
+  if (env.CLERK_SECRET_KEY && bearer) {
     try {
-      const payload = await verifyToken(token, { secretKey: env.CLERK_SECRET_KEY });
+      const payload = await verifyToken(bearer, { secretKey: env.CLERK_SECRET_KEY });
       const clerkUserId = payload.sub;
-      if (clerkUserId) {
+      if (!clerkUserId) return UNAUTHENTICATED;
+
+      if (isDbConfigured(env) && env.DB) {
+        const user = await getOrCreateUserByAuthIdentity(env.DB, 'clerk', clerkUserId);
         return {
-          userId: clerkUserId,
-          clerkUserId,
+          userId: user.id,
+          authProvider: 'clerk',
+          authProviderUserId: clerkUserId,
           isAuthenticated: true,
         };
       }
+
+      return {
+        userId: null,
+        authProvider: 'clerk',
+        authProviderUserId: clerkUserId,
+        isAuthenticated: true,
+      };
     } catch {
-      return { userId: null, clerkUserId: null, isAuthenticated: false };
+      return UNAUTHENTICATED;
     }
   }
 
-  if (env.PERSONY_DEV_MODE === 'true') {
-    const devUser =
-      env.PERSONY_DEV_USER_ID || c.req.header('X-Persony-Dev-User-Id') || 'dev-local-user';
+  if (isDevModeAllowed(env)) {
+    const devUserId =
+      env.PERSONY_DEV_USER_ID || input.devUserId || 'dev-local-user';
+    const authProviderId = devUserId.startsWith('dev_') ? devUserId : `dev_${devUserId}`;
+
+    if (isDbConfigured(env) && env.DB) {
+      const user = await getOrCreateUserByAuthIdentity(env.DB, 'dev', authProviderId);
+      return {
+        userId: user.id,
+        authProvider: 'dev',
+        authProviderUserId: authProviderId,
+        isAuthenticated: true,
+      };
+    }
+
     return {
-      userId: devUser,
-      clerkUserId: null,
+      userId: authProviderId,
+      authProvider: 'dev',
+      authProviderUserId: authProviderId,
       isAuthenticated: true,
     };
   }
 
-  return { userId: null, clerkUserId: null, isAuthenticated: false };
+  return UNAUTHENTICATED;
+}
+
+export async function getAuthContext(c: Context<{ Bindings: PersonyEnv }>): Promise<AuthContext> {
+  return resolveAuthContext(c.env, {
+    authorizationHeader: c.req.header('Authorization'),
+    devUserId: c.req.header('X-Persony-Dev-User-Id'),
+  });
 }
 
 export async function requireUser(c: Context<{ Bindings: PersonyEnv }>): Promise<string> {
@@ -55,5 +111,13 @@ export class AuthRequiredError extends Error {
   constructor() {
     super('Authentication required');
     this.name = 'AuthRequiredError';
+  }
+}
+
+export class PersonaOwnershipError extends Error {
+  readonly status = 403;
+  constructor() {
+    super('Persona ownership mismatch');
+    this.name = 'PersonaOwnershipError';
   }
 }

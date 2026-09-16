@@ -14,7 +14,27 @@ import {
 } from './utils/callTranscriptPersistence';
 import { SseStreamParser } from './lib/sseParser';
 import { getApiHeaders } from './lib/api/headers';
-import { syncCustomPersonasToCloud, syncPersonaToCloud } from './lib/api/personas';
+import {
+  createPersonaOnCloud,
+  deletePersonaOnCloud,
+  fetchMyPersonas,
+  updatePersonaOnCloud,
+} from './lib/api/personas';
+import {
+  ensureDirectConversation,
+  fetchConversationMessages,
+  sendConversationMessage,
+  type CloudMessage,
+} from './lib/api/conversations';
+import {
+  hasLegacyLocalData,
+  importLocalDataToCloud,
+  remapMessagesByPersona,
+  remapPersonaIds,
+} from './lib/cloudMigration';
+import { AuthMenu } from './components/AuthMenu';
+import { ImportLocalDataModal } from './components/ImportLocalDataModal';
+import { usePersonyAuth } from './components/PersonyAuthProvider';
 
 const STORAGE_KEY_PERSONAS = 'persony_personas_v1';
 const STORAGE_KEY_MESSAGES = 'persony_messages_v1';
@@ -88,8 +108,20 @@ function cleanModelError(err: any): string {
   return msg.length > 250 ? msg.slice(0, 250) + '...' : msg;
 }
 
+function cloudMessageToChat(message: CloudMessage, personaId: string): ChatMessage {
+  return {
+    id: message.id,
+    characterId: personaId,
+    sender: message.senderType === 'user' ? 'user' : 'character',
+    text: message.text,
+    timestamp: new Date(message.createdAt).getTime(),
+    status: 'sent',
+  };
+}
+
 export default function App() {
   migrateLegacyStorageKeys();
+  const { isLoaded: isAuthLoaded, isSignedIn, clerkEnabled } = usePersonyAuth();
 
   // Theme state
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -150,9 +182,57 @@ export default function App() {
   // Collapsible sidebar state (ChatGPT-style)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
+  const [conversationIds, setConversationIds] = useState<Record<string, string>>({});
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [cloudPersonasLoaded, setCloudPersonasLoaded] = useState(false);
+
   useEffect(() => {
-    void syncCustomPersonasToCloud(personas.filter((p) => p.isCustom));
-  }, []);
+    if (!isAuthLoaded || !isSignedIn || cloudPersonasLoaded) return;
+
+    void (async () => {
+      const cloudPersonas = await fetchMyPersonas();
+      if (cloudPersonas.length > 0) {
+        setPersonas((prev) => {
+          const builtins = prev.filter((p) => !p.isCustom);
+          return [...builtins, ...cloudPersonas];
+        });
+      }
+      setCloudPersonasLoaded(true);
+      if (hasLegacyLocalData()) {
+        setIsImportModalOpen(true);
+      }
+    })();
+  }, [isAuthLoaded, isSignedIn, cloudPersonasLoaded]);
+
+  useEffect(() => {
+    if (!isAuthLoaded || !isSignedIn || !selectedPersona) return;
+
+    void (async () => {
+      const existingId = conversationIds[selectedPersona.id];
+      const conversation =
+        existingId
+          ? { id: existingId }
+          : await ensureDirectConversation(selectedPersona.id);
+
+      if (!conversation?.id) return;
+
+      setConversationIds((prev) =>
+        prev[selectedPersona.id] === conversation.id
+          ? prev
+          : { ...prev, [selectedPersona.id]: conversation.id }
+      );
+
+      const cloudMessages = await fetchConversationMessages(conversation.id);
+      if (cloudMessages.length === 0) return;
+
+      setMessagesByPersona((prev) => ({
+        ...prev,
+        [selectedPersona.id]: cloudMessages.map((m) =>
+          cloudMessageToChat(m, selectedPersona.id)
+        ),
+      }));
+    })();
+  }, [isAuthLoaded, isSignedIn, selectedPersona.id]);
 
   // Sync theme to root class
   useEffect(() => {
@@ -220,6 +300,22 @@ export default function App() {
   ) => {
     if ((!text.trim() && !audioBase64) || isStreaming) return;
 
+    if (clerkEnabled && !isSignedIn) {
+      const errMessage: ChatMessage = {
+        id: `err_${Date.now()}`,
+        characterId: selectedPersona.id,
+        sender: 'character',
+        text: 'Войдите в аккаунт, чтобы отправлять сообщения.',
+        timestamp: Date.now(),
+        isError: true,
+      };
+      setMessagesByPersona((prev) => ({
+        ...prev,
+        [selectedPersona.id]: [...(prev[selectedPersona.id] || []), errMessage],
+      }));
+      return;
+    }
+
     const msgId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
     const userMessage: ChatMessage = {
       id: msgId,
@@ -258,7 +354,7 @@ export default function App() {
         try {
           const transRes = await fetch('/api/transcribe', {
             method: 'POST',
-            headers: getApiHeaders(),
+            headers: await getApiHeaders(),
             body: JSON.stringify({
               audioBase64,
               mimeType: 'audio/wav',
@@ -293,35 +389,24 @@ export default function App() {
         });
       }
 
-      // Prepare history for Gemini chat stream
-      const messagesPayload = updatedHistory.slice(-10).map((m) => {
-        if (m.id === msgId && isVoiceNote) {
-          return {
-            sender: 'user',
-            text: transcriptText
-              ? `[Пользователь отправил голосовое аудиосообщение]: "${transcriptText}". Ответь на слова пользователя развернуто и естественно в твоем характерном стиле персонажа.`
-              : `[Пользователь отправил голосовое аудиосообщение длительностью ${audioDuration || 3} сек, но в записи была тишина или слова не распознаны]. Обрати на это внимание собеседника в стиле своего персонажа.`,
-          };
-        }
-        return {
-          sender: m.sender,
-          text: m.text,
-        };
-      });
+      const outboundText =
+        isVoiceNote
+          ? transcriptText
+            ? `[Пользователь отправил голосовое аудиосообщение]: "${transcriptText}". Ответь на слова пользователя развернуто и естественно в твоем характерном стиле персонажа.`
+            : `[Пользователь отправил голосовое аудиосообщение длительностью ${audioDuration || 3} сек, но в записи была тишина или слова не распознаны]. Обрати на это внимание собеседника в стиле своего персонажа.`
+          : text.trim();
 
-      // Request Gemini chat stream from server
-      if (selectedPersona.isCustom) {
-        await syncPersonaToCloud(selectedPersona);
+      let conversationId = conversationIds[selectedPersona.id];
+      if (!conversationId) {
+        const conversation = await ensureDirectConversation(selectedPersona.id);
+        if (!conversation?.id) {
+          throw new Error('Failed to open cloud conversation');
+        }
+        conversationId = conversation.id;
+        setConversationIds((prev) => ({ ...prev, [selectedPersona.id]: conversationId }));
       }
 
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: getApiHeaders(),
-        body: JSON.stringify({
-          personaId: selectedPersona.id,
-          messages: messagesPayload,
-        }),
-      });
+      const response = await sendConversationMessage(conversationId, outboundText, msgId);
 
       if (!response.ok) {
         throw new Error(`Server returned ${response.status}`);
@@ -449,8 +534,19 @@ export default function App() {
     setMobileView('chat');
   };
 
-  const handleSavePersona = (newPersona: Persona) => {
-    const saved = { ...newPersona, isCustom: true };
+  const handleSavePersona = async (newPersona: Persona) => {
+    let saved: Persona = { ...newPersona, isCustom: true };
+
+    if (isSignedIn) {
+      if (editingPersona?.isCustom && editingPersona.id) {
+        const updated = await updatePersonaOnCloud(saved);
+        if (updated) saved = { ...updated, isCustom: true };
+      } else {
+        const created = await createPersonaOnCloud(saved);
+        if (created) saved = { ...created, isCustom: true };
+      }
+    }
+
     setPersonas((prev) => {
       const idx = prev.findIndex((p) => p.id === saved.id);
       if (idx !== -1) {
@@ -462,14 +558,33 @@ export default function App() {
     });
     setSelectedPersona(saved);
     setMobileView('chat');
-    void syncPersonaToCloud(saved);
   };
 
   const handleDeletePersona = (id: string) => {
+    if (isSignedIn) {
+      void deletePersonaOnCloud(id);
+    }
     setPersonas((prev) => prev.filter((p) => p.id !== id));
     if (selectedPersona.id === id) {
       setSelectedPersona(DEFAULT_PERSONAS[0]);
     }
+  };
+
+  const handleImportLocalData = async () => {
+    const result = await importLocalDataToCloud(personas, messagesByPersona);
+    if (!result) throw new Error('Import failed');
+
+    const remappedPersonas = remapPersonaIds(personas, result.personaIdMap);
+    const remappedMessages = remapMessagesByPersona(messagesByPersona, result.personaIdMap);
+
+    setPersonas((prev) => {
+      const builtins = prev.filter((p) => !p.isCustom);
+      const custom = remappedPersonas.filter((p) => p.isCustom);
+      return [...builtins, ...custom];
+    });
+    setMessagesByPersona(remappedMessages);
+    setConversationIds({});
+    setCloudPersonasLoaded(false);
   };
 
   const handleClearChat = (characterId: string) => {
@@ -524,6 +639,7 @@ export default function App() {
             onResetDefaults={handleResetDefaults}
             isSidebarOpen={isSidebarOpen}
             onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+            authMenu={<AuthMenu />}
           />
         </div>
 
@@ -594,6 +710,12 @@ export default function App() {
         }}
         onSave={handleSavePersona}
         initialPersona={editingPersona}
+      />
+
+      <ImportLocalDataModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onConfirm={handleImportLocalData}
       />
 
       {/* Persona Profile & Dossier Drawer */}

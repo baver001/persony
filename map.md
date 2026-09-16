@@ -48,13 +48,21 @@ flowchart TD
 - CF Workers + GitHub Actions deploy
 - Дизайн-токены Persony
 
-### В работе — Phase 1 (cloud foundation)
+### Готово — Phase 1 (cloud foundation, local verified)
 
-- D1 `persony-db` + migration `0001_initial.sql`
-- Server-authoritative chat/live (`personaId`, не `systemPrompt` с клиента)
-- `AuthContext` + optional Clerk JWT
-- `POST /api/personas` sync custom personas (dev mode / auth)
-- `specs/06-cloud-data-auth.md`
+- D1 `persony-db` + migrations `0001` / `0002` (`wrangler d1 migrations apply`)
+- Internal user identity: Clerk/dev → `users.id` (lazy provisioning, без webhook)
+- Persona CRUD: server ID, owner check, soft delete, public/owner DTO
+- Cloud conversations/messages — server-authoritative chat history + SSE persist
+- Security: strict CORS, anonymous billable blocked, dev bypass только non-production
+- `POST /api/import/local-v1` + import modal
+- Clerk React UI (`@clerk/clerk-react`)
+- 32 integration/unit tests; `specs/06-cloud-data-auth.md`
+
+### Проверить для закрытия Phase 1
+
+- GitHub Actions CI green после push
+- Clerk production secrets + smoke test на workers.dev
 
 ### Готово (Phase 0)
 
@@ -63,8 +71,7 @@ flowchart TD
 
 ### Дальше (по фазам roadmap)
 
-1. **Phase 1** — Auth (Clerk), D1, cloud personas/conversations, server-authoritative prompts
-2. **Phase 2** — Multi-provider (DeepSeek + Gemini), ModelRouter, eval
+1. **Phase 2** — Multi-provider (DeepSeek + Gemini), ModelRouter, eval
 3. **Phase 3** — Energy wallet, trial battery, CostEngine
 4. **Phase 4** — Paddle recharge
 5. **Phase 5** — Public catalog, share, remix
@@ -137,4 +144,4 @@ Messenger-first UX + cloud personas + Energy economy + viral loop (`/p/:slug` �
 npm ci && npm run lint && npm test && npm run build && wrangler deploy
 ```
 
-CI: `.github/workflows/deploy.yml` (lint → test → build → deploy)
+CI: `.github/workflows/deploy.yml` (lint → test → build → migrate → deploy)

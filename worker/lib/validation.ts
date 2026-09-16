@@ -1,21 +1,21 @@
 import { z } from 'zod';
 
-export const chatRequestSchema = z.object({
-  personaId: z.string().min(1),
-  conversationId: z.string().optional(),
-  messages: z
-    .array(
-      z.object({
-        sender: z.enum(['user', 'character', 'model']),
-        text: z.string(),
-      })
-    )
-    .min(1)
-    .max(50),
+export const MAX_CHAT_MESSAGE_CHARS = 50_000;
+export const MAX_TRANSCRIBE_BASE64_CHARS = 8_000_000;
+export const MAX_WS_JSON_BYTES = 256_000;
+export const MAX_WS_AUDIO_CHUNK_CHARS = 512_000;
+
+export const conversationMessageSchema = z.object({
+  text: z.string().min(1).max(MAX_CHAT_MESSAGE_CHARS),
+  idempotencyKey: z.string().min(1).max(128).optional(),
 });
 
-export const upsertPersonaSchema = z.object({
-  id: z.string().min(1).max(128),
+export const createConversationSchema = z.object({
+  personaId: z.string().min(1).max(128),
+  title: z.string().max(200).optional(),
+});
+
+export const createPersonaSchema = z.object({
   name: z.string().min(1).max(120),
   tagline: z.string().max(200).optional().default(''),
   description: z.string().max(2000).optional().default(''),
@@ -27,12 +27,14 @@ export const upsertPersonaSchema = z.object({
   color: z.string().max(32).optional(),
   starterMessages: z.array(z.string().max(500)).max(10).optional(),
   visibility: z.enum(['private', 'unlisted', 'public']).optional(),
-  sourcePersonaId: z.string().optional(),
+  sourcePersonaId: z.string().max(128).optional(),
 });
 
+export const updatePersonaSchema = createPersonaSchema;
+
 export const transcribeRequestSchema = z.object({
-  audioBase64: z.string().min(1),
-  mimeType: z.string().optional(),
+  audioBase64: z.string().min(1).max(MAX_TRANSCRIBE_BASE64_CHARS),
+  mimeType: z.string().max(64).optional(),
 });
 
 export const generateCharacterSchema = z.object({
@@ -41,11 +43,66 @@ export const generateCharacterSchema = z.object({
 
 export const liveInitSchema = z.object({
   type: z.literal('init'),
-  personaId: z.string().min(1),
-  characterName: z.string().optional(),
-  voiceName: z.string().optional(),
+  personaId: z.string().min(1).max(128),
+  characterName: z.string().max(120).optional(),
+  voiceName: z.string().max(32).optional(),
   recentChatContext: z
-    .array(z.object({ sender: z.string(), text: z.string() }))
+    .array(
+      z.object({
+        sender: z.string().max(32),
+        text: z.string().max(MAX_CHAT_MESSAGE_CHARS),
+      })
+    )
     .max(20)
     .optional(),
+  authToken: z.string().max(4096).optional(),
+  devUserId: z.string().max(128).optional(),
+});
+
+export const liveAudioSchema = z.object({
+  type: z.literal('audio'),
+  data: z.string().min(1).max(MAX_WS_AUDIO_CHUNK_CHARS),
+});
+
+export const liveTextSchema = z.object({
+  type: z.literal('text'),
+  text: z.string().min(1).max(MAX_CHAT_MESSAGE_CHARS),
+});
+
+export const localImportSchema = z.object({
+  schemaVersion: z.literal(1),
+  personas: z
+    .array(
+      z.object({
+        localId: z.string().min(1).max(128),
+        name: z.string().min(1).max(120),
+        tagline: z.string().max(200).optional().default(''),
+        description: z.string().max(2000).optional().default(''),
+        systemPrompt: z.string().min(1).max(32_000),
+        avatarUrl: z.string().max(4096),
+        voice: z.string().min(1).max(32),
+        category: z.string().min(1).max(32),
+        badge: z.string().max(64).optional(),
+        color: z.string().max(32).optional(),
+        starterMessages: z.array(z.string().max(500)).max(10).optional(),
+      })
+    )
+    .max(100),
+  conversations: z
+    .array(
+      z.object({
+        localPersonaId: z.string().min(1).max(128),
+        messages: z
+          .array(
+            z.object({
+              localId: z.string().min(1).max(128),
+              sender: z.enum(['user', 'character']),
+              text: z.string().min(1).max(MAX_CHAT_MESSAGE_CHARS),
+              timestamp: z.number().optional(),
+            })
+          )
+          .max(500),
+      })
+    )
+    .max(100),
 });

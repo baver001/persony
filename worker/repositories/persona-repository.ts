@@ -1,8 +1,11 @@
 import { DEFAULT_PERSONAS } from '../../shared/default-personas';
-import type { PersonaRecord, PersonaPublicMeta, UpsertPersonaInput } from '../domain/persona';
+import type { PersonaRecord, PersonaPublicMeta, CreatePersonaInput, UpdatePersonaInput } from '../domain/persona';
+import { PersonaOwnershipError } from '../middleware/auth';
+import { generateId } from '../lib/ids';
+import { isDbConfigured, isProduction } from '../lib/env';
+import type { PersonyEnv } from '../types/env';
 
-const SYSTEM_OWNER = 'system';
-const SEED_MARKER = 'persony-seed-v1';
+export const SYSTEM_OWNER = 'system';
 
 type PersonaRow = {
   id: string;
@@ -14,6 +17,7 @@ type PersonaRow = {
   voice: string;
   category: string;
   visibility: string;
+  status: string;
   current_version: number;
   badge: string | null;
   color: string | null;
@@ -22,26 +26,27 @@ type PersonaRow = {
   system_prompt: string;
 };
 
-function seedToRecord(p: (typeof DEFAULT_PERSONAS)[number]): PersonaRecord {
-  return {
-    id: p.id,
-    ownerUserId: SYSTEM_OWNER,
-    name: p.name,
-    tagline: p.tagline,
-    description: p.description,
-    avatarUrl: p.avatar,
-    voice: p.voice,
-    category: p.category,
-    visibility: 'public',
-    currentVersion: 1,
-    systemPrompt: p.systemPrompt,
-    badge: p.badge,
-    color: p.color,
-    starterMessages: p.starterMessages,
-  };
-}
-
-const SEED_MAP = new Map(DEFAULT_PERSONAS.map((p) => [p.id, seedToRecord(p)]));
+const MEMORY_SEED = new Map(
+  DEFAULT_PERSONAS.map((p) => [
+    p.id,
+    {
+      id: p.id,
+      ownerUserId: SYSTEM_OWNER,
+      name: p.name,
+      tagline: p.tagline,
+      description: p.description,
+      avatarUrl: p.avatar,
+      voice: p.voice,
+      category: p.category,
+      visibility: 'public' as const,
+      currentVersion: 1,
+      systemPrompt: p.systemPrompt,
+      badge: p.badge,
+      color: p.color,
+      starterMessages: p.starterMessages,
+    } satisfies PersonaRecord,
+  ])
+);
 
 export async function isDbReady(db: D1Database): Promise<boolean> {
   try {
@@ -52,41 +57,11 @@ export async function isDbReady(db: D1Database): Promise<boolean> {
   }
 }
 
-export async function ensureDefaultPersonasSeeded(db: D1Database): Promise<void> {
-  if (!(await isDbReady(db))) return;
-
-  const marker = await db
-    .prepare('SELECT id FROM personas WHERE id = ?')
-    .bind(SEED_MARKER)
-    .first();
-
-  if (marker) return;
-
-  const now = new Date().toISOString();
-  for (const persona of DEFAULT_PERSONAS) {
-    await upsertPersonaInDb(db, SYSTEM_OWNER, {
-      id: persona.id,
-      name: persona.name,
-      tagline: persona.tagline,
-      description: persona.description,
-      systemPrompt: persona.systemPrompt,
-      avatarUrl: persona.avatar,
-      voice: persona.voice,
-      category: persona.category,
-      badge: persona.badge,
-      color: persona.color,
-      starterMessages: persona.starterMessages,
-      visibility: 'public',
-    });
-  }
-
-  await db
-    .prepare(
-      `INSERT INTO personas (id, owner_user_id, name, tagline, visibility, status, voice, category, current_version, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-    .bind(SEED_MARKER, SYSTEM_OWNER, '__seed__', 'marker', 'private', 'active', 'Puck', 'custom', 1, now, now)
-    .run();
+export function shouldAllowMemorySeed(env: PersonyEnv, dbReady: boolean): boolean {
+  if (isProduction(env)) return false;
+  if (!isDbConfigured(env)) return true;
+  if (!dbReady) return true;
+  return false;
 }
 
 function rowToRecord(row: PersonaRow): PersonaRecord {
@@ -111,47 +86,114 @@ function rowToRecord(row: PersonaRow): PersonaRecord {
   };
 }
 
-export async function getPersonaById(
+async function fetchPersonaRow(db: D1Database, personaId: string): Promise<PersonaRow | null> {
+  return db
+    .prepare(
+      `SELECT p.*, pv.system_prompt
+       FROM personas p
+       JOIN persona_versions pv ON pv.persona_id = p.id AND pv.version = p.current_version
+       WHERE p.id = ? AND p.status = 'active'`
+    )
+    .bind(personaId)
+    .first<PersonaRow>();
+}
+
+export async function ensureDefaultPersonasSeeded(db: D1Database): Promise<void> {
+  if (!(await isDbReady(db))) return;
+
+  const now = new Date().toISOString();
+
+  for (const persona of DEFAULT_PERSONAS) {
+    const insert = await db
+      .prepare(
+        `INSERT OR IGNORE INTO personas (
+          id, owner_user_id, slug, name, tagline, description, avatar_url, voice, category,
+          visibility, status, current_version, badge, color, starter_messages_json, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'public', 'active', 1, ?, ?, ?, ?, ?)`
+      )
+      .bind(
+        persona.id,
+        SYSTEM_OWNER,
+        persona.id,
+        persona.name,
+        persona.tagline,
+        persona.description,
+        persona.avatar,
+        persona.voice,
+        persona.category,
+        persona.badge || null,
+        persona.color || null,
+        persona.starterMessages ? JSON.stringify(persona.starterMessages) : null,
+        now,
+        now
+      )
+      .run();
+
+    if ((insert.meta?.changes ?? 0) > 0) {
+      await db
+        .prepare(
+          `INSERT INTO persona_versions (id, persona_id, version, system_prompt, configuration_json, created_at)
+           VALUES (?, ?, 1, ?, NULL, ?)`
+        )
+        .bind(`${persona.id}_v1`, persona.id, persona.systemPrompt, now)
+        .run();
+    }
+  }
+}
+
+export async function getPersonaRecord(
+  env: PersonyEnv,
+  db: D1Database | undefined,
+  personaId: string
+): Promise<PersonaRecord | null> {
+  const dbReady = db ? await isDbReady(db) : false;
+
+  if (db && dbReady) {
+    const row = await fetchPersonaRow(db, personaId);
+    return row ? rowToRecord(row) : null;
+  }
+
+  if (shouldAllowMemorySeed(env, dbReady)) {
+    return MEMORY_SEED.get(personaId) ?? null;
+  }
+
+  return null;
+}
+
+export async function getAccessiblePersona(
+  env: PersonyEnv,
   db: D1Database | undefined,
   personaId: string,
   requesterUserId: string | null
 ): Promise<PersonaRecord | null> {
-  if (db && (await isDbReady(db))) {
-    const row = await db
-      .prepare(
-        `SELECT p.*, pv.system_prompt
-         FROM personas p
-         JOIN persona_versions pv ON pv.persona_id = p.id AND pv.version = p.current_version
-         WHERE p.id = ? AND p.status = 'active'`
-      )
-      .bind(personaId)
-      .first<PersonaRow>();
+  const record = await getPersonaRecord(env, db, personaId);
+  if (!record) return null;
 
-    if (row) {
-      const record = rowToRecord(row);
-      if (
-        record.visibility === 'public' ||
-        record.ownerUserId === SYSTEM_OWNER ||
-        (requesterUserId && record.ownerUserId === requesterUserId)
-      ) {
-        return record;
-      }
-      return null;
-    }
+  if (
+    record.visibility === 'public' ||
+    record.ownerUserId === SYSTEM_OWNER ||
+    (requesterUserId && record.ownerUserId === requesterUserId)
+  ) {
+    return record;
   }
 
-  return SEED_MAP.get(personaId) ?? null;
+  return null;
 }
 
-export async function listPublicPersonas(db: D1Database | undefined): Promise<PersonaPublicMeta[]> {
-  if (db && (await isDbReady(db))) {
+export async function listPublicPersonas(
+  env: PersonyEnv,
+  db: D1Database | undefined
+): Promise<PersonaPublicMeta[]> {
+  const dbReady = db ? await isDbReady(db) : false;
+
+  if (db && dbReady) {
     const { results } = await db
       .prepare(
         `SELECT id, name, tagline, description, avatar_url, voice, category, visibility, badge, color, starter_messages_json
          FROM personas
-         WHERE visibility = 'public' AND status = 'active' AND id != ?`
+         WHERE visibility = 'public' AND status = 'active' AND owner_user_id = ?`
       )
-      .bind(SEED_MARKER)
+      .bind(SYSTEM_OWNER)
       .all<{
         id: string;
         name: string;
@@ -183,89 +225,159 @@ export async function listPublicPersonas(db: D1Database | undefined): Promise<Pe
     }));
   }
 
-  return DEFAULT_PERSONAS.map((p) => ({
-    id: p.id,
-    name: p.name,
-    tagline: p.tagline,
-    description: p.description,
-    avatarUrl: p.avatar,
-    voice: p.voice,
-    category: p.category,
-    visibility: 'public' as const,
-    badge: p.badge,
-    color: p.color,
-    starterMessages: p.starterMessages,
-  }));
+  if (shouldAllowMemorySeed(env, dbReady)) {
+    return DEFAULT_PERSONAS.map((p) => ({
+      id: p.id,
+      name: p.name,
+      tagline: p.tagline,
+      description: p.description,
+      avatarUrl: p.avatar,
+      voice: p.voice,
+      category: p.category,
+      visibility: 'public' as const,
+      badge: p.badge,
+      color: p.color,
+      starterMessages: p.starterMessages,
+    }));
+  }
+
+  return [];
 }
 
-export async function upsertPersonaInDb(
+export async function listUserPersonas(db: D1Database, ownerUserId: string): Promise<PersonaRecord[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT p.*, pv.system_prompt
+       FROM personas p
+       JOIN persona_versions pv ON pv.persona_id = p.id AND pv.version = p.current_version
+       WHERE p.owner_user_id = ? AND p.status = 'active' AND p.owner_user_id != ?`
+    )
+    .bind(ownerUserId, SYSTEM_OWNER)
+    .all<PersonaRow>();
+
+  return (results ?? []).map(rowToRecord);
+}
+
+export async function findPersonaBySlugForOwner(
   db: D1Database,
   ownerUserId: string,
-  input: UpsertPersonaInput
+  slug: string
+): Promise<PersonaRecord | null> {
+  const row = await db
+    .prepare(
+      `SELECT p.*, pv.system_prompt
+       FROM personas p
+       JOIN persona_versions pv ON pv.persona_id = p.id AND pv.version = p.current_version
+       WHERE p.slug = ? AND p.owner_user_id = ? AND p.status = 'active'`
+    )
+    .bind(slug, ownerUserId)
+    .first<PersonaRow>();
+
+  return row ? rowToRecord(row) : null;
+}
+
+export async function createPersonaInDb(
+  db: D1Database,
+  ownerUserId: string,
+  input: CreatePersonaInput,
+  options?: { slug?: string }
 ): Promise<PersonaRecord> {
+  const id = generateId();
+  const slug = options?.slug || id;
   const now = new Date().toISOString();
+  const versionId = `${id}_v1`;
+
+  await db
+    .prepare(
+      `INSERT INTO personas (
+        id, owner_user_id, slug, name, tagline, description, avatar_url, voice, category,
+        visibility, status, source_persona_id, current_version, badge, color, starter_messages_json,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, 1, ?, ?, ?, ?, ?)`
+    )
+    .bind(
+      id,
+      ownerUserId,
+      slug,
+      input.name,
+      input.tagline,
+      input.description,
+      input.avatarUrl,
+      input.voice,
+      input.category,
+      input.visibility || 'private',
+      input.sourcePersonaId || null,
+      input.badge || null,
+      input.color || null,
+      input.starterMessages ? JSON.stringify(input.starterMessages) : null,
+      now,
+      now
+    )
+    .run();
+
+  await db
+    .prepare(
+      `INSERT INTO persona_versions (id, persona_id, version, system_prompt, configuration_json, created_at)
+       VALUES (?, ?, 1, ?, NULL, ?)`
+    )
+    .bind(versionId, id, input.systemPrompt, now)
+    .run();
+
+  const record = await fetchPersonaRow(db, id);
+  if (!record) throw new Error('Failed to load persona after create');
+  return rowToRecord(record);
+}
+
+export async function updatePersonaInDb(
+  db: D1Database,
+  ownerUserId: string,
+  personaId: string,
+  input: UpdatePersonaInput
+): Promise<PersonaRecord> {
   const existing = await db
-    .prepare('SELECT current_version FROM personas WHERE id = ?')
-    .bind(input.id)
-    .first<{ current_version: number }>();
+    .prepare('SELECT owner_user_id, current_version FROM personas WHERE id = ? AND status = ?')
+    .bind(personaId, 'active')
+    .first<{ owner_user_id: string; current_version: number }>();
 
-  const nextVersion = existing ? existing.current_version + 1 : 1;
-  const versionId = `${input.id}_v${nextVersion}`;
+  if (!existing) {
+    throw new Error('Persona not found');
+  }
 
-  if (existing) {
-    await db
-      .prepare(
-        `UPDATE personas SET
-          name = ?, tagline = ?, description = ?, avatar_url = ?, voice = ?, category = ?,
-          visibility = ?, badge = ?, color = ?, starter_messages_json = ?, current_version = ?, updated_at = ?
-         WHERE id = ? AND owner_user_id = ?`
-      )
-      .bind(
-        input.name,
-        input.tagline,
-        input.description,
-        input.avatarUrl,
-        input.voice,
-        input.category,
-        input.visibility || 'private',
-        input.badge || null,
-        input.color || null,
-        input.starterMessages ? JSON.stringify(input.starterMessages) : null,
-        nextVersion,
-        now,
-        input.id,
-        ownerUserId
-      )
-      .run();
-  } else {
-    await db
-      .prepare(
-        `INSERT INTO personas (
-          id, owner_user_id, slug, name, tagline, description, avatar_url, voice, category,
-          visibility, status, source_persona_id, current_version, badge, color, starter_messages_json,
-          created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?)`
-      )
-      .bind(
-        input.id,
-        ownerUserId,
-        input.id,
-        input.name,
-        input.tagline,
-        input.description,
-        input.avatarUrl,
-        input.voice,
-        input.category,
-        input.visibility || 'private',
-        input.sourcePersonaId || null,
-        nextVersion,
-        input.badge || null,
-        input.color || null,
-        input.starterMessages ? JSON.stringify(input.starterMessages) : null,
-        now,
-        now
-      )
-      .run();
+  if (existing.owner_user_id !== ownerUserId) {
+    throw new PersonaOwnershipError();
+  }
+
+  const now = new Date().toISOString();
+  const nextVersion = existing.current_version + 1;
+  const versionId = `${personaId}_v${nextVersion}`;
+
+  const update = await db
+    .prepare(
+      `UPDATE personas SET
+        name = ?, tagline = ?, description = ?, avatar_url = ?, voice = ?, category = ?,
+        visibility = ?, badge = ?, color = ?, starter_messages_json = ?, current_version = ?, updated_at = ?
+       WHERE id = ? AND owner_user_id = ? AND status = 'active'`
+    )
+    .bind(
+      input.name,
+      input.tagline,
+      input.description,
+      input.avatarUrl,
+      input.voice,
+      input.category,
+      input.visibility || 'private',
+      input.badge || null,
+      input.color || null,
+      input.starterMessages ? JSON.stringify(input.starterMessages) : null,
+      nextVersion,
+      now,
+      personaId,
+      ownerUserId
+    )
+    .run();
+
+  if ((update.meta?.changes ?? 0) === 0) {
+    throw new PersonaOwnershipError();
   }
 
   await db
@@ -273,10 +385,27 @@ export async function upsertPersonaInDb(
       `INSERT INTO persona_versions (id, persona_id, version, system_prompt, configuration_json, created_at)
        VALUES (?, ?, ?, ?, NULL, ?)`
     )
-    .bind(versionId, input.id, nextVersion, input.systemPrompt, now)
+    .bind(versionId, personaId, nextVersion, input.systemPrompt, now)
     .run();
 
-  const record = await getPersonaById(db, input.id, ownerUserId);
-  if (!record) throw new Error('Failed to load persona after upsert');
-  return record;
+  const record = await fetchPersonaRow(db, personaId);
+  if (!record) throw new Error('Failed to load persona after update');
+  return rowToRecord(record);
+}
+
+export async function softDeletePersona(
+  db: D1Database,
+  ownerUserId: string,
+  personaId: string
+): Promise<void> {
+  const result = await db
+    .prepare(
+      `UPDATE personas SET status = 'deleted', updated_at = ? WHERE id = ? AND owner_user_id = ? AND status = 'active'`
+    )
+    .bind(new Date().toISOString(), personaId, ownerUserId)
+    .run();
+
+  if ((result.meta?.changes ?? 0) === 0) {
+    throw new PersonaOwnershipError();
+  }
 }

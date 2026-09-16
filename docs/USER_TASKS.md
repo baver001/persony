@@ -12,11 +12,12 @@
    ```bash
    wrangler secret put CLERK_SECRET_KEY
    ```
-4. Добавить в frontend env (Vite):
+4. Добавить publishable key в Cloudflare/Vite build env:
    ```
    VITE_CLERK_PUBLISHABLE_KEY=pk_...
    ```
-5. Проверка: `GET /api/me` → `isAuthenticated: true` после входа.
+5. Убедиться, что Worker имеет `ENVIRONMENT=production` (уже в `wrangler.jsonc` vars).
+6. Проверка после deploy: sign-in → chat → reload → история из D1; `GET /api/me` → `isAuthenticated: true`.
 
 ## 2. Paddle — billing (Phase 4)
 
@@ -45,6 +46,7 @@
 
 ```env
 GEMINI_API_KEY=...
+ENVIRONMENT=development
 PERSONY_DEV_MODE=true
 PERSONY_DEV_USER_ID=dev-local-user
 ```
