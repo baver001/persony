@@ -35,18 +35,27 @@ const OPERATION_FALLBACK_UNITS: Record<string, number> = {
 export async function loadBatteryConfig(db: D1Database): Promise<BatteryConfig> {
   const merged: BatteryConfig = { ...DEFAULT_BATTERY_CONFIG };
 
-  for (const key of Object.keys(DEFAULT_BATTERY_CONFIG) as Array<keyof BatteryConfig>) {
+  const numericKeys = [
+    'battery_capacity_units',
+    'battery_welcome_units',
+    'battery_regen_delay_minutes',
+    'battery_regen_full_hours',
+    'beta_usage_scale',
+  ] as const;
+
+  const enabled = await getSystemSetting(db, 'battery_enabled');
+  if (enabled !== null && enabled !== undefined) {
+    merged.battery_enabled = Boolean(enabled);
+  }
+
+  const mode = await getSystemSetting(db, 'battery_mode');
+  if (mode === 'paid' || mode === 'beta_regen') {
+    merged.battery_mode = mode;
+  }
+
+  for (const key of numericKeys) {
     const value = await getSystemSetting(db, key);
-    if (value === null || value === undefined) continue;
-    if (key === 'battery_enabled') {
-      merged.battery_enabled = Boolean(value);
-    } else if (key === 'battery_mode') {
-      merged.battery_mode = value === 'paid' ? 'paid' : 'beta_regen';
-    } else if (
-      key !== 'battery_enabled' &&
-      key !== 'battery_mode' &&
-      typeof value === 'number'
-    ) {
+    if (typeof value === 'number') {
       merged[key] = value;
     }
   }
