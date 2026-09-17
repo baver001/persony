@@ -126,22 +126,22 @@ export const SidebarBottomBar: React.FC<Props> = ({
     }
   };
 
-  const menuBtnClass = (active: boolean) =>
-    `flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+  const iconMenuBtnClass = (active: boolean) =>
+    `py-touch-target p-2 rounded-lg transition-colors cursor-pointer shrink-0 ${
       active
         ? isDark
           ? 'bg-zinc-800 text-zinc-100'
           : 'bg-neutral-100 text-neutral-900'
         : isDark
-          ? 'text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100'
-          : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
+          ? 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+          : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
     }`;
 
   const currentLocale = i18n.language.startsWith('ru') ? 'ru' : 'en';
 
   return (
     <div
-      className={`px-3 py-2 border-t shrink-0 flex items-center gap-2 ${
+      className={`px-3 py-2.5 border-t shrink-0 flex items-center gap-2 min-h-[3.25rem] ${
         isDark ? 'bg-[#18181b] border-zinc-800' : 'bg-white border-neutral-200'
       }`}
     >
@@ -152,6 +152,7 @@ export const SidebarBottomBar: React.FC<Props> = ({
           isDark ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200' : 'hover:bg-neutral-100 text-neutral-600'
         }`}
         title={t('common:soundEffects')}
+        aria-label={t('common:soundEffects')}
       >
         {soundEnabled ? (
           <Volume2 className="w-4 h-4 text-emerald-400" />
@@ -167,11 +168,11 @@ export const SidebarBottomBar: React.FC<Props> = ({
             setShowProfileMenu(false);
             setShowSettingsMenu((prev) => !prev);
           }}
-          className={menuBtnClass(showSettingsMenu)}
+          className={iconMenuBtnClass(showSettingsMenu)}
           title={t('common:settings')}
+          aria-label={t('common:settings')}
         >
           <Settings2 className="w-4 h-4 shrink-0" />
-          <span>{t('common:settings')}</span>
         </button>
 
         {showSettingsMenu && (
@@ -252,11 +253,11 @@ export const SidebarBottomBar: React.FC<Props> = ({
             setShowSettingsMenu(false);
             setShowProfileMenu((prev) => !prev);
           }}
-          className={menuBtnClass(showProfileMenu)}
+          className={iconMenuBtnClass(showProfileMenu)}
           title={t('common:profile')}
+          aria-label={t('common:profile')}
         >
           <User className="w-4 h-4 shrink-0" />
-          <span>{t('common:profile')}</span>
         </button>
 
         {showProfileMenu && (

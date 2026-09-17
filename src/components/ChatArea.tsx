@@ -6,7 +6,6 @@ import {
   ArrowUp,
   Mic,
   MoreVertical,
-  ArrowLeft,
   Check,
   CheckCheck,
   Sparkles,
@@ -26,7 +25,6 @@ import {
   Pin,
   X,
   PanelLeftOpen,
-  PanelLeftClose,
   PanelLeft,
   AlertCircle,
 } from 'lucide-react';
@@ -192,6 +190,27 @@ const PersonyMarkdown: React.FC<{ content: string; isUser: boolean }> = ({ conte
   );
 };
 
+const VOICE_WAVE_HEIGHTS = [4, 8, 14, 8, 16, 12, 6, 14, 18, 10, 8, 14, 6, 12, 16, 8, 10, 14, 8, 6];
+
+const VoiceWaveform: React.FC<{
+  live?: boolean;
+  isPlaying?: boolean;
+  barClassName?: string;
+}> = ({ live = false, isPlaying = false, barClassName }) => (
+  <div className={`py-voice-waveform${live ? ' py-voice-waveform--live' : ''}`}>
+    {VOICE_WAVE_HEIGHTS.map((h, i) => (
+      <span
+        key={i}
+        className={`py-voice-waveform-bar ${isPlaying && !live ? 'animate-pulse' : ''} ${barClassName ?? ''}`}
+        style={{
+          height: isPlaying && !live ? `${((i % 5) + 2) * 3.5}px` : `${h}px`,
+          animationDelay: live ? `${(i % 7) * 0.09}s` : undefined,
+        }}
+      />
+    ))}
+  </div>
+);
+
 // Voice Note Audio Bubble with Transcription
 const VoiceNoteBubble: React.FC<{
   audioUrl?: string;
@@ -252,21 +271,16 @@ const VoiceNoteBubble: React.FC<{
         </button>
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-0.5 h-6">
-            {[4, 8, 14, 8, 16, 12, 6, 14, 18, 10, 8, 14, 6, 12, 16, 8, 10, 14, 8, 6].map((h, i) => (
-              <span
-                key={i}
-                className={`w-1 rounded-full transition-all ${
-                  isPlaying
-                    ? 'bg-emerald-400 animate-pulse'
-                    : isUser
-                    ? 'bg-white/75'
-                    : 'bg-white/40 dark:bg-white/40 bg-neutral-400'
-                }`}
-                style={{ height: `${isPlaying ? ((i % 5) + 2) * 3.5 : h}px` }}
-              />
-            ))}
-          </div>
+          <VoiceWaveform
+            isPlaying={isPlaying}
+            barClassName={
+              isPlaying
+                ? 'bg-emerald-400/90'
+                : isUser
+                  ? '!bg-white/75'
+                  : '!bg-white/40'
+            }
+          />
           <div className="flex items-center justify-between text-[10px] opacity-75 mt-0.5">
             <span>{isPlaying ? 'Воспроизведение...' : 'Голосовое сообщение'}</span>
             <span>0:{duration.toString().padStart(2, '0')}</span>
@@ -398,7 +412,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     const textarea = textareaRef.current;
     if (!textarea) return;
     textarea.style.height = 'auto';
-    const minH = 24;
+    const minH = 20;
     const maxH = 160;
     const scrollH = textarea.scrollHeight;
     const targetH = Math.min(Math.max(scrollH, minH), maxH);
@@ -411,7 +425,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     const text = inputText.trim();
     setInputText('');
     if (textareaRef.current) {
-      textareaRef.current.style.height = '24px';
+      textareaRef.current.style.height = '20px';
       textareaRef.current.style.overflowY = 'hidden';
     }
     soundFX.playSend();
@@ -621,32 +635,40 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         className="relative z-10 flex items-center justify-between gap-2 px-2 sm:px-4 py-2 sm:py-2.5 border-b border-py-border bg-py-sidebar text-py-text transition-colors shadow-xs shrink-0"
       >
         <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-          {/* Back button visible ONLY on small mobile screens (<640px) */}
-          {onBackToList && (
-            <button
-              onClick={onBackToList}
-              className="sm:hidden py-touch-target px-1.5 -ml-0.5 rounded-full hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors shrink-0"
-              title="Назад к списку"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-          )}
-
-          {/* ChatGPT-style sidebar expand button on desktop when sidebar is collapsed */}
-          {!isSidebarOpen && onToggleSidebar && (
-            <button
-              id="chat-open-sidebar-btn"
-              onClick={onToggleSidebar}
-              className={`hidden sm:inline-flex py-touch-target p-2 -ml-1 rounded-lg transition-colors ${
-                isDark
-                  ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100'
-                  : 'hover:bg-neutral-100 text-neutral-600 hover:text-neutral-900'
-              }`}
-              title="Развернуть боковую панель"
-            >
-              <PanelLeftOpen className="w-5 h-5" />
-            </button>
-          )}
+          {/* Fixed 40px slot — layout stays stable when sidebar opens/closes */}
+          <div className="py-header-nav-slot">
+            {onBackToList && (
+              <button
+                type="button"
+                onClick={onBackToList}
+                className={`py-header-icon-btn sm:hidden transition-colors cursor-pointer ${
+                  isDark
+                    ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100'
+                    : 'hover:bg-neutral-100 text-neutral-600 hover:text-neutral-900'
+                }`}
+                title="К списку чатов"
+                aria-label="К списку чатов"
+              >
+                <PanelLeft className="w-4 h-4" />
+              </button>
+            )}
+            {onToggleSidebar && !isSidebarOpen && (
+              <button
+                id="chat-open-sidebar-btn"
+                type="button"
+                onClick={onToggleSidebar}
+                className={`py-header-icon-btn hidden sm:inline-flex transition-colors cursor-pointer ${
+                  isDark
+                    ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100'
+                    : 'hover:bg-neutral-100 text-neutral-600 hover:text-neutral-900'
+                }`}
+                title="Развернуть боковую панель"
+                aria-label="Развернуть боковую панель"
+              >
+                <PanelLeftOpen className="w-4 h-4" />
+              </button>
+            )}
+          </div>
 
           {/* Contact Avatar */}
           <div
@@ -1153,7 +1175,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       {/* Bottom Input Bar — transparent strip, thread-width composer */}
       <div
         id="chat-input-bar"
-        className="relative z-10 shrink-0 bg-transparent pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+        className="relative z-10 shrink-0 bg-transparent pt-2 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
       >
         {showEmojiPicker && (
           <div className="py-chat-thread mb-2">
@@ -1182,31 +1204,38 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         <div className="py-chat-thread">
         <div className="py-composer-row">
           {isRecordingVoice ? (
-            <div className="flex-1 flex items-center justify-between bg-rose-500/15 border border-rose-500/30 rounded-[26px] px-4 min-h-11 text-xs text-rose-400">
-              <div className="flex items-center gap-2.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
-                <span className="font-mono font-bold text-sm">
-                  0:{recordingSeconds.toString().padStart(2, '0')}
-                </span>
-                <span className="hidden sm:inline text-white/70 text-xs">Запись аудиосообщения...</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => stopVoiceRecording(true)}
-                  className="px-2.5 py-1 rounded-lg hover:bg-rose-500/20 text-white/70 hover:text-white transition-colors cursor-pointer text-xs"
-                >
-                  Отмена
-                </button>
-                <button
-                  type="button"
-                  onClick={() => stopVoiceRecording(false)}
-                  className="w-8 h-8 rounded-full bg-rose-600 hover:bg-rose-700 text-white shadow-sm flex items-center justify-center cursor-pointer transition-all active:scale-95"
-                  title="Отправить голосовое"
-                >
-                  <ArrowUp className="w-4 h-4 stroke-[2.5]" />
-                </button>
-              </div>
+            <div className="py-composer-recording flex-1">
+              <span
+                className={`font-mono text-xs tabular-nums shrink-0 ${
+                  isDark ? 'text-zinc-400' : 'text-neutral-500'
+                }`}
+              >
+                0:{recordingSeconds.toString().padStart(2, '0')}
+              </span>
+              <VoiceWaveform live />
+              <button
+                type="button"
+                onClick={() => stopVoiceRecording(true)}
+                className={`shrink-0 px-2 py-1 rounded-lg text-xs transition-colors cursor-pointer ${
+                  isDark
+                    ? 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700/50'
+                    : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200/80'
+                }`}
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                onClick={() => stopVoiceRecording(false)}
+                className={`py-composer-send-btn active:scale-95 transition-all shadow-sm cursor-pointer ${
+                  isDark
+                    ? 'bg-white hover:bg-zinc-200 text-zinc-900'
+                    : 'bg-neutral-900 hover:bg-neutral-800 text-white'
+                }`}
+                title="Отправить голосовое"
+              >
+                <ArrowUp className="w-4 h-4 stroke-[2.5]" />
+              </button>
             </div>
           ) : (
             <>
@@ -1218,18 +1247,18 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Сообщение..."
-                  className={`flex-1 min-w-0 resize-none bg-transparent text-sm leading-relaxed focus:outline-none overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden py-1 ${
+                  className={`flex-1 min-w-0 resize-none bg-transparent text-sm focus:outline-none overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
                     isDark
                       ? 'text-zinc-100 placeholder-zinc-500'
                       : 'text-neutral-900 placeholder-neutral-400'
                   }`}
-                  style={{ height: '24px', maxHeight: '160px' }}
+                  style={{ height: '20px', maxHeight: '160px' }}
                 />
 
                 <button
                   type="button"
                   onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                  className={`p-2 rounded-full transition-colors shrink-0 cursor-pointer ${
+                  className={`py-composer-icon-btn transition-colors cursor-pointer ${
                     showEmojiPicker
                       ? isDark
                         ? 'text-zinc-200 bg-zinc-700'
@@ -1249,7 +1278,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     type="button"
                     onClick={handleSend}
                     disabled={isStreaming}
-                    className={`w-9 h-9 rounded-full active:scale-95 transition-all shadow-sm flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50 ${
+                    className={`py-composer-send-btn active:scale-95 transition-all shadow-sm cursor-pointer disabled:opacity-50 ${
                       isDark
                         ? 'bg-white hover:bg-zinc-200 text-zinc-900'
                         : 'bg-neutral-900 hover:bg-neutral-800 text-white'
@@ -1264,7 +1293,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     type="button"
                     onClick={startVoiceRecording}
                     disabled={isStreaming}
-                    className={`p-2 rounded-full transition-all shrink-0 disabled:opacity-40 disabled:cursor-not-allowed ${
+                    className={`py-composer-icon-btn transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
                       isDark
                         ? 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700/60'
                         : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200/80'
