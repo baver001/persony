@@ -57,5 +57,7 @@
   "typingResponse": "печатает ответ...",
   "voiceNoteRecording": "[Голосовое сообщение]",
   "voiceNoteModelWithTranscript": "(Голосовое сообщение пользователя): «{{transcript}}»",
-  "voiceNoteModelSilent": "(Голосовое сообщение без распознанной речи, ~{{seconds}} с)"
+  "voiceNoteModelSilent": "(Голосовое сообщение без распознанной речи, ~{{seconds}} с)",
+  "feedbackHelpful": "Полезно",
+  "feedbackNotHelpful": "Не полезно"
 }

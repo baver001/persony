@@ -7,6 +7,8 @@ import {
   PanelLeftOpen,
   SquarePen,
   CheckCheck,
+  Compass,
+  Users,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Persona, ChatMessage } from '../types';
@@ -44,7 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleSidebar,
   isCollapsed = false,
 }) => {
-  const { t, i18n } = useTranslation(['common', 'chat']);
+  const { t, i18n } = useTranslation(['common', 'chat', 'personas']);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -69,6 +71,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const closeSearch = () => {
     setIsSearchOpen(false);
     setSearchQuery('');
+  };
+
+  const navigateTo = (path: string) => {
+    window.history.pushState({}, '', path);
+    window.dispatchEvent(new PopStateEvent('popstate'));
   };
 
   const isDark = theme === 'dark';
@@ -238,6 +245,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
               aria-expanded={isSearchOpen}
             >
               <Search className="w-4 h-4" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigateTo('/discover')}
+              className={`py-touch-target p-2 rounded-lg transition-colors cursor-pointer ${
+                isDark
+                  ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100'
+                  : 'hover:bg-neutral-100 text-neutral-600 hover:text-neutral-900'
+              }`}
+              title={t('personas:discoverTitle')}
+              aria-label={t('personas:discoverTitle')}
+            >
+              <Compass className="w-4 h-4" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigateTo('/my-personas')}
+              className={`py-touch-target p-2 rounded-lg transition-colors cursor-pointer ${
+                isDark
+                  ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100'
+                  : 'hover:bg-neutral-100 text-neutral-600 hover:text-neutral-900'
+              }`}
+              title={t('personas:myPersonasTitle')}
+              aria-label={t('personas:myPersonasTitle')}
+            >
+              <Users className="w-4 h-4" />
             </button>
 
             <button

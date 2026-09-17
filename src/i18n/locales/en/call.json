@@ -25,5 +25,7 @@
   "createAccount": "Create account",
   "notNow": "Not now",
   "tryAgain": "Try again",
-  "close": "Close"
+  "close": "Close",
+  "transcriptPanel": "Live transcript",
+  "transcriptEmpty": "Speech will appear here as you talk."
 }

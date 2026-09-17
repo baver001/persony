@@ -19,7 +19,7 @@ import {
 import { getConversationForUser, touchConversation } from '../repositories/conversation-repository';
 import { getPersonaVersion } from '../repositories/persona-repository';
 import { chargeBatteryForInference } from './energy-service';
-import { buildMemoryContextBlocks, persistMemoryCandidates } from './memory-service';
+import { buildMemoryContextBlocks, extractAndPersistMemories } from './memory-service';
 import { touchPersonaRelationship } from './persona-relationship-service';
 import { resolveCompiledInstructions } from './persona-compiler';
 import { PersonaNotFoundError } from './persona-service';
@@ -109,6 +109,7 @@ async function executeInferenceStream(
   env: PersonyEnv,
   run: InferenceRunRecord,
   userMessageId: string,
+  userMessageText: string,
   systemPrompt: string,
   history: Array<{ sender: string; text: string }>,
   personaId: string
@@ -161,6 +162,16 @@ async function executeInferenceStream(
           await chargeBatteryForInference(db, run.userId, run.id, 'text_chat').catch(
             () => undefined
           );
+          void extractAndPersistMemories(
+            env,
+            db,
+            run.userId,
+            personaId,
+            run.conversationId,
+            userMessageId,
+            userMessageText,
+            accumulated.trim()
+          ).catch(() => undefined);
           controller.enqueue(
             sseEncode({
               done: true,
@@ -252,15 +263,6 @@ export async function streamConversationReply(
     run = (await findInferenceRunByClientRequest(env.DB, conversationId, clientRequestId))!;
   }
 
-  void persistMemoryCandidates(
-    env.DB,
-    userId,
-    persona.id,
-    conversationId,
-    userMessage.id,
-    text
-  ).catch(() => undefined);
-
   void touchPersonaRelationship(env.DB, userId, persona.id).catch(() => undefined);
 
   const memoryBlocks = await buildMemoryContextBlocks(
@@ -289,6 +291,7 @@ export async function streamConversationReply(
     env,
     run,
     userMessage.id,
+    text,
     compiledPrompt,
     history,
     persona.id

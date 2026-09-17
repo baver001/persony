@@ -57,5 +57,7 @@
   "typingResponse": "typing a reply...",
   "voiceNoteRecording": "[Voice message]",
   "voiceNoteModelWithTranscript": "(User voice message): \"{{transcript}}\"",
-  "voiceNoteModelSilent": "(Voice message without recognized speech, ~{{seconds}} s)"
+  "voiceNoteModelSilent": "(Voice message without recognized speech, ~{{seconds}} s)",
+  "feedbackHelpful": "Helpful",
+  "feedbackNotHelpful": "Not helpful"
 }

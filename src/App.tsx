@@ -46,6 +46,8 @@ import { MemoryPage } from './pages/MemoryPage';
 import { OwnerConsole } from './pages/OwnerConsole';
 import { SettingsPage } from './pages/SettingsPage';
 import { MeetPersonasPage } from './pages/MeetPersonasPage';
+import { DiscoverPage } from './pages/DiscoverPage';
+import { MyPersonasPage } from './pages/MyPersonasPage';
 import i18n from './i18n';
 import { applyLocaleToPersona, applyLocaleToPersonas } from './utils/personaPresentation';
 
@@ -53,6 +55,8 @@ const STORAGE_KEY_PERSONAS = 'persony_personas_v1';
 const STORAGE_KEY_MESSAGES = 'persony_messages_v1';
 const STORAGE_KEY_THEME = 'persony_theme_v1';
 const STORAGE_KEY_SOUND = 'persony_sound_v1';
+const PENDING_PERSONA_KEY = 'persony_pending_persona_v1';
+const OPEN_CREATE_PERSONA_KEY = 'persony_open_create_v1';
 const MESSAGE_PAGE_SIZE = 50;
 
 const LEGACY_STORAGE_KEYS: Record<string, string> = {
@@ -302,6 +306,26 @@ function ChatApp() {
     setShowMeetPersonas(false);
     setMobileView('chat');
   };
+
+  useEffect(() => {
+    if (!cloudPersonasLoaded) return;
+
+    const pendingPersonaRaw = sessionStorage.getItem(PENDING_PERSONA_KEY);
+    if (pendingPersonaRaw) {
+      sessionStorage.removeItem(PENDING_PERSONA_KEY);
+      try {
+        const persona = JSON.parse(pendingPersonaRaw) as Persona;
+        handleMeetPersonaStart(persona);
+      } catch {
+        // ignore malformed payload
+      }
+    }
+
+    if (sessionStorage.getItem(OPEN_CREATE_PERSONA_KEY)) {
+      sessionStorage.removeItem(OPEN_CREATE_PERSONA_KEY);
+      setIsCreateModalOpen(true);
+    }
+  }, [cloudPersonasLoaded]);
 
   useEffect(() => {
     if (!isAuthLoaded || !isSignedIn || !clerkEnabled || !selectedPersona) return;
@@ -951,6 +975,7 @@ function ChatApp() {
             hasOlderMessages={hasOlderMessages[selectedPersona.id] ?? false}
             isLoadingOlderMessages={isLoadingOlderMessages}
             onLoadOlderMessages={handleLoadOlderMessages}
+            conversationId={conversationIds[selectedPersona.id]}
           />
         </div>
       </div>
@@ -1020,6 +1045,10 @@ function ChatApp() {
   );
 }
 
+function getStoredTheme(): 'dark' | 'light' {
+  return (localStorage.getItem(STORAGE_KEY_THEME) as 'dark' | 'light') || 'dark';
+}
+
 export default function App() {
   migrateLegacyStorageKeys();
   const { isSignedIn } = usePersonyAuth();
@@ -1039,6 +1068,34 @@ export default function App() {
   }
   if (pathname.startsWith('/settings')) {
     return <SettingsPage onBack={navigateHome} isSignedIn={Boolean(isSignedIn)} />;
+  }
+  if (pathname.startsWith('/discover')) {
+    return (
+      <DiscoverPage
+        theme={getStoredTheme()}
+        onBack={navigateHome}
+        onStartChat={(persona) => {
+          sessionStorage.setItem(PENDING_PERSONA_KEY, JSON.stringify(persona));
+          navigateHome();
+        }}
+      />
+    );
+  }
+  if (pathname.startsWith('/my-personas')) {
+    return (
+      <MyPersonasPage
+        theme={getStoredTheme()}
+        onBack={navigateHome}
+        onStartChat={(persona) => {
+          sessionStorage.setItem(PENDING_PERSONA_KEY, JSON.stringify(persona));
+          navigateHome();
+        }}
+        onCreatePersona={() => {
+          sessionStorage.setItem(OPEN_CREATE_PERSONA_KEY, '1');
+          navigateHome();
+        }}
+      />
+    );
   }
 
   return <ChatApp />;

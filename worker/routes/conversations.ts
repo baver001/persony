@@ -1,5 +1,10 @@
 import { Hono } from 'hono';
-import { createConversationSchema, conversationMessageSchema } from '../lib/validation';
+import {
+  createConversationSchema,
+  conversationMessageSchema,
+  messageFeedbackSchema,
+} from '../lib/validation';
+import { upsertMessageFeedback } from '../repositories/message-feedback-repository';
 import { AuthRequiredError, requireUser } from '../middleware/auth';
 import { requireAIEntitlement } from '../middleware/entitlement';
 import {
@@ -124,6 +129,34 @@ conversationRoutes.post('/conversations/:id/messages', async (c) => {
     if (err instanceof ConversationAccessError) return c.json({ error: err.message }, 403);
     if (err instanceof InferenceInProgressError) return c.json({ error: err.message }, 409);
     if (err instanceof PersonaNotFoundError) return c.json({ error: err.message }, 404);
+    throw err;
+  }
+});
+
+conversationRoutes.post('/conversations/:id/messages/:messageId/feedback', async (c) => {
+  try {
+    const userId = await requireUser(c);
+    if (!c.env.DB) return c.json({ error: 'Database not configured' }, 503);
+
+    const conversationId = c.req.param('id');
+    const messageId = c.req.param('messageId');
+    const conversation = await getConversationForUser(c.env.DB, conversationId, userId);
+    if (!conversation) return c.json({ error: 'Not found' }, 404);
+
+    const body = await c.req.json();
+    const parsed = messageFeedbackSchema.safeParse(body);
+    if (!parsed.success) return c.json({ error: 'Invalid payload' }, 400);
+
+    await upsertMessageFeedback(c.env.DB, {
+      userId,
+      messageId,
+      conversationId,
+      feedback: parsed.data.feedback,
+    });
+
+    return c.json({ ok: true });
+  } catch (err) {
+    if (err instanceof AuthRequiredError) return c.json({ error: 'Authentication required' }, 401);
     throw err;
   }
 });

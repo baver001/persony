@@ -25,6 +25,8 @@ import {
   X,
   ArrowLeft,
   AlertCircle,
+  ThumbsDown,
+  ThumbsUp,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Persona, ChatMessage } from '../types';
@@ -44,6 +46,7 @@ import {
 import { normalizeUserMessageForDisplay } from '../utils/chatMessageDisplay';
 import { useMobileLayout } from '../hooks/useMobileLayout';
 import { getOfferedCallInsights } from '../utils/callTranscriptPersistence';
+import { submitMessageFeedback } from '../lib/api/feedback';
 
 interface ChatAreaProps {
   character: Persona;
@@ -73,6 +76,7 @@ interface ChatAreaProps {
   hasOlderMessages?: boolean;
   isLoadingOlderMessages?: boolean;
   onLoadOlderMessages?: () => void;
+  conversationId?: string;
 }
 
 const EMOJI_LIST = ['👍', '🔥', '❤️', '💡', '⚡', '🚀', '👏', '😂', '🤔', '🎉', '👋', '☕'];
@@ -351,10 +355,12 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   hasOlderMessages = false,
   isLoadingOlderMessages = false,
   onLoadOlderMessages,
+  conversationId,
 }) => {
   const { t, i18n } = useTranslation(['chat', 'common']);
   const localized = getLocalizedPersonaPresentation(character, i18n.language);
   const [inputText, setInputText] = useState('');
+  const [messageFeedback, setMessageFeedback] = useState<Record<string, 'up' | 'down'>>({});
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [expandedCallId, setExpandedCallId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{
@@ -586,6 +592,12 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   ) => {
     event.preventDefault();
     openMessageMenu(event.clientX, event.clientY, messageId);
+  };
+
+  const handleMessageFeedback = (messageId: string, feedback: 'up' | 'down') => {
+    setMessageFeedback((prev) => ({ ...prev, [messageId]: feedback }));
+    if (!conversationId) return;
+    void submitMessageFeedback(conversationId, messageId, feedback);
   };
 
   const handleMessageTouchStart = (
@@ -1155,6 +1167,46 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 ) : (
                   <PersonyMarkdown content={displayMsg.text} isUser={isUser} />
                 )}
+
+                {!isUser &&
+                  !msg.isError &&
+                  !msg.isVoiceNote &&
+                  !msg.isCallSummary &&
+                  !msg.isCallInsights &&
+                  conversationId && (
+                    <div className="flex items-center gap-1 mt-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleMessageFeedback(msg.id, 'up')}
+                        className={`p-1 rounded-md transition-colors ${
+                          messageFeedback[msg.id] === 'up'
+                            ? 'text-py-accent bg-py-accent/10'
+                            : isDark
+                              ? 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
+                              : 'text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100'
+                        }`}
+                        title={t('feedbackHelpful')}
+                        aria-label={t('feedbackHelpful')}
+                      >
+                        <ThumbsUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMessageFeedback(msg.id, 'down')}
+                        className={`p-1 rounded-md transition-colors ${
+                          messageFeedback[msg.id] === 'down'
+                            ? 'text-rose-400 bg-rose-500/10'
+                            : isDark
+                              ? 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
+                              : 'text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100'
+                        }`}
+                        title={t('feedbackNotHelpful')}
+                        aria-label={t('feedbackNotHelpful')}
+                      >
+                        <ThumbsDown className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
 
                 {/* Bubble Footer */}
                 <div

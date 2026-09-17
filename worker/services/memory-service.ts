@@ -1,13 +1,17 @@
 import {
-  findDuplicateMemory,
-  insertMemory,
   retrieveRelevantMemories,
   touchMemoriesUsed,
   type MemoryKind,
   type MemoryRecord,
   type MemoryScope,
 } from '../repositories/memory-repository';
-import { insertMemoryCandidate } from '../repositories/memory-candidate-repository';
+import type { PersonyEnv } from '../types/env';
+import { applyMemoryExtractionCandidates } from './memory-application';
+import {
+  HeuristicMemoryExtractor,
+  type MemoryExtractionCandidate as ExtractorCandidate,
+} from './memory-extractor';
+import { StructuredMemoryExtractor } from './structured-memory-extractor';
 
 const REMEMBER_PATTERNS = [
   /\bremember(?:\s+that)?\s+(.+)/i,
@@ -78,6 +82,21 @@ function classifySensitivity(content: string): 'normal' | 'sensitive' | 'special
   return 'normal';
 }
 
+function legacyCandidatesToExtractor(
+  candidates: MemoryExtractionCandidate[]
+): ExtractorCandidate[] {
+  return candidates.map((c) => ({
+    scope: c.scope,
+    kind: c.kind,
+    content: c.content,
+    normalizedKey: c.content.toLowerCase().slice(0, 120),
+    confidence: c.confidence,
+    importance: 0.5,
+    sensitivity: c.sensitivity,
+    action: 'create',
+  }));
+}
+
 export async function persistMemoryCandidates(
   db: D1Database,
   userId: string,
@@ -87,49 +106,59 @@ export async function persistMemoryCandidates(
   text: string,
   options?: { allowSensitiveAutoStore?: boolean }
 ): Promise<MemoryRecord[]> {
-  const candidates = extractMemoryCandidatesFromText(text);
-  const stored: MemoryRecord[] = [];
+  return applyMemoryExtractionCandidates(
+    db,
+    userId,
+    personaId,
+    conversationId,
+    userMessageId,
+    legacyCandidatesToExtractor(extractMemoryCandidatesFromText(text)),
+    options
+  );
+}
 
-  for (const candidate of candidates) {
-    if (candidate.sensitivity !== 'normal' && !options?.allowSensitiveAutoStore) {
-      await insertMemoryCandidate(db, {
-        userId,
+export async function extractAndPersistMemories(
+  env: PersonyEnv,
+  db: D1Database,
+  userId: string,
+  personaId: string,
+  conversationId: string,
+  userMessageId: string,
+  userText: string,
+  assistantText?: string,
+  options?: { locale?: string; allowSensitiveAutoStore?: boolean }
+): Promise<MemoryRecord[]> {
+  let candidates: ExtractorCandidate[] = [];
+
+  if (env.GEMINI_API_KEY?.trim()) {
+    try {
+      const extractor = new StructuredMemoryExtractor(env.GEMINI_API_KEY);
+      candidates = await extractor.extract({
+        userMessage: userText,
+        assistantMessage: assistantText,
         personaId,
-        conversationId,
-        scope: candidate.scope,
-        kind: candidate.kind,
-        content: candidate.content,
-        sensitivity: candidate.sensitivity,
-        confidence: candidate.confidence,
-        sourceMessageId: userMessageId,
+        locale: options?.locale,
       });
-      continue;
+    } catch {
+      candidates = await new HeuristicMemoryExtractor().extract({ userMessage: userText });
     }
-
-    const duplicate = await findDuplicateMemory(
-      db,
-      userId,
-      candidate.scope,
-      candidate.content,
-      candidate.scope === 'relationship' ? personaId : undefined
-    );
-    if (duplicate) continue;
-
-    const memory = await insertMemory(db, {
-      userId,
-      scope: candidate.scope,
-      kind: candidate.kind,
-      content: candidate.content,
-      personaId: candidate.scope === 'relationship' ? personaId : undefined,
-      conversationId,
-      confidence: candidate.confidence,
-      sensitivity: candidate.sensitivity,
-      sourceMessageIds: [userMessageId],
-    });
-    stored.push(memory);
+  } else {
+    candidates = await new HeuristicMemoryExtractor().extract({ userMessage: userText });
   }
 
-  return stored;
+  if (!candidates.length) {
+    candidates = legacyCandidatesToExtractor(extractMemoryCandidatesFromText(userText));
+  }
+
+  return applyMemoryExtractionCandidates(
+    db,
+    userId,
+    personaId,
+    conversationId,
+    userMessageId,
+    candidates,
+    options
+  );
 }
 
 export async function buildMemoryContextBlocks(

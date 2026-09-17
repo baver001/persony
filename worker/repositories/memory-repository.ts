@@ -7,6 +7,7 @@ export type MemoryKind =
   | 'goal'
   | 'project'
   | 'decision'
+  | 'instruction'
   | 'relationship'
   | 'summary'
   | 'open_task';
@@ -199,6 +200,51 @@ export async function setMemoryStatus(
     .bind(status, now, memoryId, userId)
     .run();
   return (result.meta?.changes ?? 0) > 0;
+}
+
+export async function findActiveMemoryByKind(
+  db: D1Database,
+  userId: string,
+  scope: MemoryScope,
+  kind: MemoryKind,
+  personaId?: string
+): Promise<MemoryRecord | null> {
+  let query = `SELECT * FROM memories WHERE user_id = ? AND scope = ? AND kind = ? AND status = 'active'`;
+  const binds: string[] = [userId, scope, kind];
+  if (personaId) {
+    query += ` AND persona_id = ?`;
+    binds.push(personaId);
+  }
+  query += ` ORDER BY updated_at DESC LIMIT 1`;
+  const row = await db.prepare(query).bind(...binds).first<MemoryRow>();
+  return row ? rowToMemory(row) : null;
+}
+
+export async function supersedeMemory(
+  db: D1Database,
+  userId: string,
+  oldMemoryId: string,
+  input: {
+    scope: MemoryScope;
+    kind: MemoryKind;
+    content: string;
+    personaId?: string;
+    conversationId?: string;
+    confidence?: number;
+    importance?: number;
+    sensitivity?: MemorySensitivity;
+    sourceMessageIds?: string[];
+  }
+): Promise<MemoryRecord> {
+  const newMemory = await insertMemory(db, { userId, ...input });
+  const now = new Date().toISOString();
+  await db
+    .prepare(
+      `UPDATE memories SET status = 'disabled', superseded_by = ?, updated_at = ? WHERE id = ? AND user_id = ?`
+    )
+    .bind(newMemory.id, now, oldMemoryId, userId)
+    .run();
+  return newMemory;
 }
 
 export async function findDuplicateMemory(

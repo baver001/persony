@@ -61,6 +61,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
   // Live subtitles
   const [transcripts, setTranscripts] = useState<Array<{ id: string; sender: 'user' | 'character'; text: string }>>([]);
   const transcriptsRef = useRef<Array<{ id: string; sender: 'user' | 'character'; text: string }>>([]);
+  const transcriptScrollRef = useRef<HTMLDivElement>(null);
   const durationRef = useRef(0);
   const statusRef = useRef<CallStatus>('connecting');
   const sessionIdRef = useRef('');
@@ -117,6 +118,12 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
   useEffect(() => {
     durationRef.current = duration;
   }, [duration]);
+
+  useEffect(() => {
+    const el = transcriptScrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [transcripts, showSubtitles]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -417,17 +424,6 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
     }
   };
 
-  const sendQuickLivePrompt = (text: string) => {
-    if (liveSessionReadyRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'text', text }));
-      setTranscripts((prev) => [...prev, { id: Math.random().toString(), sender: 'user', text }]);
-      onNewMessageFromCall?.(text, 'user');
-    }
-  };
-
-  const liveCue = transcripts.length > 0 ? transcripts[transcripts.length - 1] : null;
-  const liveCueSpeakerLabel =
-    liveCue?.sender === 'user' ? t('chat:you') : character.name.split(' ')[0];
   const characterFirstName = character.name.split(' ')[0];
   const showCallControls = status === 'connected' || status === 'connecting';
   const headerLabel =
@@ -515,12 +511,12 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.97, y: 12 }}
           transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-          className="relative w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-lg bg-gradient-to-b from-zinc-900/95 via-[#18181b] to-zinc-950 sm:rounded-[28px] border-0 sm:border border-zinc-800/80 shadow-2xl flex flex-col overflow-hidden"
+          className="relative w-full h-[100dvh] sm:h-[34rem] sm:max-w-lg bg-gradient-to-b from-zinc-900/95 via-[#18181b] to-zinc-950 sm:rounded-[28px] border-0 sm:border border-zinc-800/80 shadow-2xl flex flex-col overflow-hidden"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-7 sm:px-8 pt-7 pb-3 z-10 shrink-0">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-2 w-2 relative">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="flex h-2 w-2 relative shrink-0">
                 {status === 'connected' && (
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
                 )}
@@ -534,9 +530,14 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                   }`}
                 />
               </span>
-              <span className="text-xs text-white/50 font-medium tracking-wide">
+              <span className="text-xs text-white/50 font-medium tracking-wide truncate">
                 {headerLabel}
               </span>
+              {(status === 'connecting' || status === 'connected') && (
+                <span className="font-mono text-emerald-400/90 text-xs tabular-nums shrink-0">
+                  {status === 'connecting' ? '…' : formatDuration(duration)}
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
@@ -564,10 +565,9 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
             </div>
           </div>
 
-          {/* Main stage — avatar, subtitles and controls as one centered cluster */}
-          <div className="relative flex-1 flex items-center justify-center min-h-0 w-full px-7 sm:px-8 pb-[max(1.75rem,env(safe-area-inset-bottom))] select-none overflow-hidden">
+          {/* Avatar stage */}
+          <div className="relative flex-1 flex items-center justify-center min-h-0 w-full px-7 sm:px-8 py-4 select-none overflow-hidden">
             <div className="w-full max-w-sm flex flex-col items-center">
-            {/* Gentle ambient glow behind avatar */}
             <div className="relative flex items-center justify-center">
               <div
                 className="absolute inset-0 rounded-full blur-2xl pointer-events-none transition-opacity duration-700"
@@ -578,9 +578,8 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                 }}
               />
 
-              {/* Character Avatar with subtle glow */}
               <div
-                className={`relative z-10 w-36 h-36 sm:w-40 sm:h-40 rounded-full p-1 bg-white/10 transition-all duration-300 shadow-2xl ${
+                className={`relative z-10 w-28 h-28 sm:w-32 sm:h-32 rounded-full p-1 bg-white/10 transition-all duration-300 shadow-2xl ${
                   isModelSpeaking
                     ? 'shadow-[0_0_30px_rgba(255,255,255,0.15)] ring-2 ring-zinc-500/50'
                     : 'shadow-[0_0_20px_rgba(0,0,0,0.5)] ring-1 ring-white/10'
@@ -595,25 +594,11 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
               </div>
             </div>
 
-            {/* Character Info */}
-            <div className="mt-5 sm:mt-6 text-center z-10 w-full">
-              <h2 className="text-[1.65rem] font-semibold text-white tracking-tight">{character.name}</h2>
-              <p className="text-sm text-white/45 mt-1.5 max-w-xs mx-auto line-clamp-2 leading-relaxed">
+            <div className="mt-4 text-center z-10 w-full">
+              <h2 className="text-xl font-semibold text-white tracking-tight">{character.name}</h2>
+              <p className="text-sm text-white/45 mt-1 max-w-xs mx-auto line-clamp-2 leading-relaxed">
                 {character.tagline}
               </p>
-
-              {(status === 'connecting' || status === 'connected') && (
-                <div className="inline-flex items-center justify-center min-w-[88px] h-8 mt-5 px-4 rounded-full bg-white/[0.04] text-xs select-none">
-                  {status === 'connecting' && (
-                    <span className="text-white/50">{t('connecting')}</span>
-                  )}
-                  {status === 'connected' && (
-                    <span className="font-mono text-emerald-400/90 font-medium tracking-wider tabular-nums">
-                      {formatDuration(duration)}
-                    </span>
-                  )}
-                </div>
-              )}
 
               {status === 'auth_required' && (
                 <div className="mt-8 w-full max-w-xs mx-auto text-left rounded-2xl bg-white/[0.03] border border-white/[0.06] px-5 py-5 space-y-4">
@@ -675,103 +660,97 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                 </div>
               )}
             </div>
+            </div>
+          </div>
 
-            {/* Live subtitle — only the current utterance; full history saved to chat after call */}
-            {showSubtitles && liveCue && (
-              <div
-                id="live-call-subtitle"
-                className="relative w-full max-w-md mt-5 h-[3.75rem] overflow-hidden rounded-xl bg-white/[0.04] border border-white/[0.06] px-3.5 py-2"
-                aria-live="polite"
+          {showCallControls ? (
+            <div
+              id="call-controls-bar"
+              className="shrink-0 flex items-center justify-center gap-6 sm:gap-7 px-7 pb-4 z-10"
+            >
+              <button
+                id="call-mute-btn"
+                onClick={handleToggleMute}
+                className={`p-4 rounded-full transition-all duration-200 flex items-center justify-center shrink-0 ${
+                  isMuted
+                    ? 'bg-white/15 text-white/90'
+                    : 'bg-white/[0.07] hover:bg-white/[0.11] text-white/80'
+                }`}
+                title={isMuted ? t('muteOn') : t('muteOff')}
               >
-                <AnimatePresence initial={false}>
-                  <motion.div
-                    key={liveCue.id}
-                    initial={{ y: 14, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: -18, opacity: 0 }}
-                    transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-                    className={`absolute inset-x-3.5 bottom-2 text-xs leading-relaxed line-clamp-3 ${
-                      liveCue.sender === 'user' ? 'text-emerald-300/90 text-right' : 'text-zinc-100 text-left'
-                    }`}
-                  >
-                    <span className="font-medium opacity-75">{liveCueSpeakerLabel}</span>
-                    <span className="mx-1 opacity-35">·</span>
-                    <span className="text-white/85">{liveCue.text}</span>
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-            )}
+                {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+              </button>
 
-            {/* Quick Starters in Call (clean, minimal) */}
-            {status === 'connected' && !liveCue && (
-              <div className="flex flex-wrap items-center justify-center gap-1.5 mt-4 w-full">
-                <button
-                  onClick={() => sendQuickLivePrompt(t('quickHello'))}
-                  className="px-3 py-1 rounded-full text-[11px] bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors border border-white/5"
-                >
-                  {t('quickHello')}
-                </button>
-                <button
-                  onClick={() => sendQuickLivePrompt(t('quickMood'))}
-                  className="px-3 py-1 rounded-full text-[11px] bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors border border-white/5"
-                >
-                  {t('quickMood')}
-                </button>
-              </div>
-            )}
-
-            {/* Call controls */}
-            {showCallControls ? (
-              <div
-                id="call-controls-bar"
-                className="flex items-center justify-center gap-6 sm:gap-7 mt-10 sm:mt-12 z-10"
+              <button
+                id="call-hangup-btn"
+                onClick={handleEndCall}
+                className="p-5 rounded-full bg-rose-600 hover:bg-rose-500 active:scale-[0.98] text-white shadow-lg shadow-black/30 transition-all duration-200 flex items-center justify-center shrink-0"
+                title={t('end')}
               >
-                <button
-                  id="call-mute-btn"
-                  onClick={handleToggleMute}
-                  className={`p-4 rounded-full transition-all duration-200 flex items-center justify-center shrink-0 ${
-                    isMuted
-                      ? 'bg-white/15 text-white/90'
-                      : 'bg-white/[0.07] hover:bg-white/[0.11] text-white/80'
-                  }`}
-                  title={isMuted ? t('muteOn') : t('muteOff')}
-                >
-                  {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
-                </button>
+                <PhoneOff className="w-7 h-7" />
+              </button>
 
-                <button
-                  id="call-hangup-btn"
-                  onClick={handleEndCall}
-                  className="p-5 rounded-full bg-rose-600 hover:bg-rose-500 active:scale-[0.98] text-white shadow-lg shadow-black/30 transition-all duration-200 flex items-center justify-center shrink-0"
-                  title={t('end')}
-                >
-                  <PhoneOff className="w-7 h-7" />
-                </button>
-
-                <button
-                  id="call-speaker-btn"
-                  onClick={handleToggleSpeaker}
-                  className={`p-4 rounded-full transition-all duration-200 flex items-center justify-center shrink-0 ${
-                    isSpeakerMuted
-                      ? 'bg-white/15 text-white/90'
-                      : 'bg-white/[0.07] hover:bg-white/[0.11] text-white/80'
-                  }`}
-                  title={isSpeakerMuted ? t('speakerOn') : t('speakerOff')}
-                >
-                  {isSpeakerMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
-                </button>
-              </div>
-            ) : status === 'error' ? (
+              <button
+                id="call-speaker-btn"
+                onClick={handleToggleSpeaker}
+                className={`p-4 rounded-full transition-all duration-200 flex items-center justify-center shrink-0 ${
+                  isSpeakerMuted
+                    ? 'bg-white/15 text-white/90'
+                    : 'bg-white/[0.07] hover:bg-white/[0.11] text-white/80'
+                }`}
+                title={isSpeakerMuted ? t('speakerOn') : t('speakerOff')}
+              >
+                {isSpeakerMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+              </button>
+            </div>
+          ) : status === 'error' ? (
+            <div className="shrink-0 pb-6 text-center">
               <button
                 type="button"
                 onClick={onClose}
-                className="mt-10 text-sm text-white/40 hover:text-white/60 transition-colors"
+                className="text-sm text-white/40 hover:text-white/60 transition-colors"
               >
                 {t('close')}
               </button>
-            ) : null}
             </div>
-          </div>
+          ) : null}
+
+          {showSubtitles && status === 'connected' && (
+            <div
+              id="live-call-transcript-panel"
+              className="shrink-0 border-t border-white/10 px-5 py-3 h-36 flex flex-col bg-black/20"
+              aria-live="polite"
+            >
+              <p className="text-[10px] uppercase tracking-wide text-white/35 mb-2">
+                {t('transcriptPanel')}
+              </p>
+              <div
+                ref={transcriptScrollRef}
+                className="flex-1 overflow-y-auto space-y-2 pr-1 scrollbar-thin"
+              >
+                {transcripts.length === 0 ? (
+                  <p className="text-xs text-white/35">{t('transcriptEmpty')}</p>
+                ) : (
+                  transcripts.map((line) => (
+                    <div
+                      key={line.id}
+                      className={`text-xs leading-relaxed ${
+                        line.sender === 'user' ? 'text-emerald-300/90 text-right' : 'text-zinc-100 text-left'
+                      }`}
+                    >
+                      <span className="font-medium opacity-75">
+                        {line.sender === 'user' ? t('chat:you') : character.name.split(' ')[0]}
+                      </span>
+                      <span className="mx-1 opacity-35">·</span>
+                      <span className="text-white/85">{line.text}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]" />
         </motion.div>
       </div>
     </AnimatePresence>

@@ -8,6 +8,7 @@ import {
 } from '@clerk/clerk-react';
 import {
   Brain,
+  Compass,
   LogOut,
   Moon,
   Plus,
@@ -15,6 +16,7 @@ import {
   ShieldAlert,
   Sun,
   User,
+  Users,
   Volume2,
   VolumeX,
 } from 'lucide-react';
@@ -102,7 +104,7 @@ export const SidebarBottomBar: React.FC<Props> = ({
   onResetDefaults,
   compact = false,
 }) => {
-  const { t } = useTranslation(['common', 'settings']);
+  const { t } = useTranslation(['common', 'settings', 'personas']);
   const { openUserProfile, signOut } = useClerk();
   const { clerkEnabled, isLoaded, isSignedIn } = usePersonyAuth();
   const { battery, refresh: refreshBattery } = useBattery();
@@ -318,6 +320,18 @@ export const SidebarBottomBar: React.FC<Props> = ({
                   </SignedOut>
 
                   <SignedIn>
+                    <MenuItem
+                      isDark={isDark}
+                      onClick={() => go('/discover')}
+                      icon={<Compass className="w-3.5 h-3.5" />}
+                      label={t('personas:discoverTitle')}
+                    />
+                    <MenuItem
+                      isDark={isDark}
+                      onClick={() => go('/my-personas')}
+                      icon={<Users className="w-3.5 h-3.5" />}
+                      label={t('personas:myPersonasTitle')}
+                    />
                     <MenuItem
                       isDark={isDark}
                       onClick={() => go('/memory')}

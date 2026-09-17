@@ -68,5 +68,18 @@
   "savePersona": "Save persona",
   "defaultSystemPrompt": "You are {{name}}. Chat in the Persony messenger in your characteristic style. Reply in English.",
   "relationshipRemembersTitle": "What {{name}} remembers about you",
-  "relationshipRemembersEmpty": "Nothing specific yet — keep chatting and Persony will remember what matters for this relationship."
+  "relationshipRemembersEmpty": "Nothing specific yet — keep chatting and Persony will remember what matters for this relationship.",
+  "discoverTitle": "Discover",
+  "discoverSubtitle": "Browse official personas by role — each with its own voice, mission, and memory.",
+  "discoverSection": {
+    "featured": "Featured",
+    "development": "Development",
+    "business": "Business",
+    "thinking": "Thinking",
+    "creative": "Creative",
+    "lifestyle": "Lifestyle"
+  },
+  "myPersonasTitle": "My Personas",
+  "myPersonasSubtitle": "Personas you created — private, editable, and always yours.",
+  "myPersonasEmpty": "You have not created any personas yet."
 }

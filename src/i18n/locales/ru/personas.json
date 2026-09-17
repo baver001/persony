@@ -68,5 +68,18 @@
   "savePersona": "Сохранить персонажа",
   "defaultSystemPrompt": "Ты — {{name}}. Общайся в мессенджере Persony в своём характерном стиле. Отвечай на русском языке.",
   "relationshipRemembersTitle": "Что {{name}} помнит о вас",
-  "relationshipRemembersEmpty": "Пока ничего особенного — продолжайте общение, и Persony запомнит важное именно для этой связи."
+  "relationshipRemembersEmpty": "Пока ничего особенного — продолжайте общение, и Persony запомнит важное именно для этой связи.",
+  "discoverTitle": "Обзор",
+  "discoverSubtitle": "Официальные персоны по ролям — у каждой свой голос, миссия и память.",
+  "discoverSection": {
+    "featured": "Избранное",
+    "development": "Развитие",
+    "business": "Бизнес",
+    "thinking": "Мышление",
+    "creative": "Творчество",
+    "lifestyle": "Лайфстайл"
+  },
+  "myPersonasTitle": "Мои персоны",
+  "myPersonasSubtitle": "Созданные вами персоны — приватные, редактируемые и только ваши.",
+  "myPersonasEmpty": "Вы ещё не создали ни одной персоны."
 }

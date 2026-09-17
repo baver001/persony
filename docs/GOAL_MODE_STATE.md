@@ -29,11 +29,13 @@
 | Call insights recap (optional) | ✅ | Pending | Pending | Pending |
 | Avatar studio + generate API | ✅ | Pending | Pending | Pending |
 | MemoryExtractor interface | ✅ | Partial | Pending | Pending |
-| Structured LLM extractor | Planned | — | — | — |
-| Discover v1 sections | Partial | — | — | — |
+| Structured LLM extractor + supersede | ✅ | Pending npm | Pending | Pending |
+| Live call modal (fixed height + transcript) | ✅ | Pending | Pending | Pending |
+| Discover v1 (`/discover` sections) | ✅ | Pending | Pending | Pending |
+| My Personas (`/my-personas`) | ✅ | Pending | Pending | Pending |
 | Owner Battery overview | ✅ | Pending | Pending | Pending |
 | Persona Creator v2 (PersonaSpec) | Partial | — | — | — |
-| Feedback 👍👎 UI | Planned | — | — | — |
+| Feedback 👍👎 API + chat UI | ✅ | Pending | Pending | Pending |
 
 ## Preflight (2026-09-17)
 
@@ -43,9 +45,9 @@
 
 ## Next (autonomous)
 
-1. Commit + push Phase 1.3 batches
-2. Apply D1 migration `0006` on production
-3. Structured memory extractor (LLM JSON)
-4. Discover v1 + My Personas section
-5. Owner Console nav completion
+1. Commit + push this batch (memory v2, discover, call UI, feedback)
+2. Confirm D1 migration `0006` on production
+3. Owner Console nav completion
+4. Persona Creator v2 (PersonaSpec sliders)
+5. Battery charge for voice/transcribe/avatar endpoints
 6. Production vertical slice verification

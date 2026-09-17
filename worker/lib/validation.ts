@@ -21,6 +21,10 @@ export const conversationMessageSchema = z
     message: 'clientRequestId is required',
   });
 
+export const messageFeedbackSchema = z.object({
+  feedback: z.enum(['up', 'down']),
+});
+
 export const createConversationSchema = z.object({
   personaId: z.string().min(1).max(128),
   title: z.string().max(200).optional(),
