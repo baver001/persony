@@ -23,8 +23,7 @@ import {
   ChevronUp,
   Search,
   X,
-  PanelLeftOpen,
-  PanelLeft,
+  ArrowLeft,
   AlertCircle,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -64,8 +63,6 @@ interface ChatAreaProps {
   isCallingActive?: boolean;
   onExpandCall?: () => void;
   onEndActiveCall?: () => void;
-  isSidebarOpen?: boolean;
-  onToggleSidebar?: () => void;
   onRetryMessage?: () => void;
   onDeleteMessage?: (messageId: string) => void;
   hasOlderMessages?: boolean;
@@ -77,6 +74,7 @@ const EMOJI_LIST = ['👍', '🔥', '❤️', '💡', '⚡', '🚀', '👏', '�
 
 // Persony message markdown renderer
 const PersonyMarkdown: React.FC<{ content: string; isUser: boolean }> = ({ content, isUser }) => {
+  const { t } = useTranslation('chat');
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   const codeBlockRegex = /```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g;
@@ -169,12 +167,12 @@ const PersonyMarkdown: React.FC<{ content: string; isUser: boolean }> = ({ conte
                   {copiedIndex === idx ? (
                     <>
                       <Check className="w-3 h-3 text-emerald-400" />
-                      <span className="text-emerald-400">Скопировано</span>
+                      <span className="text-emerald-400">{t('copied')}</span>
                     </>
                   ) : (
                     <>
                       <Copy className="w-3 h-3" />
-                      <span>Копировать</span>
+                      <span>{t('copy')}</span>
                     </>
                   )}
                 </button>
@@ -226,6 +224,7 @@ const VoiceNoteBubble: React.FC<{
   transcript,
   isTranscribing,
 }) => {
+  const { t } = useTranslation('chat');
   const [isPlaying, setIsPlaying] = useState(false);
   const [showTranscript, setShowTranscript] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -266,7 +265,7 @@ const VoiceNoteBubble: React.FC<{
               ? 'bg-white text-zinc-900'
               : 'bg-zinc-700 hover:bg-zinc-600 dark:bg-zinc-700 dark:text-zinc-100 text-white'
           }`}
-          title={isPlaying ? 'Пауза' : 'Воспроизвести'}
+          title={isPlaying ? t('pause') : t('play')}
         >
           {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
         </button>
@@ -283,7 +282,7 @@ const VoiceNoteBubble: React.FC<{
             }
           />
           <div className="flex items-center justify-between text-[10px] opacity-75 mt-0.5">
-            <span>{isPlaying ? 'Воспроизведение...' : 'Голосовое сообщение'}</span>
+            <span>{isPlaying ? t('playing') : t('voiceMessage')}</span>
             <span>0:{duration.toString().padStart(2, '0')}</span>
           </div>
         </div>
@@ -295,18 +294,18 @@ const VoiceNoteBubble: React.FC<{
           {isTranscribing ? (
             <div className="flex items-center gap-1.5 opacity-80 text-[11px] animate-pulse">
               <Sparkles className="w-3.5 h-3.5 text-zinc-300" />
-              <span>Расшифровка речи...</span>
+              <span>{t('transcribing')}</span>
             </div>
           ) : (
             <div className="space-y-1">
               <div className="flex items-center justify-between text-[10px] opacity-60">
-                <span className="font-semibold uppercase tracking-wider">Расшифровка</span>
+                <span className="font-semibold uppercase tracking-wider">{t('transcript')}</span>
                 <button
                   type="button"
                   onClick={() => setShowTranscript(!showTranscript)}
                   className="hover:underline text-[10px] cursor-pointer"
                 >
-                  {showTranscript ? 'Скрыть' : 'Показать'}
+                  {showTranscript ? t('hide') : t('show')}
                 </button>
               </div>
               {showTranscript && (
@@ -339,8 +338,6 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   isCallingActive,
   onExpandCall,
   onEndActiveCall,
-  isSidebarOpen = true,
-  onToggleSidebar,
   onRetryMessage,
   onDeleteMessage,
   hasOlderMessages = false,
@@ -495,7 +492,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           const audioUrl = URL.createObjectURL(wavBlob);
           const finalDuration = duration > 0 ? duration : elapsedSecs;
           onSendMessage(
-            '🎤 [Голосовое сообщение]',
+            `🎤 ${t('voiceNoteRecording')}`,
             true,
             audioUrl,
             finalDuration,
@@ -511,7 +508,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             const resultStr = reader.result as string;
             const base64Data = resultStr.includes(',') ? resultStr.split(',')[1] : resultStr;
             onSendMessage(
-              '🎤 [Голосовое сообщение]',
+              `🎤 ${t('voiceNoteRecording')}`,
               true,
               audioUrl,
               elapsedSecs,
@@ -606,12 +603,17 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
   const handleCopyMessage = async (message: ChatMessage) => {
     const ok = await copyTextToClipboard(formatMessageCopyText(message));
-    if (ok) showCopyFeedback('Сообщение скопировано');
+    if (ok) showCopyFeedback(t('messageCopied'));
   };
 
   const handleCopyDialog = async () => {
-    const ok = await copyTextToClipboard(formatDialogCopyText(messages, character.name));
-    if (ok) showCopyFeedback('Диалог скопирован');
+    const ok = await copyTextToClipboard(
+      formatDialogCopyText(messages, character.name, {
+        you: t('you'),
+        voiceCall: t('voiceCallSummary'),
+      })
+    );
+    if (ok) showCopyFeedback(t('dialogCopied'));
   };
 
   const formatTime = (ts: number) => {
@@ -621,8 +623,6 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
   const isDark = theme === 'dark';
   const showMobileBack = Boolean(onBackToList);
-  const showDesktopExpand = Boolean(onToggleSidebar && !isSidebarOpen);
-  const showNavSlot = showMobileBack || showDesktopExpand;
 
   const displayedMessages = searchInChat.trim()
     ? messages.filter((m) => m.text.toLowerCase().includes(searchInChat.toLowerCase()))
@@ -640,36 +640,17 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         className="relative z-10 flex items-center justify-between gap-2 px-2 sm:px-4 py-2 sm:py-2.5 border-b border-py-border bg-py-sidebar text-py-text transition-colors shadow-xs shrink-0"
       >
         <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-          {/* Nav: mobile back OR desktop expand — never duplicate sidebar collapse */}
-          <div
-            className={`py-header-nav-slot transition-[width] duration-150 ${
-              showNavSlot ? '' : 'w-0 min-w-0 overflow-hidden'
-            }`}
-          >
-            {showMobileBack && (
-              <button
-                type="button"
-                onClick={onBackToList}
-                className="py-header-icon-btn py-header-icon-btn--muted inline-flex sm:hidden cursor-pointer"
-                title={t('chat:backToChats')}
-                aria-label={t('chat:backToChats')}
-              >
-                <PanelLeft className="w-4 h-4" />
-              </button>
-            )}
-            {showDesktopExpand && (
-              <button
-                id="chat-sidebar-toggle-btn"
-                type="button"
-                onClick={onToggleSidebar}
-                className="py-header-icon-btn py-header-icon-btn--muted hidden sm:inline-flex cursor-pointer"
-                title={t('chat:expandSidebar')}
-                aria-label={t('chat:expandSidebar')}
-              >
-                <PanelLeftOpen className="w-4 h-4" />
-              </button>
-            )}
-          </div>
+          {showMobileBack && (
+            <button
+              type="button"
+              onClick={onBackToList}
+              className="py-header-icon-btn py-header-icon-btn--muted inline-flex sm:hidden cursor-pointer shrink-0"
+              title={t('chat:backToChats')}
+              aria-label={t('chat:backToChats')}
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          )}
 
           {/* Contact Avatar */}
           <div
@@ -704,7 +685,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               <h2 className="text-sm font-bold truncate leading-tight tracking-tight">
                 {character.name}
               </h2>
-              {character.badge && (
+              {character.badge && character.isCustom && (
                 <span className={`hidden min-[400px]:inline-flex text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${
                   isDark
                     ? 'bg-zinc-800 text-zinc-300 border border-zinc-700/60'
@@ -716,11 +697,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             </div>
             <p className="text-[11px] sm:text-xs text-py-text-secondary truncate leading-tight mt-0.5">
               {isCallingActive ? (
-                <span className="text-py-accent font-medium">в звонке</span>
+                <span className="text-py-accent font-medium">{t('inCall')}</span>
               ) : isStreaming ? (
-                <span className="text-py-text animate-pulse font-medium">печатает...</span>
+                <span className="text-py-text animate-pulse font-medium">{t('typing')}</span>
               ) : (
-                `в сети • голос ${character.voice}`
+                t('onlineVoice', { voice: character.voice })
               )}
             </p>
           </div>
@@ -731,7 +712,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           {/* Search in Chat Button — desktop only */}
           <button
             onClick={() => setIsSearchOpen(!isSearchOpen)}
-            className={`py-header-icon-btn hidden sm:inline-flex cursor-pointer ${
+            className={`py-header-icon-btn inline-flex cursor-pointer ${
               isSearchOpen ? 'py-header-icon-btn--accent' : 'py-header-icon-btn--muted'
             }`}
             title={t('chat:searchInChat')}
@@ -778,7 +759,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             type="text"
             value={searchInChat}
             onChange={(e) => setSearchInChat(e.target.value)}
-            placeholder="Поиск сообщений в этом чате..."
+            placeholder={t('searchMessagesPlaceholder')}
             className={`flex-1 bg-transparent text-xs focus:outline-none ${
               isDark ? 'text-zinc-100 placeholder-zinc-500' : 'text-neutral-900 placeholder-neutral-400'
             }`}
@@ -801,7 +782,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             }}
             className={`text-xs hover:underline font-medium ${isDark ? 'text-zinc-300' : 'text-neutral-700'}`}
           >
-            Закрыть
+            {t('close')}
           </button>
         </div>
       )}
@@ -825,7 +806,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 : 'bg-white/90 text-neutral-700 border border-neutral-200'
             }`}
           >
-            {new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
+            {new Date().toLocaleDateString(
+              i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US',
+              { day: 'numeric', month: 'long' }
+            )}
           </span>
         </div>
 
@@ -900,7 +884,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
         {isLoadingOlderMessages && (
           <div className="flex justify-center py-2 text-xs text-zinc-500">
-            Загрузка истории…
+            {t('loadingHistory')}
           </div>
         )}
 
@@ -941,11 +925,12 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                       </div>
                       <div>
                         <span className="text-xs font-bold block leading-tight">
-                          Голосовой звонок
+                          {t('voiceCallSummary')}
                         </span>
                         <span className="text-[11px] text-white/70 block mt-0.5">
-                          Длительность: {Math.floor((msg.callDurationSecs || 0) / 60)}:
-                          {((msg.callDurationSecs || 0) % 60).toString().padStart(2, '0')}
+                          {t('duration', {
+                            time: `${Math.floor((msg.callDurationSecs || 0) / 60)}:${((msg.callDurationSecs || 0) % 60).toString().padStart(2, '0')}`,
+                          })}
                         </span>
                       </div>
                     </div>
@@ -955,7 +940,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                         onClick={() => onStartCall(character)}
                         className="px-2 py-1 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white text-[11px] font-medium transition-colors flex items-center gap-1 border border-zinc-600 cursor-pointer"
                       >
-                        <Phone className="w-3 h-3" /> Перезвонить
+                        <Phone className="w-3 h-3" /> {t('callAgain')}
                       </button>
                       <span className="text-[10px] text-white/60 mt-1">
                         {formatTime(msg.timestamp)} ↙
@@ -971,20 +956,20 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                         className="text-[11px] text-white/80 hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
                       >
                         {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                        {isExpanded ? 'Скрыть стенограмму' : 'Показать стенограмму'}
+                        {isExpanded ? t('hideTranscript') : t('showTranscript')}
                       </button>
 
                       {isExpanded && (
                         <div className="mt-2 space-y-1.5 max-h-40 overflow-y-auto text-xs p-2 rounded-xl bg-black/40 border border-white/5 scrollbar-thin">
-                          {msg.callTranscripts?.map((t, tIdx) => (
+                          {msg.callTranscripts?.map((line, tIdx) => (
                             <div
                               key={tIdx}
                               className={`flex gap-1.5 ${
-                                t.sender === 'user' ? 'text-emerald-300' : 'text-zinc-300'
+                                line.sender === 'user' ? 'text-emerald-300' : 'text-zinc-300'
                               }`}
                             >
-                              <strong className="shrink-0">{t.sender === 'user' ? 'Вы:' : `${character.name}:`}</strong>
-                              <span className="text-white/90">{t.text}</span>
+                              <strong className="shrink-0">{line.sender === 'user' ? `${t('you')}:` : `${character.name}:`}</strong>
+                              <span className="text-white/90">{line.text}</span>
                             </div>
                           ))}
                         </div>
@@ -1052,7 +1037,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                         className="self-start px-3 py-1.5 rounded-xl bg-zinc-800/90 hover:bg-zinc-700 text-zinc-100 text-xs font-medium transition-colors flex items-center gap-1.5 border border-zinc-700 hover:border-zinc-500 shadow-xs cursor-pointer mt-1"
                       >
                         <RefreshCw className="w-3.5 h-3.5 text-zinc-300" />
-                        <span>Повторить запрос</span>
+                        <span>{t('retryRequest')}</span>
                       </button>
                     )}
                   </div>
@@ -1067,7 +1052,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                   }`}
                 >
                   {msg.isFromVoiceCall && (
-                    <span className="opacity-70" title="Из голосового звонка">🎙️</span>
+                    <span className="opacity-70" title={t('fromVoiceCall')}>🎙️</span>
                   )}
                   <span>{formatTime(msg.timestamp)}</span>
                   {isUser && <CheckCheck className="w-3.5 h-3.5 text-white" />}
@@ -1098,7 +1083,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 ) : (
                   <span className="flex items-center gap-1.5 text-zinc-400 text-xs">
                     <span className="w-2 h-2 rounded-full bg-zinc-400 animate-ping" />
-                    печатает ответ...
+                    {t('typingResponse')}
                   </span>
                 )}
               </div>
@@ -1160,7 +1145,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200/80'
                 }`}
               >
-                Отмена
+                {t('cancel')}
               </button>
               <button
                 type="button"
@@ -1170,7 +1155,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     ? 'bg-white hover:bg-zinc-200 text-zinc-900'
                     : 'bg-neutral-900 hover:bg-neutral-800 text-white'
                 }`}
-                title="Отправить голосовое"
+                title={t('sendVoice')}
               >
                 <ArrowUp className="w-4 h-4 stroke-[2.5]" />
               </button>
@@ -1184,7 +1169,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Сообщение..."
+                  placeholder={t('messagePlaceholder')}
                   className={`flex-1 min-w-0 resize-none bg-transparent text-sm focus:outline-none overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
                     isDark
                       ? 'text-zinc-100 placeholder-zinc-500'
@@ -1205,7 +1190,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                       ? 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700/60'
                       : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200/80'
                   }`}
-                  title="Эмодзи"
+                  title={t('emoji')}
+                  aria-label={t('emoji')}
                 >
                   <Smile className="w-5 h-5" />
                 </button>
@@ -1221,7 +1207,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                         ? 'bg-white hover:bg-zinc-200 text-zinc-900'
                         : 'bg-neutral-900 hover:bg-neutral-800 text-white'
                     }`}
-                    title="Отправить (Enter)"
+                    title={t('sendEnter')}
+                    aria-label={t('sendEnter')}
                   >
                     <ArrowUp className="w-4 h-4 stroke-[2.5]" />
                   </button>
@@ -1236,28 +1223,14 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                         ? 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700/60'
                         : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200/80'
                     }`}
-                    title={isStreaming ? 'Ожидание ответа...' : 'Записать аудиосообщение'}
+                    title={isStreaming ? t('waitingForResponse') : t('recordVoiceNote')}
+                    aria-label={isStreaming ? t('waitingForResponse') : t('recordVoiceNote')}
                   >
                     <Mic className="w-5 h-5" />
                   </button>
                 )}
               </div>
 
-              <button
-                id="quick-live-call-btn"
-                type="button"
-                onClick={() => (isCallingActive ? onExpandCall?.() : onStartCall(character))}
-                className={`py-composer-action transition-all cursor-pointer ${
-                  isCallingActive
-                    ? 'bg-py-accent/15 text-py-accent border border-py-accent/40 hover:bg-py-accent/25'
-                    : isDark
-                    ? 'bg-py-elevated hover:bg-zinc-700 text-zinc-300 hover:text-white border border-py-border'
-                    : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-800 border border-neutral-200'
-                }`}
-                title={isCallingActive ? 'Развернуть звонок' : 'Голосовой звонок'}
-              >
-                {isCallingActive ? <Maximize2 className="w-5 h-5" /> : <Phone className="w-5 h-5" />}
-              </button>
             </>
           )}
         </div>
@@ -1271,7 +1244,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         const items: MessageContextMenuItem[] = [
           {
             id: 'copy-message',
-            label: 'Копировать сообщение',
+            label: t('copyMessage'),
             icon: messageMenuIcons.copy,
             onSelect: () => {
               void handleCopyMessage(targetMessage);
@@ -1279,7 +1252,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           },
           {
             id: 'copy-dialog',
-            label: 'Копировать диалог',
+            label: t('copyDialog'),
             icon: messageMenuIcons.copyDialog,
             onSelect: () => {
               void handleCopyDialog();
@@ -1290,7 +1263,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         if (onDeleteMessage) {
           items.push({
             id: 'delete-message',
-            label: 'Удалить сообщение',
+            label: t('deleteMessage'),
             icon: messageMenuIcons.delete,
             destructive: true,
             onSelect: () => onDeleteMessage(targetMessage.id),

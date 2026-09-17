@@ -6,12 +6,14 @@ import enMemory from './locales/en/memory.json';
 import enSettings from './locales/en/settings.json';
 import enPersonas from './locales/en/personas.json';
 import enErrors from './locales/en/errors.json';
+import enCall from './locales/en/call.json';
 import ruCommon from './locales/ru/common.json';
 import ruChat from './locales/ru/chat.json';
 import ruMemory from './locales/ru/memory.json';
 import ruSettings from './locales/ru/settings.json';
 import ruPersonas from './locales/ru/personas.json';
 import ruErrors from './locales/ru/errors.json';
+import ruCall from './locales/ru/call.json';
 
 const LOCALE_STORAGE_KEY = 'persony.preferred_locale';
 
@@ -33,6 +35,7 @@ void i18n.use(initReactI18next).init({
       settings: enSettings,
       personas: enPersonas,
       errors: enErrors,
+      call: enCall,
     },
     ru: {
       common: ruCommon,
@@ -41,6 +44,7 @@ void i18n.use(initReactI18next).init({
       settings: ruSettings,
       personas: ruPersonas,
       errors: ruErrors,
+      call: ruCall,
     },
   },
   lng: getStoredLocale(),

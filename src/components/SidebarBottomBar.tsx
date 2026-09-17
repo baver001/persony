@@ -31,6 +31,7 @@ type Props = {
   onToggleSound: () => void;
   onOpenCreateModal: () => void;
   onResetDefaults?: () => void;
+  compact?: boolean;
 };
 
 function MenuShell({
@@ -96,6 +97,7 @@ export const SidebarBottomBar: React.FC<Props> = ({
   onToggleSound,
   onOpenCreateModal,
   onResetDefaults,
+  compact = false,
 }) => {
   const { t } = useTranslation(['common', 'settings']);
   const { openUserProfile, signOut } = useClerk();
@@ -141,9 +143,11 @@ export const SidebarBottomBar: React.FC<Props> = ({
 
   return (
     <div
-      className={`px-3 py-2.5 border-t shrink-0 flex items-center gap-2 min-h-[3.25rem] ${
-        isDark ? 'bg-[#18181b] border-zinc-800' : 'bg-white border-neutral-200'
-      }`}
+      className={`border-t shrink-0 flex min-h-[3.25rem] ${
+        compact
+          ? 'flex-col items-center gap-1 px-1.5 py-2'
+          : 'flex-row items-center gap-2 px-3 py-2.5'
+      } ${isDark ? 'bg-[#18181b] border-zinc-800' : 'bg-white border-neutral-200'}`}
     >
       <button
         type="button"
@@ -244,7 +248,7 @@ export const SidebarBottomBar: React.FC<Props> = ({
         )}
       </div>
 
-      <div className="flex-1" />
+      {!compact && <div className="flex-1" />}
 
       <div className="relative">
         <button

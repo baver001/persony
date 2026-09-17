@@ -1,3 +1,4 @@
+import i18n from '../i18n';
 import type { ChatMessage } from '../types';
 
 const LEGACY_VOICE_WITH_TRANSCRIPT =
@@ -15,9 +16,9 @@ export function buildVoiceNoteModelText(
   audioDuration?: number
 ): string {
   if (transcript?.trim()) {
-    return `(Голосовое сообщение пользователя): «${transcript.trim()}»`;
+    return i18n.t('chat:voiceNoteModelWithTranscript', { transcript: transcript.trim() });
   }
-  return `(Голосовое сообщение без распознанной речи, ~${audioDuration || 3} с)`;
+  return i18n.t('chat:voiceNoteModelSilent', { seconds: audioDuration || 3 });
 }
 
 /** Normalize stored/cloud text so internal prompts never reach the UI. */
@@ -38,7 +39,7 @@ export function normalizeUserMessageForDisplay(text: string): {
 
   if (LEGACY_VOICE_SILENCE.test(text)) {
     return {
-      text: '🎤 Голосовое сообщение',
+      text: `🎤 ${i18n.t('chat:voiceMessage')}`,
       isVoiceNote: true,
     };
   }

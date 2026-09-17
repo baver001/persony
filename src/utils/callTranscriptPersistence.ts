@@ -1,3 +1,4 @@
+import i18n from '../i18n';
 import { ChatMessage } from '../types';
 
 export interface CallTranscriptTurn {
@@ -29,7 +30,7 @@ export function buildCallHistoryMessages(
       id: `call_summary_${sessionId}`,
       characterId: personaId,
       sender: 'system',
-      text: `📞 Голосовой звонок · ${formatCallDuration(durationSecs)}`,
+      text: `📞 ${i18n.t('chat:voiceCallSummary')} · ${formatCallDuration(durationSecs)}`,
       timestamp: baseTimestamp,
       isCallSummary: true,
       callDurationSecs: durationSecs,

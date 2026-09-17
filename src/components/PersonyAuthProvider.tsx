@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { ClerkProvider, useAuth } from '@clerk/clerk-react';
+import { Trans, useTranslation } from 'react-i18next';
 import { fetchAppConfig, type AppConfig } from '../lib/api/config';
 import { setAuthTokenGetter } from '../lib/api/auth';
-import { getPersonyClerkAppearance, personyClerkLocalization } from '../lib/clerkAppearance';
+import { getPersonyClerkAppearance, getPersonyClerkLocalization } from '../lib/clerkAppearance';
 
 type PersonyAuthState = {
   isLoaded: boolean;
@@ -91,9 +92,13 @@ function AuthSetupRequired({ children }: { children: React.ReactNode }) {
     <PersonyAuthContext.Provider value={value}>
       {children}
       <div className="fixed bottom-4 left-4 right-4 z-[70] mx-auto max-w-lg rounded-xl border border-amber-500/40 bg-amber-950/90 px-4 py-3 text-sm text-amber-100 shadow-lg backdrop-blur">
-        Для работы чата и звонков нужен Clerk: задайте{' '}
-        <code className="text-amber-50">CLERK_PUBLISHABLE_KEY</code> и{' '}
-        <code className="text-amber-50">CLERK_SECRET_KEY</code> в Worker.
+        <Trans
+          i18nKey="common:clerkDevWarning"
+          components={{
+            publishableKey: <code className="text-amber-50" />,
+            secretKey: <code className="text-amber-50" />,
+          }}
+        />
       </div>
     </PersonyAuthContext.Provider>
   );
@@ -118,6 +123,7 @@ function useDocumentTheme(): 'dark' | 'light' {
 export function PersonyAuthProvider({ children }: { children: React.ReactNode }) {
   const [config, setConfig] = useState<AppConfig | null>(null);
   const theme = useDocumentTheme();
+  const { t, i18n } = useTranslation(['common']);
 
   useEffect(() => {
     void fetchAppConfig().then(setConfig);
@@ -133,7 +139,7 @@ export function PersonyAuthProvider({ children }: { children: React.ReactNode })
     return (
       <PersonyAuthContext.Provider value={bootValue}>
         <div className="fixed inset-0 flex items-center justify-center bg-py-app text-py-text-muted text-sm">
-          Загрузка…
+          {t('common:loading')}
         </div>
       </PersonyAuthContext.Provider>
     );
@@ -148,7 +154,7 @@ export function PersonyAuthProvider({ children }: { children: React.ReactNode })
         publishableKey={publishableKey}
         afterSignOutUrl="/"
         appearance={getPersonyClerkAppearance(theme)}
-        localization={personyClerkLocalization}
+        localization={getPersonyClerkLocalization(i18n.language)}
       >
         <ClerkBridge authRequired={config.authRequired}>{children}</ClerkBridge>
       </ClerkProvider>

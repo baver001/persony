@@ -3,5 +3,14 @@
   "CONVERSATION_NOT_FOUND": "Conversation not found.",
   "FORBIDDEN": "You do not have access to this resource.",
   "MEMORY_NOT_FOUND": "Memory not found.",
-  "INTERNAL_ERROR": "Something went wrong. Please try again."
+  "INTERNAL_ERROR": "Something went wrong. Please try again.",
+  "MODEL_GENERIC": "An error occurred while contacting the model.",
+  "MODEL_OVERLOADED": "The model is temporarily overloaded. Tap Retry in a few seconds.",
+  "MODEL_RATE_LIMIT": "Rate limit exceeded. Wait a moment and try again.",
+  "NETWORK": "Could not reach the server. Check your internet connection.",
+  "TIMEOUT": "The server timed out. Try again — it usually works on the second attempt.",
+  "SERVICE_UNAVAILABLE": "Service is temporarily unavailable due to high load. Please try again.",
+  "SIGN_IN_TO_SEND": "Sign in to send messages.",
+  "AUTH_NOT_CONFIGURED": "Auth service is not configured. Contact the administrator.",
+  "CLOUD_DIALOG_FAILED": "Could not open cloud conversation. Check your account sign-in."
 }

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
 import {
   X,
@@ -22,30 +23,38 @@ interface CreatePersonaModalProps {
   initialPersona?: Persona | null;
 }
 
-const VOICES: Array<{ id: VoiceName; label: string; tone: string }> = [
-  { id: 'Aoede', label: 'Aoede', tone: 'Женский' },
-  { id: 'Charon', label: 'Charon', tone: 'Мужской (низкий)' },
-  { id: 'Puck', label: 'Puck', tone: 'Молодежный' },
-  { id: 'Zephyr', label: 'Zephyr', tone: 'Спокойный' },
-  { id: 'Kore', label: 'Kore', tone: 'Поэтичный' },
-  { id: 'Fenrir', label: 'Fenrir', tone: 'Харизматичный' },
-];
-
-const CATEGORIES: Array<{ id: Persona['category']; label: string }> = [
-  { id: 'tech', label: 'IT & Кибер' },
-  { id: 'mentor', label: 'Менторы' },
-  { id: 'philosophy', label: 'Философия' },
-  { id: 'creative', label: 'Творчество' },
-  { id: 'fantasy', label: 'Фэнтези' },
-  { id: 'custom', label: 'Свой стиль' },
-];
-
 export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
   isOpen,
   onClose,
   onSave,
   initialPersona,
 }) => {
+  const { t } = useTranslation(['personas', 'common']);
+
+  const VOICES = useMemo(
+    (): Array<{ id: VoiceName; label: string; tone: string }> => [
+      { id: 'Aoede', label: 'Aoede', tone: t('voiceFemale') },
+      { id: 'Charon', label: 'Charon', tone: t('voiceMaleLow') },
+      { id: 'Puck', label: 'Puck', tone: t('voiceYouth') },
+      { id: 'Zephyr', label: 'Zephyr', tone: t('voiceCalm') },
+      { id: 'Kore', label: 'Kore', tone: t('voicePoetic') },
+      { id: 'Fenrir', label: 'Fenrir', tone: t('voiceCharismatic') },
+    ],
+    [t]
+  );
+
+  const CATEGORIES = useMemo(
+    (): Array<{ id: Persona['category']; label: string }> => [
+      { id: 'tech', label: t('categoryTech') },
+      { id: 'mentor', label: t('categoryMentor') },
+      { id: 'philosophy', label: t('categoryPhilosophy') },
+      { id: 'creative', label: t('categoryCreative') },
+      { id: 'fantasy', label: t('categoryFantasy') },
+      { id: 'custom', label: t('categoryCustom') },
+    ],
+    [t]
+  );
+
   const [name, setName] = useState(initialPersona?.name || '');
   const [tagline, setTagline] = useState(initialPersona?.tagline || '');
   const [description, setDescription] = useState(initialPersona?.description || '');
@@ -53,7 +62,9 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
   const [voice, setVoice] = useState<VoiceName>(initialPersona?.voice || 'Aoede');
   const [category, setCategory] = useState<Persona['category']>(initialPersona?.category || 'custom');
   const [avatar, setAvatar] = useState(initialPersona?.avatar || PRESET_AVATARS[0]);
-  const [starter1, setStarter1] = useState(initialPersona?.starterMessages?.[0] || 'Привет! Чем могу помочь?');
+  const [starter1, setStarter1] = useState(
+    initialPersona?.starterMessages?.[0] || t('defaultStarter')
+  );
 
   const [aiPrompt, setAiPrompt] = useState('');
   const [isGeneratingWithAi, setIsGeneratingWithAi] = useState(false);
@@ -76,7 +87,7 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
 
       if (!res.ok) {
         const errJson = (await res.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(errJson?.error || 'Не удалось сгенерировать персонажа. Повторите попытку.');
+        throw new Error(errJson?.error || t('generateFailed'));
       }
 
       const data = (await res.json()) as Record<string, unknown>;
@@ -102,7 +113,7 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
       );
       setAvatar(svgAvatar);
     } catch (err: any) {
-      setGenerationError(err.message || 'Ошибка генерации');
+      setGenerationError(err.message || t('generationError'));
     } finally {
       setIsGeneratingWithAi(false);
     }
@@ -133,11 +144,11 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
     const newPersona: Persona = {
       id: initialPersona?.id || `custom_${Date.now()}`,
       name: name.trim(),
-      tagline: tagline.trim() || 'AI Собеседник',
-      description: description.trim() || 'Пользовательский персонаж для живого общения.',
+      tagline: tagline.trim() || t('common:companionDefault'),
+      description: description.trim() || t('common:customPersonaDefault'),
       systemPrompt:
         systemPrompt.trim() ||
-        `Ты — ${name.trim()}. Общайся в мессенджере Persony в своем характерном стиле. Отвечай на русском языке.`,
+        t('defaultSystemPrompt', { name: name.trim() }),
       avatar: avatar || generateSvgAvatar(name, category),
       voice,
       category,
@@ -145,7 +156,7 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
       badge: 'Custom',
       isCustom: true,
       createdAt: initialPersona?.createdAt || Date.now(),
-      starterMessages: starter1.trim() ? [starter1.trim()] : ['Привет! Рад познакомиться.'],
+      starterMessages: starter1.trim() ? [starter1.trim()] : [t('defaultGreeting')],
     };
 
     onSave(newPersona);
@@ -169,11 +180,9 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
             <PersonyLogo size={32} theme="dark" className="shrink-0" />
             <div>
               <h2 className="text-sm sm:text-base font-bold text-white leading-tight">
-                {initialPersona ? 'Редактировать персонажа' : 'Создать нового персонажа'}
+                {initialPersona ? t('editTitle') : t('createTitle')}
               </h2>
-              <p className="text-[11px] text-white/50">
-                Настройте образ, голос и системный промпт
-              </p>
+              <p className="text-[11px] text-white/50">{t('createSubtitle')}</p>
             </div>
           </div>
           <button
@@ -189,14 +198,14 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-300 shrink-0 hidden sm:flex">
               <Wand2 className="w-3.5 h-3.5" />
-              <span>Быстрая генерация:</span>
+              <span>{t('quickGenerate')}</span>
             </div>
             <div className="flex-1 relative">
               <input
                 type="text"
                 value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
-                placeholder="Опишите концепт (например: Саркастичный кот-детектив из Токио...)"
+                placeholder={t('conceptPlaceholder')}
                 className="w-full bg-black/40 border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white placeholder-white/40 focus:outline-none focus:border-zinc-500 transition-colors"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleGenerateWithAI();
@@ -212,13 +221,13 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
               {isGeneratingWithAi ? (
                 <>
                   <RefreshCw className="w-3 h-3 animate-spin" />
-                  <span>Генерация...</span>
+                  <span>{t('generating')}</span>
                 </>
               ) : (
                 <>
                   <Sparkles className="w-3 h-3" />
-                  <span className="sm:hidden">Сгенерировать</span>
-                  <span className="hidden sm:inline">Создать AI</span>
+                  <span className="sm:hidden">{t('generateShort')}</span>
+                  <span className="hidden sm:inline">{t('generateAi')}</span>
                 </>
               )}
             </button>
@@ -247,12 +256,12 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
                     type="button"
                     onClick={handleGenerateProceduralAvatar}
                     className="px-2 py-1 rounded-md bg-white/10 hover:bg-white/15 text-[11px] text-white font-medium flex items-center gap-1 transition-colors cursor-pointer"
-                    title="Сгенерировать векторный арт-аватар"
+                    title={t('generateAvatar')}
                   >
-                    <Palette className="w-3 h-3 text-zinc-400" /> Арт
+                    <Palette className="w-3 h-3 text-zinc-400" /> {t('art')}
                   </button>
                   <label className="px-2 py-1 rounded-md bg-white/10 hover:bg-white/15 text-[11px] text-white font-medium flex items-center gap-1 transition-colors cursor-pointer">
-                    <Upload className="w-3 h-3" /> Загрузить
+                    <Upload className="w-3 h-3" /> {t('upload')}
                     <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                   </label>
                 </div>
@@ -278,22 +287,22 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
             {/* Name and Tagline */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-white/70">Имя персонажа *</label>
+                <label className="text-[11px] font-semibold text-white/70">{t('nameLabel')}</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Кибер-Детектив"
+                  placeholder={t('namePlaceholder')}
                   className="w-full bg-[#18181b] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-zinc-500 transition-colors"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-white/70">Краткий статус (Tagline)</label>
+                <label className="text-[11px] font-semibold text-white/70">{t('taglineLabel')}</label>
                 <input
                   type="text"
                   value={tagline}
                   onChange={(e) => setTagline(e.target.value)}
-                  placeholder="Специалист по защите"
+                  placeholder={t('taglinePlaceholder')}
                   className="w-full bg-[#18181b] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-zinc-500 transition-colors"
                 />
               </div>
@@ -301,7 +310,7 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
 
             {/* Category Chips */}
             <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-white/70">Категория</label>
+              <label className="text-[11px] font-semibold text-white/70">{t('categoryLabel')}</label>
               <div className="flex flex-wrap gap-1.5">
                 {CATEGORIES.map((cat) => (
                   <button
@@ -324,9 +333,9 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-semibold text-white/70 flex items-center gap-1">
-                  <Mic className="w-3.5 h-3.5 text-zinc-400" /> Голос для звонков
+                  <Mic className="w-3.5 h-3.5 text-zinc-400" /> {t('voiceLabel')}
                 </label>
-                <span className="text-[10px] text-white/40">6 доступных голосов</span>
+                <span className="text-[10px] text-white/40">{t('voicesAvailable')}</span>
               </div>
               <div className="grid grid-cols-3 gap-1.5">
                 {VOICES.map((v) => {
@@ -360,14 +369,14 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
             <div className="flex-1 flex flex-col space-y-1">
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-semibold text-white/70">
-                  Системная инструкция (System Prompt)
+                  {t('systemPromptLabel')}
                 </label>
-                <span className="text-[10px] text-white/40">Характер и знания персонажа</span>
+                <span className="text-[10px] text-white/40">{t('systemPromptHint')}</span>
               </div>
               <textarea
                 value={systemPrompt}
                 onChange={(e) => setSystemPrompt(e.target.value)}
-                placeholder="Опишите характер, манеру речи, предысторию и правила поведения персонажа в Persony..."
+                placeholder={t('systemPromptPlaceholder')}
                 className="w-full flex-1 min-h-[140px] md:min-h-[160px] bg-[#18181b] border border-white/10 rounded-lg p-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-zinc-500 transition-colors leading-relaxed resize-none"
               />
             </div>
@@ -375,13 +384,13 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
             {/* First Starter Message */}
             <div className="space-y-1 shrink-0">
               <label className="text-[11px] font-semibold text-white/70">
-                Первое приветствие в чате
+                {t('starterLabel')}
               </label>
               <input
                 type="text"
                 value={starter1}
                 onChange={(e) => setStarter1(e.target.value)}
-                placeholder="Привет! Чем могу помочь?"
+                placeholder={t('starterPlaceholder')}
                 className="w-full bg-[#18181b] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-zinc-500 transition-colors"
               />
             </div>
@@ -395,7 +404,7 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
             onClick={onClose}
             className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
           >
-            Отмена
+            {t('common:cancel')}
           </button>
           <button
             type="button"
@@ -405,7 +414,7 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
             className="px-4 py-1.5 rounded-lg bg-zinc-100 hover:bg-white disabled:opacity-50 text-zinc-900 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
           >
             <Check className="w-3.5 h-3.5" />
-            <span>Сохранить персонажа</span>
+            <span>{t('savePersona')}</span>
           </button>
         </div>
       </motion.div>

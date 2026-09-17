@@ -12,7 +12,9 @@ import {
   ShieldCheck,
   Check,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Persona } from '../types';
+import { getLocalizedPersonaPresentation } from '../utils/personaPresentation';
 
 interface PersonaProfileDrawerProps {
   character: Persona | null;
@@ -33,6 +35,7 @@ export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
   onDelete,
   onClearChat,
 }) => {
+  const { t, i18n } = useTranslation(['personas', 'common', 'chat']);
   const [copiedPrompt, setCopiedPrompt] = React.useState(false);
 
   React.useEffect(() => {
@@ -44,6 +47,8 @@ export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
   }, [onClose]);
 
   if (!isOpen || !character) return null;
+
+  const localized = getLocalizedPersonaPresentation(character, i18n.language);
 
   const handleCopyPrompt = () => {
     navigator.clipboard.writeText(character.systemPrompt);
@@ -68,7 +73,7 @@ export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
         >
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800 bg-zinc-900/50">
-            <span className="text-sm font-semibold text-white/90">Информация о персонаже</span>
+            <span className="text-sm font-semibold text-white/90">{t('personas:profileTitle')}</span>
             <button
               onClick={onClose}
               className="py-touch-target p-2 rounded-full text-white/50 hover:text-white hover:bg-white/10 transition-colors"
@@ -91,7 +96,7 @@ export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
               </div>
 
               <h3 className="mt-4 text-xl font-bold text-white tracking-tight">{character.name}</h3>
-              <p className="text-xs text-zinc-400 font-medium mt-0.5">{character.tagline}</p>
+              <p className="text-xs text-zinc-400 font-medium mt-0.5">{localized.tagline}</p>
 
               {/* Call to action: Voice call */}
               <div className="flex items-center gap-3 mt-5 w-full">
@@ -103,12 +108,13 @@ export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
                   }}
                   className="flex-1 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-xs font-semibold flex items-center justify-center gap-2 border border-zinc-700 shadow-sm transition-all cursor-pointer"
                 >
-                  <Phone className="w-4 h-4" /> Позвонить
+                  <Phone className="w-4 h-4" /> {t('personas:call')}
                 </button>
                 <button
                   onClick={() => onEdit(character)}
                   className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 transition-colors border border-white/5"
-                  title="Редактировать"
+                  title={t('common:edit')}
+                  aria-label={t('common:edit')}
                 >
                   <Edit3 className="w-4 h-4" />
                 </button>
@@ -117,15 +123,15 @@ export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
 
             {/* Description */}
             <div className="space-y-2 bg-zinc-900 p-4 rounded-2xl border border-zinc-800">
-              <span className="text-[11px] font-semibold text-white/50 uppercase tracking-wider">О персонаже</span>
-              <p className="text-xs text-white/80 leading-relaxed">{character.description}</p>
+              <span className="text-[11px] font-semibold text-white/50 uppercase tracking-wider">{t('personas:about')}</span>
+              <p className="text-xs text-white/80 leading-relaxed">{localized.description}</p>
             </div>
 
             {/* Voice Settings */}
             <div className="space-y-3 bg-zinc-900 p-4 rounded-2xl border border-zinc-800">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-semibold text-white/50 uppercase tracking-wider flex items-center gap-1.5">
-                  <Mic className="w-3.5 h-3.5 text-zinc-400" /> Голос
+                  <Mic className="w-3.5 h-3.5 text-zinc-400" /> {t('personas:voice')}
                 </span>
                 <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300 border border-zinc-700/60">
                   {character.voice}
@@ -137,14 +143,14 @@ export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
             <div className="space-y-2 bg-zinc-900 p-4 rounded-2xl border border-zinc-800">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-semibold text-white/50 uppercase tracking-wider flex items-center gap-1.5">
-                  <Terminal className="w-3.5 h-3.5 text-zinc-400" /> Системный промпт
+                  <Terminal className="w-3.5 h-3.5 text-zinc-400" /> {t('personas:systemPrompt')}
                 </span>
                 <button
                   onClick={handleCopyPrompt}
                   className="text-[11px] text-zinc-300 hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   {copiedPrompt ? <Check className="w-3 h-3 text-emerald-400" /> : <Share2 className="w-3 h-3" />}
-                  {copiedPrompt ? 'Скопировано' : 'Копировать'}
+                  {copiedPrompt ? t('chat:copied') : t('chat:copy')}
                 </button>
               </div>
               <div className="max-h-36 overflow-y-auto font-mono text-[11px] text-white/60 bg-black/40 p-2.5 rounded-xl border border-white/5 scrollbar-thin scrollbar-thumb-white/10 leading-relaxed whitespace-pre-wrap">
@@ -157,13 +163,13 @@ export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
               {onClearChat && (
                 <button
                   onClick={() => {
-                    if (confirm('Очистить историю сообщений с этим персонажем?')) {
+                    if (confirm(t('personas:clearHistoryConfirm'))) {
                       onClearChat(character.id);
                     }
                   }}
                   className="w-full py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-white/70 hover:text-white transition-colors text-left flex items-center justify-between"
                 >
-                  <span>Очистить историю сообщений</span>
+                  <span>{t('personas:clearHistory')}</span>
                   <Trash2 className="w-3.5 h-3.5 text-white/40" />
                 </button>
               )}
@@ -171,14 +177,14 @@ export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
               {character.isCustom && onDelete && (
                 <button
                   onClick={() => {
-                    if (confirm(`Удалить персонажа "${character.name}"?`)) {
+                    if (confirm(t('personas:deletePersonaConfirm', { name: character.name }))) {
                       onDelete(character.id);
                       onClose();
                     }
                   }}
                   className="w-full py-2 px-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-xs text-rose-400 transition-colors text-left flex items-center justify-between"
                 >
-                  <span>Удалить персонажа</span>
+                  <span>{t('personas:deletePersona')}</span>
                   <Trash2 className="w-3.5 h-3.5 text-rose-400" />
                 </button>
               )}

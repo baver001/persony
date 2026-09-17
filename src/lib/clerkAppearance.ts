@@ -64,7 +64,7 @@ export function getPersonyClerkAppearance(theme: 'dark' | 'light') {
   };
 }
 
-export const personyClerkLocalization = {
+const personyClerkLocalizationRu = {
   signIn: {
     start: {
       title: 'Вход в Persony',
@@ -88,3 +88,32 @@ export const personyClerkLocalization = {
     },
   },
 } as const;
+
+const personyClerkLocalizationEn = {
+  signIn: {
+    start: {
+      title: 'Sign in to Persony',
+      subtitle: 'Continue chatting with your personas',
+    },
+  },
+  signUp: {
+    start: {
+      title: 'Join Persony',
+      subtitle: 'Create an account in a minute',
+    },
+  },
+  userProfile: {
+    navbar: {
+      account: 'Profile',
+      security: 'Security',
+    },
+    start: {
+      headerTitle__account: 'Account',
+      headerSubtitle__account: 'Profile and email',
+    },
+  },
+} as const;
+
+export function getPersonyClerkLocalization(locale: string) {
+  return locale.startsWith('ru') ? personyClerkLocalizationRu : personyClerkLocalizationEn;
+}

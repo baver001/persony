@@ -5,7 +5,11 @@ export function formatMessageCopyText(message: ChatMessage): string {
   return message.text.trim();
 }
 
-export function formatDialogCopyText(messages: ChatMessage[], personaName: string): string {
+export function formatDialogCopyText(
+  messages: ChatMessage[],
+  personaName: string,
+  labels: { you: string; voiceCall: string }
+): string {
   return messages
     .filter((m) => m.sender !== 'system')
     .map((m) => {
@@ -15,13 +19,13 @@ export function formatDialogCopyText(messages: ChatMessage[], personaName: strin
         const duration = `${mins}:${secs.toString().padStart(2, '0')}`;
         const lines =
           m.callTranscripts?.map((t) => {
-            const who = t.sender === 'user' ? 'Вы' : personaName;
+            const who = t.sender === 'user' ? labels.you : personaName;
             return `${who}: ${t.text}`;
           }) ?? [];
-        return [`[Голосовой звонок · ${duration}]`, ...lines].join('\n');
+        return [`[${labels.voiceCall} · ${duration}]`, ...lines].join('\n');
       }
 
-      const who = m.sender === 'user' ? 'Вы' : personaName;
+      const who = m.sender === 'user' ? labels.you : personaName;
       return `${who}: ${formatMessageCopyText(m)}`;
     })
     .filter(Boolean)

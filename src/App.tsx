@@ -45,6 +45,8 @@ import { MemoryPage } from './pages/MemoryPage';
 import { OwnerConsole } from './pages/OwnerConsole';
 import { SettingsPage } from './pages/SettingsPage';
 import { MeetPersonasPage } from './pages/MeetPersonasPage';
+import i18n from './i18n';
+import { applyLocaleToPersona, applyLocaleToPersonas } from './utils/personaPresentation';
 
 const STORAGE_KEY_PERSONAS = 'persony_personas_v1';
 const STORAGE_KEY_MESSAGES = 'persony_messages_v1';
@@ -73,7 +75,7 @@ function migrateLegacyStorageKeys() {
 
 // Format and unwrap model error messages cleanly for the client
 function cleanModelError(err: any): string {
-  if (!err) return 'Произошла ошибка при обращении к модели.';
+  if (!err) return i18n.t('errors:MODEL_GENERIC');
   let msg = typeof err === 'string' ? err : err.message || String(err);
 
   for (let depth = 0; depth < 4; depth++) {
@@ -102,21 +104,21 @@ function cleanModelError(err: any): string {
 
   const lower = String(msg).toLowerCase();
   if (lower.includes('503') || lower.includes('high demand') || lower.includes('unavailable') || lower.includes('service unavailable')) {
-    return 'Модель временно перегружена запросами. Нажмите «Повторить запрос» через пару секунд.';
+    return i18n.t('errors:MODEL_OVERLOADED');
   }
   if (lower.includes('quota') || lower.includes('429') || lower.includes('rate limit')) {
-    return 'Превышен лимит запросов. Подождите немного и повторите отправку.';
+    return i18n.t('errors:MODEL_RATE_LIMIT');
   }
   if (lower.includes('failed to fetch') || lower.includes('networkerror')) {
-    return 'Ошибка связи с сервером. Проверьте интернет-соединение.';
+    return i18n.t('errors:NETWORK');
   }
   if (lower.includes('524') || lower.includes('timeout') || lower.includes('timed out')) {
-    return 'Сервер не успел ответить вовремя. Повторите запрос — обычно со второй попытки срабатывает.';
+    return i18n.t('errors:TIMEOUT');
   }
 
   // Strip raw JSON artifacts if any remain
   if (msg.includes('{"error":') || msg.includes('"code":')) {
-    return 'Сервис временно недоступен из-за высокой нагрузки. Повторите попытку.';
+    return i18n.t('errors:SERVICE_UNAVAILABLE');
   }
 
   return msg.length > 250 ? msg.slice(0, 250) + '...' : msg;
@@ -244,6 +246,21 @@ function ChatApp() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [cloudPersonasLoaded, setCloudPersonasLoaded] = useState(false);
   const [showMeetPersonas, setShowMeetPersonas] = useState(false);
+
+  useEffect(() => {
+    const syncPersonaLocale = (lng: string) => {
+      setPersonas((prev) => applyLocaleToPersonas(prev, lng));
+      setSelectedPersona((prev) => applyLocaleToPersona(prev, lng));
+      setCallingPersona((prev) => applyLocaleToPersona(prev, lng));
+      setProfilePersona((prev) => (prev ? applyLocaleToPersona(prev, lng) : null));
+    };
+
+    syncPersonaLocale(i18n.language);
+    i18n.on('languageChanged', syncPersonaLocale);
+    return () => {
+      i18n.off('languageChanged', syncPersonaLocale);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isAuthLoaded || !isSignedIn || !clerkEnabled || cloudPersonasLoaded) return;
@@ -454,7 +471,7 @@ function ChatApp() {
         : await ensureDirectConversation(personaId);
 
       if (!conversation?.id) {
-        throw new Error('Не удалось открыть облачный диалог. Проверьте вход в аккаунт.');
+        throw new Error(i18n.t('errors:CLOUD_DIALOG_FAILED'));
       }
 
       conversationId = conversation.id;
@@ -527,8 +544,8 @@ function ChatApp() {
       appendInferenceError(
         selectedPersona.id,
         clerkEnabled
-          ? 'Войдите в аккаунт, чтобы отправлять сообщения.'
-          : 'Сервис авторизации не настроен. Обратитесь к администратору.'
+          ? i18n.t('errors:SIGN_IN_TO_SEND')
+          : i18n.t('errors:AUTH_NOT_CONFIGURED')
       );
       return;
     }
@@ -542,7 +559,7 @@ function ChatApp() {
       text: isVoiceNote
         ? initialTranscript
           ? `🎤 "${initialTranscript}"`
-          : '🎤 Голосовое сообщение'
+          : `🎤 ${i18n.t('chat:voiceNoteFallback')}`
         : text.trim(),
       timestamp: Date.now(),
       status: 'sent',
@@ -606,7 +623,7 @@ function ChatApp() {
       const displayText = isVoiceNote
         ? transcriptText
           ? buildVoiceNoteDisplayText(transcriptText)
-          : '🎤 Голосовое сообщение'
+          : `🎤 ${i18n.t('chat:voiceNoteFallback')}`
         : text.trim();
 
       const modelText = isVoiceNote
@@ -728,8 +745,9 @@ function ChatApp() {
   };
 
   const handleResetDefaults = () => {
-    setPersonas(DEFAULT_PERSONAS);
-    setSelectedPersona(DEFAULT_PERSONAS[0]);
+    const localized = applyLocaleToPersonas(DEFAULT_PERSONAS, i18n.language);
+    setPersonas(localized);
+    setSelectedPersona(localized[0]!);
     localStorage.removeItem(STORAGE_KEY_PERSONAS);
   };
 
@@ -762,12 +780,14 @@ function ChatApp() {
       <div className="flex-1 flex w-full h-full overflow-hidden relative">
         {/* Left Sidebar: Collapsible ChatGPT style */}
         <div
-          className={`h-full transition-all duration-200 shrink-0 border-r border-py-border ${
+          className={`h-full transition-[width] duration-200 ease-out shrink-0 border-r border-py-border overflow-hidden ${
             !isSidebarOpen
-              ? 'hidden'
+              ? mobileView === 'chat'
+                ? 'hidden md:flex md:w-14'
+                : 'flex w-full md:w-14'
               : mobileView === 'chat'
-              ? 'hidden sm:flex sm:w-[300px] md:w-[320px] lg:w-[360px]'
-              : 'flex w-full sm:w-[300px] md:w-[320px] lg:w-[360px]'
+                ? 'hidden sm:flex sm:w-[300px] md:w-[320px] lg:w-[360px]'
+                : 'flex w-full sm:w-[300px] md:w-[320px] lg:w-[360px]'
           }`}
         >
           <Sidebar
@@ -787,6 +807,7 @@ function ChatApp() {
             onResetDefaults={handleResetDefaults}
             isSidebarOpen={isSidebarOpen}
             onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+            isCollapsed={!isSidebarOpen}
           />
         </div>
 
@@ -812,8 +833,6 @@ function ChatApp() {
             isCallingActive={isCallOpen && callingPersona.id === selectedPersona.id}
             onExpandCall={() => setIsCallOpen(true)}
             onEndActiveCall={() => setIsCallOpen(false)}
-            isSidebarOpen={isSidebarOpen}
-            onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
             onRetryMessage={handleRetryLastMessage}
             onDeleteMessage={handleDeleteMessage}
             hasOlderMessages={hasOlderMessages[selectedPersona.id] ?? false}

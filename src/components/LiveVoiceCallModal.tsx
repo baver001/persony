@@ -19,6 +19,7 @@ import { callDiagnostics } from '../utils/callDiagnostics';
 import { isMobileDevice } from '../utils/pcmAudio';
 import { getLiveInitCredentials } from '../lib/api/headers';
 import { usePersonyAuth } from './PersonyAuthProvider';
+import { useTranslation } from 'react-i18next';
 
 interface LiveVoiceCallModalProps {
   character: Persona;
@@ -41,6 +42,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
   conversationId,
   onEndCallSummary,
 }) => {
+  const { t } = useTranslation(['call', 'chat', 'errors']);
   const [status, setStatus] = useState<CallStatus>('connecting');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [duration, setDuration] = useState<number>(0);
@@ -347,7 +349,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
               onNewMessageFromCall?.(msg.text, 'user');
             }
           } else if (msg.type === 'error') {
-            setErrorMessage(msg.message || 'Ошибка соединения с Gemini Live');
+            setErrorMessage(msg.message || t('genericError'));
             setStatus('error');
           } else if (msg.type === 'session_closed') {
             handleEndCall();
@@ -363,7 +365,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
           clearInterval(ringtoneTimerRef.current);
           ringtoneTimerRef.current = null;
         }
-        setErrorMessage('Не удалось подключиться к серверу Live API. Проверьте микрофон и ключ API.');
+        setErrorMessage(t('connectionError'));
         setStatus('error');
       };
 
@@ -378,7 +380,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
         clearInterval(ringtoneTimerRef.current);
         ringtoneTimerRef.current = null;
       }
-      setErrorMessage(err.name === 'NotAllowedError' ? 'Доступ к микрофону заблокирован в браузере' : err.message);
+      setErrorMessage(err.name === 'NotAllowedError' ? t('micBlocked') : err.message);
       setStatus('error');
     }
   };
@@ -425,17 +427,15 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
 
   const liveCue = transcripts.length > 0 ? transcripts[transcripts.length - 1] : null;
   const liveCueSpeakerLabel =
-    liveCue?.sender === 'user' ? 'Вы' : character.name.split(' ')[0];
+    liveCue?.sender === 'user' ? t('chat:you') : character.name.split(' ')[0];
   const characterFirstName = character.name.split(' ')[0];
   const showCallControls = status === 'connected' || status === 'connecting';
   const headerLabel =
-    status === 'connected'
-      ? 'Голосовой звонок'
-      : status === 'auth_required'
-        ? 'Голосовой звонок'
-        : status === 'error'
-          ? 'Звонок'
-          : 'Подключение…';
+    status === 'connected' || status === 'auth_required'
+      ? t('title')
+      : status === 'error'
+        ? t('titleActive')
+        : t('titleConnecting');
 
   if (!isOpen) return null;
 
@@ -468,7 +468,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
             <div className="flex items-center gap-1 h-3 mt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
               <span className="text-[10px] text-white/50 truncate">
-                {status === 'connected' ? 'Звонок активен' : 'Соединение...'}
+                {status === 'connected' ? t('statusActive') : t('statusConnecting')}
               </span>
             </div>
           </div>
@@ -480,21 +480,21 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
               className={`py-touch-target p-2 rounded-full transition-colors ${
                 isMuted ? 'bg-rose-500/20 text-rose-400' : 'bg-white/10 text-white hover:bg-white/20'
               }`}
-              title={isMuted ? 'Включить микрофон' : 'Выключить микрофон'}
+              title={isMuted ? t('muteOn') : t('muteOff')}
             >
               {isMuted ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
             </button>
             <button
               onClick={() => setIsMinimized(false)}
               className="py-touch-target p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
-              title="Развернуть звонок"
+              title={t('expand')}
             >
               <Maximize2 className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={handleEndCall}
               className="py-touch-target p-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white shadow-md transition-colors"
-              title="Завершить звонок"
+              title={t('end')}
             >
               <PhoneOff className="w-3.5 h-3.5" />
             </button>
@@ -548,7 +548,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                     ? 'bg-zinc-800 text-zinc-200 border border-zinc-700'
                     : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white'
                 }`}
-                title="Субтитры разговора"
+                title={t('subtitles')}
               >
                 <Subtitles className="w-4 h-4" />
               </button>
@@ -557,7 +557,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                 id="toggle-minimize-btn"
                 onClick={() => setIsMinimized(true)}
                 className="py-touch-target p-2 rounded-full bg-white/5 text-white/50 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
-                title="Свернуть звонок"
+                title={t('minimize')}
               >
                 <Minimize2 className="w-4 h-4" />
               </button>
@@ -605,7 +605,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
               {(status === 'connecting' || status === 'connected') && (
                 <div className="inline-flex items-center justify-center min-w-[88px] h-8 mt-5 px-4 rounded-full bg-white/[0.04] text-xs select-none">
                   {status === 'connecting' && (
-                    <span className="text-white/50">Соединение…</span>
+                    <span className="text-white/50">{t('connecting')}</span>
                   )}
                   {status === 'connected' && (
                     <span className="font-mono text-emerald-400/90 font-medium tracking-wider tabular-nums">
@@ -623,12 +623,12 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                     </div>
                     <div className="min-w-0 space-y-1.5">
                       <p className="text-sm font-medium text-white/90 leading-snug">
-                        Войдите, чтобы позвонить
+                        {t('signInToCall')}
                       </p>
                       <p className="text-xs text-white/45 leading-relaxed">
                         {clerkEnabled
-                          ? `После входа можно сразу говорить с ${characterFirstName} — это займёт пару секунд.`
-                          : 'Сервис авторизации временно недоступен.'}
+                          ? t('signInHint', { name: characterFirstName })
+                          : t('authUnavailable')}
                       </p>
                     </div>
                   </div>
@@ -639,7 +639,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                           type="button"
                           className="w-full rounded-xl bg-white text-zinc-900 text-sm font-medium py-2.5 hover:bg-white/90 transition-colors"
                         >
-                          Войти и позвонить
+                          {t('signInAndCall')}
                         </button>
                       </SignInButton>
                       <SignUpButton mode="modal">
@@ -647,7 +647,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                           type="button"
                           className="w-full rounded-xl bg-white/[0.06] text-white/80 text-sm py-2.5 hover:bg-white/[0.1] transition-colors"
                         >
-                          Создать аккаунт
+                          {t('createAccount')}
                         </button>
                       </SignUpButton>
                     </div>
@@ -657,7 +657,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                     onClick={onClose}
                     className="w-full text-xs text-white/35 hover:text-white/55 transition-colors pt-1"
                   >
-                    Не сейчас
+                    {t('notNow')}
                   </button>
                 </div>
               )}
@@ -670,7 +670,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                     onClick={startCall}
                     className="w-full rounded-xl bg-white/[0.08] hover:bg-white/[0.12] text-white/85 text-sm py-2.5 transition-colors"
                   >
-                    Попробовать снова
+                    {t('tryAgain')}
                   </button>
                 </div>
               )}
@@ -706,16 +706,16 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
             {status === 'connected' && !liveCue && (
               <div className="flex flex-wrap items-center justify-center gap-1.5 mt-4 w-full">
                 <button
-                  onClick={() => sendQuickLivePrompt('Привет! Расскажи о себе.')}
+                  onClick={() => sendQuickLivePrompt(t('quickHello'))}
                   className="px-3 py-1 rounded-full text-[11px] bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors border border-white/5"
                 >
-                  Привет! Расскажи о себе
+                  {t('quickHello')}
                 </button>
                 <button
-                  onClick={() => sendQuickLivePrompt('Как настроение?')}
+                  onClick={() => sendQuickLivePrompt(t('quickMood'))}
                   className="px-3 py-1 rounded-full text-[11px] bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors border border-white/5"
                 >
-                  Как настроение?
+                  {t('quickMood')}
                 </button>
               </div>
             )}
@@ -734,7 +734,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                       ? 'bg-white/15 text-white/90'
                       : 'bg-white/[0.07] hover:bg-white/[0.11] text-white/80'
                   }`}
-                  title={isMuted ? 'Включить микрофон' : 'Отключить микрофон'}
+                  title={isMuted ? t('muteOn') : t('muteOff')}
                 >
                   {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
                 </button>
@@ -743,7 +743,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                   id="call-hangup-btn"
                   onClick={handleEndCall}
                   className="p-5 rounded-full bg-rose-600 hover:bg-rose-500 active:scale-[0.98] text-white shadow-lg shadow-black/30 transition-all duration-200 flex items-center justify-center shrink-0"
-                  title="Завершить звонок"
+                  title={t('end')}
                 >
                   <PhoneOff className="w-7 h-7" />
                 </button>
@@ -756,7 +756,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                       ? 'bg-white/15 text-white/90'
                       : 'bg-white/[0.07] hover:bg-white/[0.11] text-white/80'
                   }`}
-                  title={isSpeakerMuted ? 'Включить звук' : 'Заглушить динамик'}
+                  title={isSpeakerMuted ? t('speakerOn') : t('speakerOff')}
                 >
                   {isSpeakerMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
                 </button>
@@ -767,7 +767,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                 onClick={onClose}
                 className="mt-10 text-sm text-white/40 hover:text-white/60 transition-colors"
               >
-                Закрыть
+                {t('close')}
               </button>
             ) : null}
             </div>

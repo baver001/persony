@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { CloudUpload, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface ImportLocalDataModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ export const ImportLocalDataModal: React.FC<ImportLocalDataModalProps> = ({
   onClose,
   onConfirm,
 }) => {
+  const { t } = useTranslation('common');
   const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,7 +27,7 @@ export const ImportLocalDataModal: React.FC<ImportLocalDataModalProps> = ({
       await onConfirm();
       onClose();
     } catch {
-      setError('Не удалось импортировать данные. Повторите попытку.');
+      setError(t('importFailed'));
     } finally {
       setIsImporting(false);
     }
@@ -44,13 +46,11 @@ export const ImportLocalDataModal: React.FC<ImportLocalDataModalProps> = ({
               <CloudUpload className="w-5 h-5 text-py-accent" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-py-text">Импорт локальных данных</h2>
-              <p className="text-sm text-py-muted mt-1">
-                На этом устройстве найдены персоны и сообщения Persony. Импортировать в ваш аккаунт?
-              </p>
+              <h2 className="text-lg font-semibold text-py-text">{t('importTitle')}</h2>
+              <p className="text-sm text-py-muted mt-1">{t('importDescription')}</p>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="text-py-muted hover:text-py-text">
+          <button type="button" onClick={onClose} className="text-py-muted hover:text-py-text" aria-label={t('cancel')}>
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -64,7 +64,7 @@ export const ImportLocalDataModal: React.FC<ImportLocalDataModalProps> = ({
             disabled={isImporting}
             className="px-4 py-2 rounded-xl text-sm text-py-muted hover:text-py-text"
           >
-            Позже
+            {t('later')}
           </button>
           <button
             type="button"
@@ -72,7 +72,7 @@ export const ImportLocalDataModal: React.FC<ImportLocalDataModalProps> = ({
             disabled={isImporting}
             className="px-4 py-2 rounded-xl text-sm font-medium bg-py-accent text-white hover:opacity-90 disabled:opacity-60"
           >
-            {isImporting ? 'Импорт…' : 'Импортировать'}
+            {isImporting ? t('importing') : t('import')}
           </button>
         </div>
       </motion.div>

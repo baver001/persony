@@ -30,3 +30,13 @@ export function getLocalizedPersonaPresentation(
     disclosure: persona.disclosure,
   };
 }
+
+export function applyLocaleToPersona(persona: Persona, language: string): Persona {
+  if (persona.isCustom) return persona;
+  const localized = getLocalizedPersonaPresentation(persona, language);
+  return { ...persona, ...localized };
+}
+
+export function applyLocaleToPersonas(personas: Persona[], language: string): Persona[] {
+  return personas.map((persona) => applyLocaleToPersona(persona, language));
+}
