@@ -1,0 +1,16 @@
+{
+  "title": "Battery",
+  "sheetTitle": "Battery",
+  "close": "Close",
+  "ariaLabel": "Battery {{percent}} percent",
+  "recharging": "Recharging",
+  "betaAccess": "Beta access",
+  "betaRechargeHint": "Your Battery recharges automatically while you're away.",
+  "fullRechargeEta": "Full recharge from empty: about {{hours}} hours.",
+  "emptyHint": "Your Battery is empty. New AI actions are paused until some energy returns.",
+  "low": "Battery low",
+  "critical": "Battery critical",
+  "empty": "Battery empty",
+  "settingsTitle": "Battery",
+  "settingsHint": "During beta, energy restores automatically after idle time."
+}

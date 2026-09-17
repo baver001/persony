@@ -22,6 +22,9 @@ import { useTranslation } from 'react-i18next';
 import i18n, { setStoredLocale } from '../i18n';
 import { updatePreferredLocale } from '../lib/api/me';
 import { usePersonyAuth } from './PersonyAuthProvider';
+import { useBattery } from '../hooks/useBattery';
+import { BatteryIndicator } from './BatteryIndicator';
+import { BatterySheet } from './BatterySheet';
 
 type Props = {
   isDark: boolean;
@@ -102,8 +105,10 @@ export const SidebarBottomBar: React.FC<Props> = ({
   const { t } = useTranslation(['common', 'settings']);
   const { openUserProfile, signOut } = useClerk();
   const { clerkEnabled, isLoaded, isSignedIn } = usePersonyAuth();
+  const { battery, refresh: refreshBattery } = useBattery();
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showBatterySheet, setShowBatterySheet] = useState(false);
 
   const closeMenus = () => {
     setShowSettingsMenu(false);
@@ -142,13 +147,28 @@ export const SidebarBottomBar: React.FC<Props> = ({
   const currentLocale = i18n.language.startsWith('ru') ? 'ru' : 'en';
 
   return (
+    <>
     <div
       className={`border-t shrink-0 flex min-h-[3.25rem] ${
         compact
           ? 'flex-col items-center gap-1 px-1.5 py-2'
-          : 'flex-row items-center gap-2 px-3 py-2.5'
+          : 'flex-col gap-1.5 px-3 py-2.5'
       } ${isDark ? 'bg-[#18181b] border-zinc-800' : 'bg-white border-neutral-200'}`}
     >
+      {isSignedIn && battery?.enabled && (
+        <div className={compact ? 'w-full flex justify-center' : 'w-full'}>
+          <BatteryIndicator
+            battery={battery}
+            compact={compact}
+            onClick={() => {
+              void refreshBattery();
+              setShowBatterySheet(true);
+            }}
+          />
+        </div>
+      )}
+
+      <div className={`flex w-full ${compact ? 'flex-col items-center gap-1' : 'flex-row items-center gap-2'}`}>
       <button
         type="button"
         onClick={onToggleSound}
@@ -330,6 +350,14 @@ export const SidebarBottomBar: React.FC<Props> = ({
           </>
         )}
       </div>
+      </div>
     </div>
+
+    <BatterySheet
+      isOpen={showBatterySheet}
+      onClose={() => setShowBatterySheet(false)}
+      battery={battery}
+    />
+    </>
   );
 };

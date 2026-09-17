@@ -3,8 +3,10 @@ import { z } from 'zod';
 import { toSqlCount } from '../lib/sql-count';
 import { AuthRequiredError } from '../middleware/auth';
 import { RoleRequiredError, requireOwnerAccess } from '../middleware/roles';
+import { DEFAULT_BATTERY_CONFIG } from '../billing/battery-config';
 import { getSystemSetting, setSystemSetting } from '../repositories/settings-repository';
 import { writeAuditLog } from '../services/audit-service';
+import { ownerAdjustBattery } from '../services/energy-service';
 import type { PersonyEnv } from '../types/env';
 
 export const ownerRoutes = new Hono<{ Bindings: PersonyEnv }>();
@@ -104,6 +106,87 @@ ownerRoutes.put('/owner/system/settings', async (c) => {
     });
 
     return c.json({ ok: true });
+  } catch (err) {
+    return ownerErrorResponse(c, err);
+  }
+});
+
+ownerRoutes.get('/owner/battery/overview', async (c) => {
+  try {
+    await requireOwnerAccess(c);
+    if (!c.env.DB) return c.json({ error_code: 'DB_NOT_CONFIGURED' }, 503);
+
+    const [wallets, usageToday, regenToday] = await Promise.all([
+      c.env.DB.prepare(`SELECT COUNT(*) as count FROM energy_wallets`).first<{ count: number }>(),
+      c.env.DB
+        .prepare(
+          `SELECT COUNT(*) as count FROM energy_ledger
+           WHERE type = 'usage' AND date(created_at) = date('now')`
+        )
+        .first<{ count: number }>(),
+      c.env.DB
+        .prepare(
+          `SELECT COUNT(*) as count FROM energy_ledger
+           WHERE type = 'beta_regeneration' AND date(created_at) = date('now')`
+        )
+        .first<{ count: number }>(),
+    ]);
+
+    const config = DEFAULT_BATTERY_CONFIG;
+    for (const key of Object.keys(DEFAULT_BATTERY_CONFIG)) {
+      const value = await getSystemSetting(c.env.DB, key);
+      if (typeof value === 'number' || typeof value === 'boolean' || value === 'beta_regen' || value === 'paid') {
+        (config as Record<string, unknown>)[key] = value;
+      }
+    }
+
+    return c.json({
+      metrics: {
+        walletCount: toSqlCount(wallets),
+        usageEventsToday: toSqlCount(usageToday),
+        regenerationEventsToday: toSqlCount(regenToday),
+        revenue: null,
+        payments: null,
+      },
+      config,
+    });
+  } catch (err) {
+    return ownerErrorResponse(c, err);
+  }
+});
+
+const ownerBatteryAdjustSchema = z.object({
+  targetPercentage: z.number().min(0).max(100),
+  reason: z.string().max(500).optional(),
+});
+
+ownerRoutes.post('/owner/users/:userId/battery/reset', async (c) => {
+  try {
+    const { userId: actorId } = await requireOwnerAccess(c);
+    if (!c.env.DB) return c.json({ error_code: 'DB_NOT_CONFIGURED' }, 503);
+    const targetUserId = c.req.param('userId');
+    const body = await c.req.json().catch(() => ({}));
+    const parsed = ownerBatteryAdjustSchema.safeParse(body);
+    const targetPct = parsed.success ? parsed.data.targetPercentage : 100;
+
+    const snapshot = await ownerAdjustBattery(
+      c.env.DB,
+      targetUserId,
+      targetPct,
+      actorId,
+      parsed.success ? parsed.data.reason : 'owner_reset'
+    );
+
+    await writeAuditLog(c.env.DB, {
+      actorUserId: actorId,
+      action: 'owner_battery_adjustment',
+      targetType: 'user',
+      targetId: targetUserId,
+      newState: snapshot,
+      reason: parsed.success ? parsed.data.reason : 'owner_reset',
+    });
+
+    return c.json({ battery: snapshot });
   } catch (err) {
     return ownerErrorResponse(c, err);
   }

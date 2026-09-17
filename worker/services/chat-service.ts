@@ -18,7 +18,9 @@ import {
 } from '../repositories/message-repository';
 import { getConversationForUser, touchConversation } from '../repositories/conversation-repository';
 import { getPersonaVersion } from '../repositories/persona-repository';
+import { chargeBatteryForInference } from './energy-service';
 import { buildMemoryContextBlocks, persistMemoryCandidates } from './memory-service';
+import { touchPersonaRelationship } from './persona-relationship-service';
 import { resolveCompiledInstructions } from './persona-compiler';
 import { PersonaNotFoundError } from './persona-service';
 import type { PersonyEnv } from '../types/env';
@@ -156,6 +158,9 @@ async function executeInferenceStream(
           );
           await markInferenceRunCompleted(db, run.id, personaMessage.id);
           await touchConversation(db, run.conversationId);
+          await chargeBatteryForInference(db, run.userId, run.id, 'text_chat').catch(
+            () => undefined
+          );
           controller.enqueue(
             sseEncode({
               done: true,
@@ -255,6 +260,8 @@ export async function streamConversationReply(
     userMessage.id,
     text
   ).catch(() => undefined);
+
+  void touchPersonaRelationship(env.DB, userId, persona.id).catch(() => undefined);
 
   const memoryBlocks = await buildMemoryContextBlocks(
     env.DB,

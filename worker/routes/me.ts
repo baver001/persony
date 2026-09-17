@@ -10,6 +10,8 @@ import {
 } from '../repositories/user-persona-repository';
 import { getUserRoles, userHasRole } from '../repositories/role-repository';
 import { getUserLocale, updateUserLocale } from '../repositories/user-repository';
+import { getBatterySnapshot } from '../services/energy-service';
+import { getRelationshipProfileSummary } from '../services/persona-relationship-service';
 import type { PersonyEnv } from '../types/env';
 
 const localeSchema = z.object({
@@ -81,6 +83,31 @@ meRoutes.post('/me/personas/:personaId/install', async (c) => {
     if (!persona) return c.json({ error_code: 'PERSONA_NOT_FOUND' }, 404);
     await installPersonaForUser(c.env.DB, userId, persona.id, persona.currentVersion);
     return c.json({ ok: true });
+  } catch (err) {
+    if (err instanceof AuthRequiredError) return c.json({ error_code: 'AUTH_REQUIRED' }, 401);
+    return c.json({ error_code: 'INTERNAL_ERROR' }, 500);
+  }
+});
+
+meRoutes.get('/me/battery', async (c) => {
+  try {
+    const userId = await requireUser(c);
+    if (!c.env.DB) return c.json({ error_code: 'DB_NOT_CONFIGURED' }, 503);
+    const battery = await getBatterySnapshot(c.env.DB, userId);
+    return c.json(battery);
+  } catch (err) {
+    if (err instanceof AuthRequiredError) return c.json({ error_code: 'AUTH_REQUIRED' }, 401);
+    return c.json({ error_code: 'INTERNAL_ERROR' }, 500);
+  }
+});
+
+meRoutes.get('/me/personas/:personaId/relationship', async (c) => {
+  try {
+    const userId = await requireUser(c);
+    if (!c.env.DB) return c.json({ error_code: 'DB_NOT_CONFIGURED' }, 503);
+    const personaId = c.req.param('personaId');
+    const summary = await getRelationshipProfileSummary(c.env.DB, userId, personaId);
+    return c.json(summary);
   } catch (err) {
     if (err instanceof AuthRequiredError) return c.json({ error_code: 'AUTH_REQUIRED' }, 401);
     return c.json({ error_code: 'INTERNAL_ERROR' }, 500);
