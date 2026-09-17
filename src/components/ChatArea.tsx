@@ -24,7 +24,6 @@ import {
   Search,
   X,
   PanelLeftOpen,
-  PanelLeftClose,
   PanelLeft,
   AlertCircle,
 } from 'lucide-react';
@@ -621,6 +620,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   };
 
   const isDark = theme === 'dark';
+  const showMobileBack = Boolean(onBackToList);
+  const showDesktopExpand = Boolean(onToggleSidebar && !isSidebarOpen);
+  const showNavSlot = showMobileBack || showDesktopExpand;
 
   const displayedMessages = searchInChat.trim()
     ? messages.filter((m) => m.text.toLowerCase().includes(searchInChat.toLowerCase()))
@@ -638,37 +640,33 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         className="relative z-10 flex items-center justify-between gap-2 px-2 sm:px-4 py-2 sm:py-2.5 border-b border-py-border bg-py-sidebar text-py-text transition-colors shadow-xs shrink-0"
       >
         <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-          {/* Fixed 40px slot — layout stays stable when sidebar opens/closes */}
-          <div className="py-header-nav-slot">
-            {onBackToList && (
+          {/* Nav: mobile back OR desktop expand — never duplicate sidebar collapse */}
+          <div
+            className={`py-header-nav-slot transition-[width] duration-150 ${
+              showNavSlot ? '' : 'w-0 min-w-0 overflow-hidden'
+            }`}
+          >
+            {showMobileBack && (
               <button
                 type="button"
                 onClick={onBackToList}
-                className={`py-header-icon-btn sm:hidden transition-colors cursor-pointer ${
-                  isDark
-                    ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100'
-                    : 'hover:bg-neutral-100 text-neutral-600 hover:text-neutral-900'
-                }`}
+                className="py-header-icon-btn py-header-icon-btn--muted inline-flex sm:hidden cursor-pointer"
                 title={t('chat:backToChats')}
                 aria-label={t('chat:backToChats')}
               >
                 <PanelLeft className="w-4 h-4" />
               </button>
             )}
-            {onToggleSidebar && (
+            {showDesktopExpand && (
               <button
                 id="chat-sidebar-toggle-btn"
                 type="button"
                 onClick={onToggleSidebar}
                 className="py-header-icon-btn py-header-icon-btn--muted hidden sm:inline-flex cursor-pointer"
-                title={isSidebarOpen ? t('chat:collapseSidebar') : t('chat:expandSidebar')}
-                aria-label={isSidebarOpen ? t('chat:collapseSidebar') : t('chat:expandSidebar')}
+                title={t('chat:expandSidebar')}
+                aria-label={t('chat:expandSidebar')}
               >
-                {isSidebarOpen ? (
-                  <PanelLeftClose className="w-4 h-4" />
-                ) : (
-                  <PanelLeftOpen className="w-4 h-4" />
-                )}
+                <PanelLeftOpen className="w-4 h-4" />
               </button>
             )}
           </div>
