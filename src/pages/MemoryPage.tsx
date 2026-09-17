@@ -39,12 +39,12 @@ export function MemoryPage({ onBack }: Props) {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 p-4 sm:p-8">
+    <div className="min-h-screen bg-py-app text-py-text p-4 sm:p-8">
       <div className="max-w-2xl mx-auto space-y-6">
         <button
           type="button"
           onClick={onBack}
-          className="text-sm text-zinc-400 hover:text-zinc-200"
+          className="text-sm text-py-text-secondary hover:text-py-text transition-colors"
         >
           ← {t('common:back')}
         </button>

@@ -155,7 +155,7 @@ export const SidebarBottomBar: React.FC<Props> = ({
         aria-label={t('common:soundEffects')}
       >
         {soundEnabled ? (
-          <Volume2 className="w-4 h-4 text-emerald-400" />
+          <Volume2 className="w-4 h-4 text-py-accent" />
         ) : (
           <VolumeX className="w-4 h-4 text-zinc-500" />
         )}

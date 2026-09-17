@@ -121,11 +121,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Search Input */}
         <div
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs transition-all ${
-            isDark
-              ? 'bg-[#27272a] border-zinc-700/60 focus-within:border-zinc-500 text-zinc-100'
-              : 'bg-neutral-100 border-neutral-200 focus-within:border-neutral-400 text-neutral-900'
-          }`}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs transition-all bg-py-input border-py-border focus-within:border-py-text-muted text-py-text`}
         >
           <Search
             className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-zinc-400' : 'text-neutral-400'}`}
@@ -292,14 +288,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         e.stopPropagation();
                         onStartCall(persona);
                       }}
-                      className={`py-touch-target p-2 rounded-full transition-all shrink-0 ${
+                      className={`py-touch-target p-2 rounded-full transition-all shrink-0 hidden sm:inline-flex ${
                         isSelected
                           ? isDark
                             ? 'hover:bg-zinc-700 text-zinc-200'
                             : 'hover:bg-neutral-200 text-neutral-700'
                           : isDark
-                          ? 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-zinc-700 text-zinc-400 hover:text-white'
-                          : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-neutral-200 text-neutral-600'
+                          ? 'opacity-0 group-hover:opacity-100 hover:bg-zinc-700 text-zinc-400 hover:text-white'
+                          : 'opacity-0 group-hover:opacity-100 hover:bg-neutral-200 text-neutral-600'
                       }`}
                       title="Позвонить голосом"
                     >

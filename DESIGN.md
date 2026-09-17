@@ -43,6 +43,20 @@
 - `--py-radius-panel`: `12px` (панели)
 - `--py-radius-pill`: `9999px`
 
+## Motion (Emil)
+
+- `--py-ease-out`: `cubic-bezier(0.23, 1, 0.32, 1)`
+- `--py-duration-fast`: `140ms` (кнопки, border)
+- `--py-duration-normal`: `200ms` (панели)
+- Active state: `scale(0.97)` на icon-кнопках, не `transition: all`
+
+## Компоненты (CSS utilities)
+
+- `.py-header-icon-btn` — 40×40, шапка чата
+- `.py-surface-card` — карточки empty state / settings
+- `.py-starter-chip` — подсказки начала диалога
+- `.py-composer-*` — поле ввода и диктовка
+
 ## Шрифты
 
 - UI: Plus Jakarta Sans

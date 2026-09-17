@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* ─── Persony Design Tokens ─── */
+/* ─── Persony Design Tokens (Operate mode) ─── */
 :root {
   --py-bg-app: #f4f4f5;
   --py-bg-sidebar: #ffffff;
@@ -20,16 +20,21 @@
   --py-error: #f87171;
   --py-radius-bubble: 18px;
   --py-radius-panel: 12px;
+  --py-radius-pill: 9999px;
   --py-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
   --py-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --py-header-h: 3.25rem;
+  --py-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --py-duration-fast: 140ms;
+  --py-duration-normal: 200ms;
 }
 
 .dark {
-  --py-bg-app: #121214;
-  --py-bg-sidebar: #18181b;
-  --py-bg-chat: #1c1c20;
-  --py-bg-elevated: #222226;
-  --py-bg-input: #2a2a30;
+  --py-bg-app: #0a0a0b;
+  --py-bg-sidebar: #111113;
+  --py-bg-chat: #0e0e10;
+  --py-bg-elevated: #1a1a1d;
+  --py-bg-input: #1c1c1f;
   --py-bubble-in: #1c1c1f;
   --py-bubble-out: #2a2a2e;
   --py-accent: #4ec9a0;
@@ -39,8 +44,8 @@
   --py-text-muted: #71717a;
   --py-border: #27272a;
   --py-border-subtle: #1f1f23;
-  --py-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --py-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --py-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --py-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.45);
 }
 
 @theme inline {
@@ -104,7 +109,7 @@
   background: var(--py-bg-input);
   border: 1px solid var(--py-border);
   box-shadow: var(--py-shadow-sm);
-  transition: border-color 0.15s ease;
+  transition: border-color var(--py-duration-fast) var(--py-ease-out);
 }
 
 .py-composer-input:focus-within {
@@ -249,6 +254,65 @@
   flex-shrink: 0;
   border-radius: 0.5rem;
   touch-action: manipulation;
+  transition:
+    background-color var(--py-duration-fast) var(--py-ease-out),
+    color var(--py-duration-fast) var(--py-ease-out),
+    transform 100ms var(--py-ease-out);
+}
+
+.py-header-icon-btn:active {
+  transform: scale(0.97);
+}
+
+.py-header-icon-btn--muted {
+  color: var(--py-text-muted);
+}
+
+.py-header-icon-btn--muted:hover {
+  background: color-mix(in srgb, var(--py-text-primary) 6%, transparent);
+  color: var(--py-text-primary);
+}
+
+.py-header-icon-btn--accent {
+  color: var(--py-accent);
+  background: var(--py-accent-muted);
+  border: 1px solid color-mix(in srgb, var(--py-accent) 35%, transparent);
+}
+
+.py-surface-card {
+  background: var(--py-bg-elevated);
+  border: 1px solid var(--py-border);
+  border-radius: var(--py-radius-panel);
+  box-shadow: var(--py-shadow-sm);
+}
+
+.py-starter-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border-radius: 1rem;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  text-align: left;
+  border: 1px solid var(--py-border);
+  background: color-mix(in srgb, var(--py-bg-elevated) 88%, transparent);
+  color: var(--py-text-primary);
+  transition:
+    background-color var(--py-duration-fast) var(--py-ease-out),
+    border-color var(--py-duration-fast) var(--py-ease-out),
+    transform 100ms var(--py-ease-out);
+}
+
+.py-starter-chip:hover {
+  border-color: color-mix(in srgb, var(--py-text-primary) 18%, var(--py-border));
+  background: var(--py-bg-elevated);
+}
+
+.py-starter-chip:active {
+  transform: scale(0.99);
 }
 
 /* Minimum 40×40 tap area with centered icon/content */

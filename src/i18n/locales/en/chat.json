@@ -1,7 +1,13 @@
 {
-  "clearChat": "Clear chat",
-  "clearChatConfirm": "Clear this conversation? Messages will be removed from your chat list.",
-  "retry": "Retry",
-  "loadOlder": "Loading history…",
-  "placeholder": "Message"
+  "collapseSidebar": "Collapse sidebar",
+  "expandSidebar": "Expand sidebar",
+  "backToChats": "Back to chats",
+  "searchInChat": "Search in chat",
+  "voiceCall": "Voice call",
+  "expandCall": "Expand call",
+  "personaInfo": "Persona info",
+  "startConversation": "Start the conversation",
+  "voiceHint": "Voice call is available from the header or composer.",
+  "callInProgress": "Voice call in progress",
+  "callInProgressHint": "Speak into the microphone — the conversation will be saved to chat history when you finish."
 }

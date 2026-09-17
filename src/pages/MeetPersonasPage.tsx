@@ -56,11 +56,7 @@ export function MeetPersonasPage({ theme, onStartChat }: Props) {
             {personas.map((persona) => (
               <article
                 key={persona.id}
-                className={`rounded-2xl border p-4 flex gap-4 transition-colors ${
-                  isDark
-                    ? 'bg-py-elevated/60 border-py-border hover:border-zinc-600'
-                    : 'bg-white border-neutral-200 hover:border-neutral-300'
-                }`}
+                className="py-surface-card p-4 flex gap-4 transition-colors hover:border-py-text-muted"
               >
                 <img
                   src={persona.avatar}

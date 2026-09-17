@@ -22,14 +22,16 @@ import {
   ChevronDown,
   ChevronUp,
   Search,
-  Pin,
   X,
   PanelLeftOpen,
+  PanelLeftClose,
   PanelLeft,
   AlertCircle,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Persona, ChatMessage } from '../types';
 import { soundFX } from '../utils/soundEffects';
+import { getLocalizedPersonaPresentation } from '../utils/personaPresentation';
 import { audioBlobToWav } from '../utils/audioUtils';
 import {
   copyTextToClipboard,
@@ -346,6 +348,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   isLoadingOlderMessages = false,
   onLoadOlderMessages,
 }) => {
+  const { t, i18n } = useTranslation(['chat', 'common']);
+  const localized = getLocalizedPersonaPresentation(character, i18n.language);
   const [inputText, setInputText] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [expandedCallId, setExpandedCallId] = useState<string | null>(null);
@@ -358,7 +362,6 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const longPressTimerRef = useRef<number | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchInChat, setSearchInChat] = useState('');
-  const [showPinnedMessage, setShowPinnedMessage] = useState(true);
 
   // Voice Note Recording State
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
@@ -646,26 +649,26 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100'
                     : 'hover:bg-neutral-100 text-neutral-600 hover:text-neutral-900'
                 }`}
-                title="К списку чатов"
-                aria-label="К списку чатов"
+                title={t('chat:backToChats')}
+                aria-label={t('chat:backToChats')}
               >
                 <PanelLeft className="w-4 h-4" />
               </button>
             )}
-            {onToggleSidebar && !isSidebarOpen && (
+            {onToggleSidebar && (
               <button
-                id="chat-open-sidebar-btn"
+                id="chat-sidebar-toggle-btn"
                 type="button"
                 onClick={onToggleSidebar}
-                className={`py-header-icon-btn hidden sm:inline-flex transition-colors cursor-pointer ${
-                  isDark
-                    ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100'
-                    : 'hover:bg-neutral-100 text-neutral-600 hover:text-neutral-900'
-                }`}
-                title="Развернуть боковую панель"
-                aria-label="Развернуть боковую панель"
+                className="py-header-icon-btn py-header-icon-btn--muted hidden sm:inline-flex cursor-pointer"
+                title={isSidebarOpen ? t('chat:collapseSidebar') : t('chat:expandSidebar')}
+                aria-label={isSidebarOpen ? t('chat:collapseSidebar') : t('chat:expandSidebar')}
               >
-                <PanelLeftOpen className="w-4 h-4" />
+                {isSidebarOpen ? (
+                  <PanelLeftClose className="w-4 h-4" />
+                ) : (
+                  <PanelLeftOpen className="w-4 h-4" />
+                )}
               </button>
             )}
           </div>
@@ -730,43 +733,35 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           {/* Search in Chat Button — desktop only */}
           <button
             onClick={() => setIsSearchOpen(!isSearchOpen)}
-            className={`hidden sm:inline-flex py-touch-target p-2 rounded-full transition-colors ${
-              isSearchOpen
-                ? isDark ? 'bg-zinc-700 text-white' : 'bg-neutral-800 text-white'
-                : isDark
-                ? 'hover:bg-zinc-800 text-zinc-400 hover:text-white'
-                : 'hover:bg-neutral-100 text-neutral-600'
+            className={`py-header-icon-btn hidden sm:inline-flex cursor-pointer ${
+              isSearchOpen ? 'py-header-icon-btn--accent' : 'py-header-icon-btn--muted'
             }`}
-            title="Поиск в чате"
+            title={t('chat:searchInChat')}
+            aria-label={t('chat:searchInChat')}
           >
             <Search className="w-4 h-4" />
           </button>
 
-          {/* Live Voice Call Button */}
           <button
             id="chat-call-btn"
             onClick={() => (isCallingActive ? onExpandCall?.() : onStartCall(character))}
-            className={`py-touch-target gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-full active:scale-95 text-xs font-semibold shadow-xs transition-all cursor-pointer ${
+            className={`py-header-icon-btn cursor-pointer ${
               isCallingActive
-                ? 'bg-py-accent/15 text-py-accent border border-py-accent/40 hover:bg-py-accent/25'
-                : isDark
-                ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 hover:border-zinc-600'
-                : 'bg-neutral-900 hover:bg-neutral-800 text-white'
+                ? 'py-header-icon-btn--accent'
+                : 'py-header-icon-btn--muted'
             }`}
-            title={isCallingActive ? 'Развернуть звонок' : 'Позвонить голосом'}
+            title={isCallingActive ? t('chat:expandCall') : t('chat:voiceCall')}
+            aria-label={isCallingActive ? t('chat:expandCall') : t('chat:voiceCall')}
           >
-            {isCallingActive ? <Maximize2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" /> : <Phone className="w-4 h-4 sm:w-3.5 sm:h-3.5" />}
-            <span className="hidden md:inline">{isCallingActive ? 'В звонке' : 'Звонок'}</span>
+            {isCallingActive ? <Maximize2 className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
           </button>
 
-          {/* Profile Details Button — desktop only (tap avatar on mobile) */}
           <button
             id="chat-profile-btn"
             onClick={() => onOpenProfile(character)}
-            className={`hidden sm:inline-flex py-touch-target p-2 rounded-full transition-colors ${
-              isDark ? 'hover:bg-zinc-800 text-zinc-400 hover:text-white' : 'hover:bg-neutral-100 text-neutral-600'
-            }`}
-            title="Информация о персонаже"
+            className="py-header-icon-btn py-header-icon-btn--muted hidden sm:inline-flex cursor-pointer"
+            title={t('chat:personaInfo')}
+            aria-label={t('chat:personaInfo')}
           >
             <Info className="w-4 h-4" />
           </button>
@@ -813,44 +808,6 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         </div>
       )}
 
-      {/* Pinned Message Bar — скрываем во время активного звонка */}
-      {showPinnedMessage && !isCallingActive && (
-        <div
-          className={`px-4 py-2 border-b flex items-center justify-between text-xs cursor-pointer transition-colors ${
-            isDark
-              ? 'bg-zinc-800/80 hover:bg-zinc-800 border-zinc-700/80 text-zinc-200'
-              : 'bg-white hover:bg-neutral-50 border-neutral-200 text-neutral-800 shadow-xs'
-          }`}
-          onClick={() => onStartCall(character)}
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <div className={`w-1 h-7 rounded-full shrink-0 ${isDark ? 'bg-zinc-400' : 'bg-neutral-800'}`} />
-            <div className="min-w-0">
-              <span className={`font-bold text-[11px] block leading-tight ${isDark ? 'text-zinc-300' : 'text-neutral-800'}`}>
-                Закреплённое сообщение
-              </span>
-              <span className={`truncate block text-[11px] leading-tight mt-0.5 ${
-                isDark ? 'text-zinc-400' : 'text-neutral-600'
-              }`}>
-                Прямой голосовой звонок. Нажмите «Звонок» вверху для разговора.
-              </span>
-            </div>
-          </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowPinnedMessage(false);
-            }}
-            className={`p-1.5 rounded-lg transition-colors ml-2 shrink-0 ${
-              isDark ? 'hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200' : 'hover:bg-neutral-200 text-neutral-400 hover:text-neutral-700'
-            }`}
-            title="Скрыть"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-
       {/* 3. Messages Stream */}
       <div
         id="messages-scroll-container"
@@ -876,9 +833,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
         {/* If no messages, render character intro */}
         {messages.length === 0 && (
-          <div className="max-w-lg mx-auto my-6 text-center space-y-4">
+          <div className="max-w-md mx-auto my-8 sm:my-10 text-center space-y-5">
             <div
-              className={`w-20 h-20 rounded-full mx-auto overflow-hidden shadow-md ${
+              className={`w-[4.5rem] h-[4.5rem] rounded-full mx-auto overflow-hidden shadow-md ${
                 isCallingActive
                   ? 'ring-2 ring-py-accent ring-offset-2 ring-offset-py-chat'
                   : 'ring-1 ring-py-border'
@@ -891,70 +848,53 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 className="w-full h-full object-cover"
               />
             </div>
-            <div>
-              <h3 className="text-base font-bold text-py-text">{character.name}</h3>
-              <p className="text-xs text-py-text-secondary mt-1 max-w-sm mx-auto leading-relaxed">
-                {character.description}
+            <div className="space-y-1.5 px-2">
+              <h3 className="text-base font-semibold tracking-tight text-py-text">{character.name}</h3>
+              <p className="text-sm text-py-text-secondary max-w-sm mx-auto leading-relaxed">
+                {localized.description}
               </p>
             </div>
 
-            {isCallingActive ? (
-              <div className="p-4 rounded-2xl bg-py-elevated border border-py-accent/30 text-left shadow-sm">
+            {isCallingActive && (
+              <div className="py-surface-card p-4 text-left">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="w-2 h-2 rounded-full bg-py-accent animate-pulse" />
-                  <span className="text-xs font-bold text-py-text">Идёт голосовой звонок</span>
+                  <span className="text-xs font-semibold text-py-text">{t('chat:callInProgress')}</span>
                 </div>
-                <p className="text-[11px] text-py-text-secondary leading-relaxed">
-                  Говорите в микрофон — разговор сохранится в истории чата после завершения.
+                <p className="text-xs text-py-text-secondary leading-relaxed">
+                  {t('chat:callInProgressHint')}
                 </p>
                 <button
+                  type="button"
                   onClick={() => onExpandCall?.()}
                   className="mt-3 w-full px-3 py-2 rounded-xl bg-py-accent/15 hover:bg-py-accent/25 text-py-accent text-xs font-semibold flex items-center justify-center gap-1.5 border border-py-accent/30 cursor-pointer transition-colors"
                 >
-                  <Maximize2 className="w-3.5 h-3.5" /> Развернуть звонок
-                </button>
-              </div>
-            ) : (
-              <div className="p-3.5 rounded-2xl bg-py-elevated border border-py-border flex items-center justify-between text-left shadow-sm">
-                <div>
-                  <span className="text-xs font-bold text-py-text block">Прямой голосовой вызов</span>
-                  <span className="text-[11px] text-py-text-secondary">Общайтесь голосом в реальном времени</span>
-                </div>
-                <button
-                  onClick={() => onStartCall(character)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors ${
-                    isDark
-                      ? 'bg-zinc-700 hover:bg-zinc-600 text-white border border-zinc-600'
-                      : 'bg-neutral-900 hover:bg-neutral-800 text-white'
-                  }`}
-                >
-                  <Phone className="w-3.5 h-3.5" /> Позвонить
+                  <Maximize2 className="w-3.5 h-3.5" /> {t('chat:expandCall')}
                 </button>
               </div>
             )}
 
-            {/* Quick Starters Chips */}
-            {!isCallingActive && character.starterMessages && character.starterMessages.length > 0 && (
-              <div className="pt-2 space-y-2">
-                <span className="text-[11px] font-semibold text-py-text-muted uppercase tracking-wider flex items-center justify-center gap-1">
-                  <Sparkles className="w-3 h-3" /> Начните разговор
+            {!isCallingActive && localized.starterMessages && localized.starterMessages.length > 0 && (
+              <div className="space-y-2.5 pt-1">
+                <span className="text-[11px] font-medium text-py-text-muted uppercase tracking-wider flex items-center justify-center gap-1.5">
+                  <Sparkles className="w-3 h-3" /> {t('chat:startConversation')}
                 </span>
                 <div className="flex flex-col gap-2">
-                  {character.starterMessages.map((msg, idx) => (
+                  {localized.starterMessages.map((msg, idx) => (
                     <button
                       key={idx}
+                      type="button"
                       onClick={() => onSendMessage(msg)}
-                      className={`px-3.5 py-2.5 rounded-2xl text-xs text-left transition-all flex items-center justify-between group cursor-pointer ${
-                        isDark
-                          ? 'bg-zinc-800/80 hover:bg-zinc-700/80 border border-zinc-700/60 hover:border-zinc-500 text-zinc-200'
-                          : 'bg-white hover:bg-neutral-100 border border-neutral-200 text-neutral-800'
-                      }`}
+                      className="py-starter-chip group cursor-pointer"
                     >
                       <span>{msg}</span>
-                      <Send className="w-3.5 h-3.5 text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2" />
+                      <Send className="w-3.5 h-3.5 text-py-text-muted opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                     </button>
                   ))}
                 </div>
+                <p className="text-[11px] text-py-text-muted pt-1">
+                  {t('chat:voiceHint')}
+                </p>
               </div>
             )}
           </div>
