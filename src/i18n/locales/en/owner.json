@@ -1,0 +1,19 @@
+{
+  "authRequired": "Sign in required.",
+  "forbidden": "Access denied.",
+  "internalError": "Server error. Try again later.",
+  "whatChanged": "What changed",
+  "personasHint": "{{count}} active personas in the catalog.",
+  "aiHint": "{{count}} failed inference runs recorded.",
+  "settingsHint": "System settings API is available at /api/owner/system/settings.",
+  "sections": {
+    "overview": "Overview",
+    "users": "Users",
+    "personas": "Personas",
+    "memory": "Memory",
+    "battery": "Battery",
+    "ai": "AI",
+    "settings": "Settings",
+    "audit": "Audit"
+  }
+}

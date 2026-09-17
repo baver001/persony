@@ -160,6 +160,89 @@ const ownerBatteryAdjustSchema = z.object({
   reason: z.string().max(500).optional(),
 });
 
+ownerRoutes.get('/owner/users', async (c) => {
+  try {
+    await requireOwnerAccess(c);
+    if (!c.env.DB) return c.json({ error_code: 'DB_NOT_CONFIGURED' }, 503);
+
+    const { results } = await c.env.DB.prepare(
+      `SELECT id, auth_provider_id, preferred_locale, created_at
+       FROM users ORDER BY created_at DESC LIMIT 25`
+    ).all<{
+      id: string;
+      auth_provider_id: string | null;
+      preferred_locale: string | null;
+      created_at: string;
+    }>();
+
+    return c.json({
+      users: (results ?? []).map((row) => ({
+        id: row.id,
+        authProviderId: row.auth_provider_id,
+        preferredLocale: row.preferred_locale,
+        createdAt: row.created_at,
+      })),
+    });
+  } catch (err) {
+    return ownerErrorResponse(c, err);
+  }
+});
+
+ownerRoutes.get('/owner/memory/stats', async (c) => {
+  try {
+    await requireOwnerAccess(c);
+    if (!c.env.DB) return c.json({ error_code: 'DB_NOT_CONFIGURED' }, 503);
+
+    const [memories, pending, relationship] = await Promise.all([
+      c.env.DB.prepare(`SELECT COUNT(*) as count FROM memories WHERE status = 'active'`).first<{ count: number }>(),
+      c.env.DB.prepare(`SELECT COUNT(*) as count FROM memory_candidates WHERE status = 'pending'`).first<{ count: number }>(),
+      c.env.DB.prepare(`SELECT COUNT(*) as count FROM memories WHERE scope = 'relationship' AND status = 'active'`).first<{ count: number }>(),
+    ]);
+
+    return c.json({
+      stats: {
+        activeMemories: toSqlCount(memories),
+        pendingCandidates: toSqlCount(pending),
+        relationshipMemories: toSqlCount(relationship),
+      },
+    });
+  } catch (err) {
+    return ownerErrorResponse(c, err);
+  }
+});
+
+ownerRoutes.get('/owner/audit', async (c) => {
+  try {
+    await requireOwnerAccess(c);
+    if (!c.env.DB) return c.json({ error_code: 'DB_NOT_CONFIGURED' }, 503);
+
+    const { results } = await c.env.DB.prepare(
+      `SELECT id, actor_user_id, action, target_type, target_id, created_at
+       FROM audit_log ORDER BY created_at DESC LIMIT 30`
+    ).all<{
+      id: string;
+      actor_user_id: string;
+      action: string;
+      target_type: string;
+      target_id: string;
+      created_at: string;
+    }>();
+
+    return c.json({
+      entries: (results ?? []).map((row) => ({
+        id: row.id,
+        actorUserId: row.actor_user_id,
+        action: row.action,
+        targetType: row.target_type,
+        targetId: row.target_id,
+        createdAt: row.created_at,
+      })),
+    });
+  } catch (err) {
+    return ownerErrorResponse(c, err);
+  }
+});
+
 ownerRoutes.post('/owner/users/:userId/battery/reset', async (c) => {
   try {
     const { userId: actorId } = await requireOwnerAccess(c);

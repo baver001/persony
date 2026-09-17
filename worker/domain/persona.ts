@@ -80,6 +80,7 @@ export type CreatePersonaInput = {
   starterMessages?: string[];
   visibility?: PersonaVisibility;
   sourcePersonaId?: string;
+  configurationJson?: string;
 };
 
 export type UpdatePersonaInput = CreatePersonaInput;

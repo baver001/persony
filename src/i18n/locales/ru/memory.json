@@ -7,5 +7,18 @@
   "preferences": "Предпочтения",
   "other": "Другое",
   "disable": "Отключить",
-  "relationshipTitle": "Что {{name}} помнит о вас"
+  "relationshipTitle": "Что {{name}} помнит о вас",
+  "relationshipTab": "Связи",
+  "pendingTitle": "Требует подтверждения",
+  "accept": "Сохранить",
+  "reject": "Отклонить",
+  "fact": "Факты",
+  "preference": "Предпочтения",
+  "goal": "Цели",
+  "project": "Проекты",
+  "decision": "Решения",
+  "instruction": "Инструкции",
+  "relationship": "Контекст связи",
+  "open_task": "Открытые задачи",
+  "summary": "Сводки"
 }

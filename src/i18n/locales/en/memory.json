@@ -7,5 +7,18 @@
   "preferences": "Preferences",
   "other": "Other",
   "disable": "Disable",
-  "relationshipTitle": "What {{name}} remembers about you"
+  "relationshipTitle": "What {{name}} remembers about you",
+  "relationshipTab": "Relationships",
+  "pendingTitle": "Needs your review",
+  "accept": "Save to memory",
+  "reject": "Dismiss",
+  "fact": "Facts",
+  "preference": "Preferences",
+  "goal": "Goals",
+  "project": "Projects",
+  "decision": "Decisions",
+  "instruction": "Instructions",
+  "relationship": "Relationship context",
+  "open_task": "Open tasks",
+  "summary": "Summaries"
 }

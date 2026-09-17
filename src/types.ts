@@ -27,6 +27,15 @@ export interface Persona {
   disclosure?: string;
   installedVersion?: number;
   pinned?: boolean;
+  behaviorProfile?: {
+    warmth?: number;
+    directness?: number;
+    creativity?: number;
+    formality?: number;
+    verbosity?: number;
+    humor?: number;
+  };
+  configurationJson?: string;
 }
 
 export interface ChatMessage {

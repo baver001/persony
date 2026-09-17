@@ -86,7 +86,7 @@ function legacyCandidatesToExtractor(
   candidates: MemoryExtractionCandidate[]
 ): ExtractorCandidate[] {
   return candidates.map((c) => ({
-    scope: c.scope,
+    scope: c.scope === 'relationship' ? 'relationship' : 'user',
     kind: c.kind,
     content: c.content,
     normalizedKey: c.content.toLowerCase().slice(0, 120),
@@ -159,6 +159,38 @@ export async function extractAndPersistMemories(
     candidates,
     options
   );
+}
+
+export async function acceptMemoryCandidateRecord(
+  db: D1Database,
+  userId: string,
+  candidateId: string
+): Promise<MemoryRecord | null> {
+  const { getMemoryCandidateForUser, resolveMemoryCandidate } = await import(
+    '../repositories/memory-candidate-repository'
+  );
+  const { insertMemory } = await import('../repositories/memory-repository');
+
+  const candidate = await getMemoryCandidateForUser(db, userId, candidateId);
+  if (!candidate || candidate.status !== 'pending') return null;
+
+  const memory = await insertMemory(db, {
+    userId,
+    scope: candidate.scope === 'room' ? 'user' : candidate.scope,
+    kind: candidate.kind,
+    content: candidate.content,
+    personaId: candidate.personaId,
+    conversationId: candidate.conversationId,
+    confidence: candidate.confidence,
+    sensitivity:
+      candidate.sensitivity === 'special_category' || candidate.sensitivity === 'sensitive'
+        ? candidate.sensitivity
+        : 'normal',
+    sourceMessageIds: candidate.sourceMessageId ? [candidate.sourceMessageId] : [],
+  });
+
+  await resolveMemoryCandidate(db, userId, candidateId, 'accepted');
+  return memory;
 }
 
 export async function buildMemoryContextBlocks(

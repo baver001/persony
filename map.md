@@ -73,14 +73,22 @@ flowchart TD
 
 - Commits pushed; migration `0003` applied; production deploy verified (health)
 
-### В работе — Phase 1.2 Persona + Memory + Trust + i18n
+### Готово — Phase 1.2 Persona + Memory + Trust + i18n (core)
 
-- Migration `0004`: roles, memory fields, legal/consent, audit, analytics, settings
-- PersonaSpec v1 + PersonaCompiler + Athena-only default install
-- Memory extraction/retrieval + `/memory` UI
-- i18next EN/RU (default English UI)
-- Owner RBAC + `/owner` console shell + audit log for settings
-- `docs/data-registry.json`, specs `08`/`09`
+- Migration `0004`–`0005`: roles, memory, candidates, audit, settings
+- PersonaSpec v1 + PersonaCompiler + official roster
+- Memory extraction/retrieval + `/memory` UI (grouped + pending candidates)
+- i18next EN/RU
+- Owner RBAC + audit log
+
+### Готово — Phase 1.3 Closed Beta (код; verify deploy)
+
+- Battery beta (`0006`), EnergyService, UI, charge on all AI endpoints
+- PersonaRelationship + profile block
+- Structured memory extractor + supersede
+- Discover `/discover`, My Personas `/my-personas`
+- Live call stable modal, feedback 👍👎, Persona Creator v2 sliders
+- Owner Console: Overview, Users, Personas, Memory, Battery, AI, Settings, Audit
 
 ### Готово (Phase 0)
 

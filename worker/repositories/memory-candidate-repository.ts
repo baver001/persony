@@ -108,6 +108,48 @@ export async function listPendingMemoryCandidates(
   }));
 }
 
+export async function getMemoryCandidateForUser(
+  db: D1Database,
+  userId: string,
+  candidateId: string
+): Promise<MemoryCandidateRecord | null> {
+  const row = await db
+    .prepare(`SELECT * FROM memory_candidates WHERE id = ? AND user_id = ? LIMIT 1`)
+    .bind(candidateId, userId)
+    .first<{
+      id: string;
+      user_id: string;
+      persona_id: string | null;
+      conversation_id: string | null;
+      scope: MemoryScope;
+      kind: MemoryKind;
+      content: string;
+      sensitivity: string;
+      confidence: number;
+      status: MemoryCandidateStatus;
+      source_message_id: string | null;
+      created_at: string;
+      resolved_at: string | null;
+    }>();
+
+  if (!row) return null;
+  return {
+    id: row.id,
+    userId: row.user_id,
+    personaId: row.persona_id ?? undefined,
+    conversationId: row.conversation_id ?? undefined,
+    scope: row.scope,
+    kind: row.kind,
+    content: row.content,
+    sensitivity: row.sensitivity,
+    confidence: row.confidence,
+    status: row.status,
+    sourceMessageId: row.source_message_id ?? undefined,
+    createdAt: row.created_at,
+    resolvedAt: row.resolved_at ?? undefined,
+  };
+}
+
 export async function resolveMemoryCandidate(
   db: D1Database,
   userId: string,

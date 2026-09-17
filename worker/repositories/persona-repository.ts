@@ -411,6 +411,7 @@ export async function createPersonaInDb(
   const slug = options?.slug || id;
   const now = new Date().toISOString();
   const versionId = `${id}_v1`;
+  const configurationJson = input.configurationJson ?? null;
 
   await db
     .prepare(
@@ -443,9 +444,9 @@ export async function createPersonaInDb(
   await db
     .prepare(
       `INSERT INTO persona_versions (id, persona_id, version, system_prompt, configuration_json, created_at)
-       VALUES (?, ?, 1, ?, NULL, ?)`
+       VALUES (?, ?, 1, ?, ?, ?)`
     )
-    .bind(versionId, id, input.systemPrompt, now)
+    .bind(versionId, id, input.systemPrompt, configurationJson, now)
     .run();
 
   const record = await fetchPersonaRow(db, id);
@@ -475,6 +476,7 @@ export async function updatePersonaInDb(
   const now = new Date().toISOString();
   const nextVersion = existing.current_version + 1;
   const versionId = `${personaId}_v${nextVersion}`;
+  const configurationJson = input.configurationJson ?? null;
 
   const update = await db
     .prepare(
@@ -508,9 +510,9 @@ export async function updatePersonaInDb(
   await db
     .prepare(
       `INSERT INTO persona_versions (id, persona_id, version, system_prompt, configuration_json, created_at)
-       VALUES (?, ?, ?, ?, NULL, ?)`
+       VALUES (?, ?, ?, ?, ?, ?)`
     )
-    .bind(versionId, personaId, nextVersion, input.systemPrompt, now)
+    .bind(versionId, personaId, nextVersion, input.systemPrompt, configurationJson, now)
     .run();
 
   const record = await fetchPersonaRow(db, personaId);

@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import i18n, { setStoredLocale } from '../i18n';
 import { updatePreferredLocale } from '../lib/api/me';
+import { useBattery } from '../hooks/useBattery';
+import { BatteryIndicator } from '../components/BatteryIndicator';
 
 type Props = {
   onBack: () => void;
@@ -8,7 +10,8 @@ type Props = {
 };
 
 export function SettingsPage({ onBack, isSignedIn }: Props) {
-  const { t } = useTranslation(['settings', 'common']);
+  const { t } = useTranslation(['settings', 'common', 'battery']);
+  const { battery, refresh } = useBattery();
 
   const switchLocale = async (locale: 'en' | 'ru') => {
     setStoredLocale(locale);
@@ -33,6 +36,18 @@ export function SettingsPage({ onBack, isSignedIn }: Props) {
           ← {t('common:back')}
         </button>
         <h1 className="text-2xl font-semibold tracking-tight">{t('settings:title')}</h1>
+
+        {isSignedIn && battery?.enabled && (
+          <section className="py-surface-card p-4 space-y-3">
+            <h2 className="font-medium">{t('battery:settingsTitle')}</h2>
+            <p className="text-sm text-py-text-secondary">{t('battery:settingsHint')}</p>
+            <BatteryIndicator
+              battery={battery}
+              onClick={() => void refresh()}
+            />
+          </section>
+        )}
+
         <section className="py-surface-card p-4 space-y-3">
           <h2 className="font-medium">{t('settings:language')}</h2>
           <div className="flex gap-2">
@@ -52,6 +67,7 @@ export function SettingsPage({ onBack, isSignedIn }: Props) {
             </button>
           </div>
         </section>
+
         <section className="py-surface-card p-4">
           <h2 className="font-medium mb-2">{t('settings:dataControls')}</h2>
           <p className="text-sm text-py-text-secondary">{t('settings:exportData')} — coming soon</p>

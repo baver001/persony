@@ -45,6 +45,7 @@ import {
 } from './MessageContextMenu';
 import { normalizeUserMessageForDisplay } from '../utils/chatMessageDisplay';
 import { useMobileLayout } from '../hooks/useMobileLayout';
+import { useBattery } from '../hooks/useBattery';
 import { getOfferedCallInsights } from '../utils/callTranscriptPersistence';
 import { submitMessageFeedback } from '../lib/api/feedback';
 
@@ -357,7 +358,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   onLoadOlderMessages,
   conversationId,
 }) => {
-  const { t, i18n } = useTranslation(['chat', 'common']);
+  const { t, i18n } = useTranslation(['chat', 'common', 'battery']);
+  const { battery, refresh: refreshBattery } = useBattery();
+  const isBatteryEmpty = Boolean(battery?.enabled && battery.percentage <= 0);
   const localized = getLocalizedPersonaPresentation(character, i18n.language);
   const [inputText, setInputText] = useState('');
   const [messageFeedback, setMessageFeedback] = useState<Record<string, 'up' | 'down'>>({});
@@ -434,7 +437,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   }, [inputText]);
 
   const handleSend = () => {
-    if (!inputText.trim() || isStreaming) return;
+    if (!inputText.trim() || isStreaming || isBatteryEmpty) return;
     const text = inputText.trim();
     setInputText('');
     if (textareaRef.current) {
@@ -443,6 +446,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     }
     soundFX.playSend();
     onSendMessage(text);
+    void refreshBattery();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -453,6 +457,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   };
 
   const startVoiceRecording = async () => {
+    if (isBatteryEmpty) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioChunksRef.current = [];
@@ -1263,6 +1268,20 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         id="chat-input-bar"
         className="relative z-10 shrink-0 bg-transparent pt-2 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
       >
+        {isBatteryEmpty && (
+          <div className="py-chat-thread mb-2">
+            <div
+              className={`rounded-2xl border px-3 py-2.5 text-sm ${
+                isDark
+                  ? 'bg-rose-950/40 border-rose-500/30 text-rose-100'
+                  : 'bg-rose-50 border-rose-200 text-rose-900'
+              }`}
+            >
+              {t('battery:emptyHint')}
+            </div>
+          </div>
+        )}
+
         {pendingCallInsights && onRequestCallInsights && (
           <div className="py-chat-thread mb-2">
             <div
@@ -1378,7 +1397,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     id="send-message-btn"
                     type="button"
                     onClick={handleSend}
-                    disabled={isStreaming}
+                    disabled={isStreaming || isBatteryEmpty}
                     className={`py-composer-send-btn active:scale-95 transition-all shadow-sm cursor-pointer disabled:opacity-50 ${
                       isDark
                         ? 'bg-white hover:bg-zinc-200 text-zinc-900'

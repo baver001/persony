@@ -1,11 +1,38 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePersonyAuth } from '../components/PersonyAuthProvider';
 import { fetchMeProfile, fetchOwnerOverview } from '../lib/api/me';
+import {
+  fetchOwnerAudit,
+  fetchOwnerBatteryOverview,
+  fetchOwnerMemoryStats,
+  fetchOwnerUsers,
+} from '../lib/api/owner';
 
 type Props = {
   onBack: () => void;
 };
+
+type OwnerSection =
+  | 'overview'
+  | 'users'
+  | 'personas'
+  | 'memory'
+  | 'battery'
+  | 'ai'
+  | 'settings'
+  | 'audit';
+
+const SECTIONS: OwnerSection[] = [
+  'overview',
+  'users',
+  'personas',
+  'memory',
+  'battery',
+  'ai',
+  'settings',
+  'audit',
+];
 
 function useOwnerNoIndex() {
   useEffect(() => {
@@ -23,9 +50,14 @@ function useOwnerNoIndex() {
 }
 
 export function OwnerConsole({ onBack }: Props) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['owner', 'common']);
   const { isSignedIn, isLoaded } = usePersonyAuth();
+  const [section, setSection] = useState<OwnerSection>('overview');
   const [overview, setOverview] = useState<Record<string, unknown> | null>(null);
+  const [battery, setBattery] = useState<Record<string, unknown> | null>(null);
+  const [users, setUsers] = useState<Array<Record<string, string | null>>>([]);
+  const [memoryStats, setMemoryStats] = useState<Record<string, number> | null>(null);
+  const [audit, setAudit] = useState<Array<Record<string, string>>>([]);
   const [error, setError] = useState<'AUTH_REQUIRED' | 'FORBIDDEN' | 'INTERNAL_ERROR' | null>(
     null
   );
@@ -53,45 +85,191 @@ export function OwnerConsole({ onBack }: Props) {
     })();
   }, [isLoaded, isSignedIn]);
 
+  useEffect(() => {
+    if (error || !overview) return;
+
+    void (async () => {
+      try {
+        if (section === 'battery') {
+          setBattery(await fetchOwnerBatteryOverview());
+        } else if (section === 'users') {
+          const data = await fetchOwnerUsers();
+          setUsers(data.users);
+        } else if (section === 'memory') {
+          const data = await fetchOwnerMemoryStats();
+          setMemoryStats(data.stats);
+        } else if (section === 'audit') {
+          const data = await fetchOwnerAudit();
+          setAudit(data.entries);
+        }
+      } catch {
+        // section-level errors stay empty
+      }
+    })();
+  }, [section, error, overview]);
+
   const metrics = (overview?.metrics as Record<string, unknown>) || {};
+  const sectionLabel = useMemo(
+    () => (key: OwnerSection) => t(`owner:sections.${key}`),
+    [t]
+  );
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 p-4 sm:p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <button type="button" onClick={onBack} className="text-sm text-zinc-400 hover:text-zinc-200">
-          ← {t('back')}
-        </button>
-        <h1 className="text-2xl font-semibold">{t('ownerConsole')}</h1>
-        {error === 'AUTH_REQUIRED' ? (
-          <p className="text-zinc-400">Sign in required.</p>
-        ) : error === 'FORBIDDEN' ? (
-          <p className="text-red-300">Access denied</p>
-        ) : error === 'INTERNAL_ERROR' ? (
-          <p className="text-red-300">Server error. Try again later.</p>
-        ) : !overview ? (
-          <p className="text-zinc-500">{t('loading')}</p>
-        ) : (
-          <>
-            <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {Object.entries(metrics).map(([key, value]) => (
-                <div key={key} className="rounded-xl border border-white/10 bg-white/5 p-3">
-                  <div className="text-xs text-zinc-500 uppercase">{key}</div>
-                  <div className="text-lg font-medium">
-                    {value === null || value === undefined ? 'Not configured' : String(value)}
-                  </div>
+    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+      <div className="max-w-6xl mx-auto p-4 sm:p-8 flex flex-col lg:flex-row gap-6">
+        <aside className="lg:w-52 shrink-0 space-y-2">
+          <button
+            type="button"
+            onClick={onBack}
+            className="text-sm text-zinc-400 hover:text-zinc-200 mb-4 block"
+          >
+            ← {t('common:back')}
+          </button>
+          <h1 className="text-lg font-semibold px-2">{t('common:ownerConsole')}</h1>
+          <nav className="flex flex-row lg:flex-col gap-1 overflow-x-auto pb-2 lg:pb-0">
+            {SECTIONS.map((key) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setSection(key)}
+                className={`px-3 py-2 rounded-lg text-left text-sm whitespace-nowrap transition-colors ${
+                  section === key
+                    ? 'bg-white/10 text-white'
+                    : 'text-zinc-400 hover:bg-white/5 hover:text-zinc-200'
+                }`}
+              >
+                {sectionLabel(key)}
+              </button>
+            ))}
+          </nav>
+        </aside>
+
+        <main className="flex-1 min-w-0 space-y-6">
+          {error === 'AUTH_REQUIRED' ? (
+            <p className="text-zinc-400">{t('owner:authRequired')}</p>
+          ) : error === 'FORBIDDEN' ? (
+            <p className="text-red-300">{t('owner:forbidden')}</p>
+          ) : error === 'INTERNAL_ERROR' ? (
+            <p className="text-red-300">{t('owner:internalError')}</p>
+          ) : !overview ? (
+            <p className="text-zinc-500">{t('common:loading')}</p>
+          ) : (
+            <>
+              <h2 className="text-xl font-semibold">{sectionLabel(section)}</h2>
+
+              {section === 'overview' && (
+                <>
+                  <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {Object.entries(metrics).map(([key, value]) => (
+                      <div key={key} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                        <div className="text-xs text-zinc-500 uppercase">{key}</div>
+                        <div className="text-lg font-medium">
+                          {value === null || value === undefined ? '—' : String(value)}
+                        </div>
+                      </div>
+                    ))}
+                  </section>
+                  <section className="rounded-xl border border-white/10 bg-white/5 p-4">
+                    <h3 className="font-medium mb-2">{t('owner:whatChanged')}</h3>
+                    <ul className="list-disc pl-5 text-sm text-zinc-300 space-y-1">
+                      {((overview.whatChanged as string[]) || []).map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </section>
+                </>
+              )}
+
+              {section === 'users' && (
+                <div className="rounded-xl border border-white/10 overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-white/5 text-zinc-400 text-left">
+                      <tr>
+                        <th className="px-3 py-2">ID</th>
+                        <th className="px-3 py-2">Locale</th>
+                        <th className="px-3 py-2">Created</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map((user) => (
+                        <tr key={String(user.id)} className="border-t border-white/5">
+                          <td className="px-3 py-2 font-mono text-xs">{user.id}</td>
+                          <td className="px-3 py-2">{user.preferredLocale || '—'}</td>
+                          <td className="px-3 py-2 text-zinc-400">{user.createdAt}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              ))}
-            </section>
-            <section className="rounded-xl border border-white/10 bg-white/5 p-4">
-              <h2 className="font-medium mb-2">What changed</h2>
-              <ul className="list-disc pl-5 text-sm text-zinc-300 space-y-1">
-                {((overview.whatChanged as string[]) || []).map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </section>
-          </>
-        )}
+              )}
+
+              {section === 'personas' && (
+                <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-zinc-300">
+                  <p>{t('owner:personasHint', { count: String(metrics.activePersonas ?? 0) })}</p>
+                </div>
+              )}
+
+              {section === 'memory' && memoryStats && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {Object.entries(memoryStats).map(([key, value]) => (
+                    <div key={key} className="rounded-xl border border-white/10 bg-white/5 p-4">
+                      <div className="text-xs text-zinc-500 uppercase">{key}</div>
+                      <div className="text-2xl font-semibold mt-1">{value}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {section === 'battery' && battery && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {Object.entries((battery.metrics as Record<string, unknown>) || {}).map(
+                      ([key, value]) => (
+                        <div key={key} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                          <div className="text-xs text-zinc-500 uppercase">{key}</div>
+                          <div className="text-lg font-medium">{String(value ?? '—')}</div>
+                        </div>
+                      )
+                    )}
+                  </div>
+                  <pre className="text-xs bg-black/40 border border-white/10 rounded-xl p-4 overflow-x-auto text-zinc-300">
+                    {JSON.stringify(battery.config, null, 2)}
+                  </pre>
+                </div>
+              )}
+
+              {section === 'ai' && (
+                <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm">
+                  <p className="text-zinc-300">
+                    {t('owner:aiHint', { count: String(metrics.failedInferenceRuns ?? 0) })}
+                  </p>
+                </div>
+              )}
+
+              {section === 'settings' && (
+                <p className="text-sm text-zinc-400">{t('owner:settingsHint')}</p>
+              )}
+
+              {section === 'audit' && (
+                <ul className="space-y-2 text-sm">
+                  {audit.map((entry) => (
+                    <li
+                      key={entry.id}
+                      className="rounded-lg border border-white/10 bg-white/5 px-3 py-2"
+                    >
+                      <span className="text-zinc-400">{entry.createdAt}</span>
+                      <span className="mx-2 text-zinc-600">·</span>
+                      <span className="font-medium">{entry.action}</span>
+                      <span className="text-zinc-500 ml-2">
+                        {entry.targetType}/{entry.targetId}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+        </main>
       </div>
     </div>
   );

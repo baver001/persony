@@ -14,6 +14,8 @@ import { Persona, VoiceName } from '../types';
 import { generateSvgAvatar, PRESET_AVATARS } from '../utils/avatarGenerator';
 import { getApiHeaders } from '../lib/api/headers';
 import { AvatarStudioModal } from './AvatarStudioModal';
+import { buildCustomPersonaSpec } from '../../shared/persona-spec/build-custom-spec';
+import type { CustomPersonaStyleInput } from '../../shared/persona-spec/build-custom-spec';
 
 interface CreatePersonaModalProps {
   isOpen: boolean;
@@ -69,6 +71,23 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
   const [isGeneratingWithAi, setIsGeneratingWithAi] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [isAvatarStudioOpen, setIsAvatarStudioOpen] = useState(false);
+  const [behaviorProfile, setBehaviorProfile] = useState<CustomPersonaStyleInput>({
+    warmth: 60,
+    directness: 55,
+    creativity: 50,
+    formality: 40,
+    verbosity: 45,
+    humor: 35,
+  });
+
+  const STYLE_SLIDERS: Array<{ key: keyof CustomPersonaStyleInput; label: string }> = [
+    { key: 'warmth', label: t('styleWarmth') },
+    { key: 'directness', label: t('styleDirectness') },
+    { key: 'creativity', label: t('styleCreativity') },
+    { key: 'formality', label: t('styleFormality') },
+    { key: 'verbosity', label: t('styleVerbosity') },
+    { key: 'humor', label: t('styleHumor') },
+  ];
 
   if (!isOpen) return null;
 
@@ -122,8 +141,19 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
   const handleSave = () => {
     if (!name.trim()) return;
 
+    const slug = initialPersona?.id || `custom_${Date.now()}`;
+    const spec = buildCustomPersonaSpec({
+      slug,
+      name: name.trim(),
+      description: description.trim() || t('common:customPersonaDefault'),
+      tagline: tagline.trim() || t('common:companionDefault'),
+      style: behaviorProfile,
+      starterMessages: starter1.trim() ? [starter1.trim()] : [t('defaultGreeting')],
+      styleNotes: systemPrompt.trim() ? [systemPrompt.trim()] : undefined,
+    });
+
     const newPersona: Persona = {
-      id: initialPersona?.id || `custom_${Date.now()}`,
+      id: slug,
       name: name.trim(),
       tagline: tagline.trim() || t('common:companionDefault'),
       description: description.trim() || t('common:customPersonaDefault'),
@@ -138,6 +168,8 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
       isCustom: true,
       createdAt: initialPersona?.createdAt || Date.now(),
       starterMessages: starter1.trim() ? [starter1.trim()] : [t('defaultGreeting')],
+      behaviorProfile,
+      configurationJson: JSON.stringify(spec),
     };
 
     onSave(newPersona);
@@ -328,8 +360,38 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
             </div>
           </div>
 
-          {/* RIGHT COLUMN: Instructions & Greeting (6 cols) */}
+          {/* RIGHT COLUMN: Style, instructions & greeting */}
           <div className="md:col-span-6 flex flex-col space-y-3">
+            <div className="space-y-2 rounded-xl border border-white/10 bg-[#18181b] p-3">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-semibold text-white/70">{t('styleTitle')}</label>
+                <span className="text-[10px] text-white/40">{t('styleHint')}</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {STYLE_SLIDERS.map(({ key, label }) => (
+                  <label key={key} className="space-y-1">
+                    <div className="flex items-center justify-between text-[10px] text-white/60">
+                      <span>{label}</span>
+                      <span>{behaviorProfile[key]}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={behaviorProfile[key]}
+                      onChange={(e) =>
+                        setBehaviorProfile((prev) => ({
+                          ...prev,
+                          [key]: Number(e.target.value),
+                        }))
+                      }
+                      className="w-full accent-zinc-300"
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+
             {/* System Prompt */}
             <div className="flex-1 flex flex-col space-y-1">
               <div className="flex items-center justify-between">

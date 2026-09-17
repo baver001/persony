@@ -117,6 +117,8 @@ export async function createPersonaOnCloud(
       color: persona.color,
       starterMessages: persona.starterMessages,
       visibility: 'private',
+      behaviorProfile: persona.behaviorProfile,
+      configurationJson: persona.configurationJson,
     }),
   });
   if (!res.ok) return null;
@@ -140,6 +142,8 @@ export async function updatePersonaOnCloud(persona: Persona): Promise<Persona | 
       color: persona.color,
       starterMessages: persona.starterMessages,
       visibility: 'private',
+      behaviorProfile: persona.behaviorProfile,
+      configurationJson: persona.configurationJson,
     }),
   });
   if (!res.ok) return null;

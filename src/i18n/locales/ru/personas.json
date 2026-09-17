@@ -81,5 +81,13 @@
   },
   "myPersonasTitle": "Мои персоны",
   "myPersonasSubtitle": "Созданные вами персоны — приватные, редактируемые и только ваши.",
-  "myPersonasEmpty": "Вы ещё не создали ни одной персоны."
+  "myPersonasEmpty": "Вы ещё не создали ни одной персоны.",
+  "styleTitle": "Стиль общения",
+  "styleHint": "Слайдеры PersonaSpec",
+  "styleWarmth": "Теплота",
+  "styleDirectness": "Прямота",
+  "styleCreativity": "Креативность",
+  "styleFormality": "Формальность",
+  "styleVerbosity": "Подробность",
+  "styleHumor": "Юмор"
 }

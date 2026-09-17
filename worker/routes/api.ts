@@ -12,9 +12,11 @@ import {
   summarizeCallSchema,
   transcribeRequestSchema,
 } from '../lib/validation';
+import { generateId } from '../lib/ids';
 import { bodySizeLimit } from '../middleware/body-limit';
 import { requireAIEntitlement } from '../middleware/entitlement';
 import { mapApiError } from '../lib/api-errors';
+import { chargeBatteryForInference } from '../services/energy-service';
 import type { PersonyEnv } from '../types/env';
 import { conversationRoutes } from './conversations';
 import { healthRoutes } from './health';
@@ -38,7 +40,7 @@ apiRoutes.route('/', ownerRoutes);
 
 apiRoutes.post('/transcribe', async (c) => {
   try {
-    await requireAIEntitlement(c);
+    const userId = await requireAIEntitlement(c);
     const body = await c.req.json();
     const parsed = transcribeRequestSchema.safeParse(body);
     if (!parsed.success) {
@@ -49,6 +51,11 @@ apiRoutes.post('/transcribe', async (c) => {
       parsed.data.audioBase64,
       parsed.data.mimeType
     );
+    if (c.env.DB) {
+      await chargeBatteryForInference(c.env.DB, userId, generateId(), 'voice_transcription').catch(
+        () => undefined
+      );
+    }
     return c.json(result);
   } catch (err) {
     const mapped = mapApiError(err, formatCleanErrorMessage(err));
@@ -58,13 +65,18 @@ apiRoutes.post('/transcribe', async (c) => {
 
 apiRoutes.post('/generate-character', async (c) => {
   try {
-    await requireAIEntitlement(c);
+    const userId = await requireAIEntitlement(c);
     const body = await c.req.json();
     const parsed = generateCharacterSchema.safeParse(body);
     if (!parsed.success) {
       return c.json({ error: 'Prompt is required' }, 400);
     }
     const result = await handleGenerateCharacter(c.env.GEMINI_API_KEY, parsed.data.prompt);
+    if (c.env.DB) {
+      await chargeBatteryForInference(c.env.DB, userId, generateId(), 'generate_character').catch(
+        () => undefined
+      );
+    }
     return c.json(result);
   } catch (err) {
     const mapped = mapApiError(err, formatCleanErrorMessage(err));
@@ -74,13 +86,18 @@ apiRoutes.post('/generate-character', async (c) => {
 
 apiRoutes.post('/summarize-call', async (c) => {
   try {
-    await requireAIEntitlement(c);
+    const userId = await requireAIEntitlement(c);
     const body = await c.req.json();
     const parsed = summarizeCallSchema.safeParse(body);
     if (!parsed.success) {
       return c.json({ error: 'Invalid summarize-call payload' }, 400);
     }
     const result = await handleSummarizeCall(c.env.GEMINI_API_KEY, parsed.data);
+    if (c.env.DB) {
+      await chargeBatteryForInference(c.env.DB, userId, generateId(), 'summarize_call').catch(
+        () => undefined
+      );
+    }
     return c.json(result);
   } catch (err) {
     const mapped = mapApiError(err, formatCleanErrorMessage(err));
@@ -90,7 +107,7 @@ apiRoutes.post('/summarize-call', async (c) => {
 
 apiRoutes.post('/generate-avatar', async (c) => {
   try {
-    await requireAIEntitlement(c);
+    const userId = await requireAIEntitlement(c);
     const body = await c.req.json();
     const parsed = generateAvatarSchema.safeParse(body);
     if (!parsed.success) {
@@ -101,6 +118,11 @@ apiRoutes.post('/generate-avatar', async (c) => {
       parsed.data.prompt,
       parsed.data.personaName
     );
+    if (c.env.DB) {
+      await chargeBatteryForInference(c.env.DB, userId, generateId(), 'generate_avatar').catch(
+        () => undefined
+      );
+    }
     return c.json(result);
   } catch (err) {
     const mapped = mapApiError(err, formatCleanErrorMessage(err));

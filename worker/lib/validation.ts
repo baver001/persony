@@ -30,6 +30,15 @@ export const createConversationSchema = z.object({
   title: z.string().max(200).optional(),
 });
 
+const behaviorProfileSchema = z.object({
+  warmth: z.number().min(0).max(100).optional(),
+  directness: z.number().min(0).max(100).optional(),
+  creativity: z.number().min(0).max(100).optional(),
+  formality: z.number().min(0).max(100).optional(),
+  verbosity: z.number().min(0).max(100).optional(),
+  humor: z.number().min(0).max(100).optional(),
+});
+
 export const createPersonaSchema = z.object({
   name: z.string().min(1).max(120),
   tagline: z.string().max(200).optional().default(''),
@@ -43,6 +52,8 @@ export const createPersonaSchema = z.object({
   starterMessages: z.array(z.string().max(500)).max(10).optional(),
   visibility: z.enum(['private', 'unlisted', 'public']).optional(),
   sourcePersonaId: z.string().max(128).optional(),
+  behaviorProfile: behaviorProfileSchema.optional(),
+  configurationJson: z.string().max(32_000).optional(),
 });
 
 export const updatePersonaSchema = createPersonaSchema;
@@ -79,6 +90,7 @@ export const liveInitSchema = z.object({
   type: z.literal('init'),
   personaId: z.string().min(1).max(128),
   conversationId: z.string().min(1).max(128).optional(),
+  callSessionId: z.string().min(1).max(128).optional(),
   characterName: z.string().max(120).optional(),
   voiceName: z.string().max(32).optional(),
   authToken: z.string().max(4096).optional(),

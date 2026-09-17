@@ -18,6 +18,7 @@ import {
   requireUser,
 } from '../middleware/auth';
 import { requireAIEntitlement } from '../middleware/entitlement';
+import { enrichPersonaCreateInput, type PersonaPayload } from '../services/persona-spec-builder';
 import type { PersonyEnv } from '../types/env';
 
 export const personaRoutes = new Hono<{ Bindings: PersonyEnv }>();
@@ -69,7 +70,8 @@ personaRoutes.post('/personas', async (c) => {
       return c.json({ error: 'Invalid persona payload', details: parsed.error.flatten() }, 400);
     }
 
-    const record = await createPersonaInDb(c.env.DB, userId, parsed.data);
+    const enriched = enrichPersonaCreateInput(parsed.data as PersonaPayload);
+    const record = await createPersonaInDb(c.env.DB, userId, enriched);
     return c.json({ persona: toPersonaOwnerDTO(record) }, 201);
   } catch (err) {
     if (err instanceof AuthRequiredError) return c.json({ error: 'Authentication required' }, 401);
@@ -88,7 +90,10 @@ personaRoutes.patch('/personas/:id', async (c) => {
       return c.json({ error: 'Invalid persona payload', details: parsed.error.flatten() }, 400);
     }
 
-    const record = await updatePersonaInDb(c.env.DB, userId, c.req.param('id'), parsed.data);
+    const enriched = enrichPersonaCreateInput(parsed.data as PersonaPayload, {
+      slug: c.req.param('id'),
+    });
+    const record = await updatePersonaInDb(c.env.DB, userId, c.req.param('id'), enriched);
     return c.json({ persona: toPersonaOwnerDTO(record) });
   } catch (err) {
     if (err instanceof AuthRequiredError) return c.json({ error: 'Authentication required' }, 401);

@@ -13,7 +13,13 @@ import {
 import { apiCors } from './middleware/cors';
 import { AuthRequiredError, resolveAuthContext } from './middleware/auth';
 import { apiRoutes } from './routes/api';
+import { generateId } from './lib/ids';
 import { ConversationAccessError } from './services/chat-service';
+import {
+  assertBatteryAllowsAI,
+  BatteryEmptyError,
+  chargeBatteryForInference,
+} from './services/energy-service';
 import { resolveLiveConversationContext } from './services/live-context-service';
 import { PersonaNotFoundError } from './services/persona-service';
 import type { PersonyEnv } from './types/env';
@@ -99,6 +105,19 @@ app.get(
                 throw new AuthRequiredError();
               }
 
+              if (c.env.DB) {
+                await assertBatteryAllowsAI(c.env.DB, auth.userId);
+                const chargeKey =
+                  parsed.data.callSessionId ||
+                  `live:${parsed.data.conversationId || parsed.data.personaId}:${generateId()}`;
+                await chargeBatteryForInference(
+                  c.env.DB,
+                  auth.userId,
+                  chargeKey,
+                  'live_voice'
+                ).catch(() => undefined);
+              }
+
               const liveContext = await resolveLiveConversationContext(
                 c.env,
                 auth.userId,
@@ -121,12 +140,20 @@ app.get(
               const message =
                 err instanceof AuthRequiredError
                   ? 'Authentication required'
+                  : err instanceof BatteryEmptyError
+                    ? 'Battery is empty'
                   : err instanceof ConversationAccessError
                     ? 'Conversation access denied'
                   : err instanceof PersonaNotFoundError
                     ? err.message
                     : formatCleanErrorMessage(err);
-              ws.send(JSON.stringify({ type: 'error', message }));
+              ws.send(
+                JSON.stringify({
+                  type: 'error',
+                  message,
+                  code: err instanceof BatteryEmptyError ? 'BATTERY_EMPTY' : undefined,
+                })
+              );
             } finally {
               initInProgress = false;
             }

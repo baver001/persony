@@ -284,6 +284,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
             type: 'init',
             personaId: character.id,
             conversationId,
+            callSessionId: sessionIdRef.current,
             characterName: character.name,
             voiceName: character.voice,
             ...credentials,

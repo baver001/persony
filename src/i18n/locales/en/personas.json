@@ -81,5 +81,13 @@
   },
   "myPersonasTitle": "My Personas",
   "myPersonasSubtitle": "Personas you created — private, editable, and always yours.",
-  "myPersonasEmpty": "You have not created any personas yet."
+  "myPersonasEmpty": "You have not created any personas yet.",
+  "styleTitle": "Conversation style",
+  "styleHint": "PersonaSpec sliders",
+  "styleWarmth": "Warmth",
+  "styleDirectness": "Directness",
+  "styleCreativity": "Creativity",
+  "styleFormality": "Formality",
+  "styleVerbosity": "Verbosity",
+  "styleHumor": "Humor"
 }

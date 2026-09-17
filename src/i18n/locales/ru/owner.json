@@ -1,0 +1,19 @@
+{
+  "authRequired": "Нужен вход в аккаунт.",
+  "forbidden": "Доступ запрещён.",
+  "internalError": "Ошибка сервера. Попробуйте позже.",
+  "whatChanged": "Что изменилось",
+  "personasHint": "Активных персон в каталоге: {{count}}.",
+  "aiHint": "Зафиксировано неудачных inference runs: {{count}}.",
+  "settingsHint": "API системных настроек: /api/owner/system/settings.",
+  "sections": {
+    "overview": "Обзор",
+    "users": "Пользователи",
+    "personas": "Персоны",
+    "memory": "Память",
+    "battery": "Батарея",
+    "ai": "AI",
+    "settings": "Настройки",
+    "audit": "Аудит"
+  }
+}

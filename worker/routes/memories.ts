@@ -7,6 +7,11 @@ import {
   setMemoryStatus,
   updateMemoryContent,
 } from '../repositories/memory-repository';
+import {
+  listPendingMemoryCandidates,
+  resolveMemoryCandidate,
+} from '../repositories/memory-candidate-repository';
+import { acceptMemoryCandidateRecord } from '../services/memory-service';
 import type { PersonyEnv } from '../types/env';
 
 const updateMemorySchema = z.object({
@@ -30,6 +35,44 @@ memoryRoutes.get('/memories', async (c) => {
     });
 
     return c.json({ memories });
+  } catch (err) {
+    if (err instanceof AuthRequiredError) return c.json({ error_code: 'AUTH_REQUIRED' }, 401);
+    return c.json({ error_code: 'INTERNAL_ERROR' }, 500);
+  }
+});
+
+memoryRoutes.get('/memories/candidates', async (c) => {
+  try {
+    const userId = await requireUser(c);
+    if (!c.env.DB) return c.json({ error: 'Database not configured' }, 503);
+    const candidates = await listPendingMemoryCandidates(c.env.DB, userId);
+    return c.json({ candidates });
+  } catch (err) {
+    if (err instanceof AuthRequiredError) return c.json({ error_code: 'AUTH_REQUIRED' }, 401);
+    return c.json({ error_code: 'INTERNAL_ERROR' }, 500);
+  }
+});
+
+memoryRoutes.post('/memories/candidates/:id/accept', async (c) => {
+  try {
+    const userId = await requireUser(c);
+    if (!c.env.DB) return c.json({ error: 'Database not configured' }, 503);
+    const memory = await acceptMemoryCandidateRecord(c.env.DB, userId, c.req.param('id'));
+    if (!memory) return c.json({ error_code: 'CANDIDATE_NOT_FOUND' }, 404);
+    return c.json({ memory });
+  } catch (err) {
+    if (err instanceof AuthRequiredError) return c.json({ error_code: 'AUTH_REQUIRED' }, 401);
+    return c.json({ error_code: 'INTERNAL_ERROR' }, 500);
+  }
+});
+
+memoryRoutes.post('/memories/candidates/:id/reject', async (c) => {
+  try {
+    const userId = await requireUser(c);
+    if (!c.env.DB) return c.json({ error: 'Database not configured' }, 503);
+    const ok = await resolveMemoryCandidate(c.env.DB, userId, c.req.param('id'), 'rejected');
+    if (!ok) return c.json({ error_code: 'CANDIDATE_NOT_FOUND' }, 404);
+    return c.json({ ok: true });
   } catch (err) {
     if (err instanceof AuthRequiredError) return c.json({ error_code: 'AUTH_REQUIRED' }, 401);
     return c.json({ error_code: 'INTERNAL_ERROR' }, 500);
