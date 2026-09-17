@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Persona, ChatMessage } from '../types';
-import { PersonyLogo } from './PersonyLogo';
 import { SidebarBottomBar } from './SidebarBottomBar';
 
 interface SidebarProps {
@@ -215,12 +214,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         className="p-3 border-b border-py-border flex flex-col gap-2 shrink-0 bg-py-sidebar"
       >
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <PersonyLogo size={32} theme={theme} className="shrink-0" />
-            <div className="leading-tight min-w-0">
-              <h1 className="text-sm font-bold tracking-tight font-[family-name:var(--font-display)]">Persony</h1>
-              <p className="text-[11px] text-py-text-muted truncate">{t('common:sidebarSubtitle')}</p>
-            </div>
+          <div className="min-w-0">
+            <h1 className="text-sm font-bold tracking-tight font-[family-name:var(--font-display)]">Persony</h1>
+            <p className="text-[11px] text-py-text-muted truncate">{t('common:sidebarSubtitle')}</p>
           </div>
 
           <div className="flex items-center gap-0.5 shrink-0">
@@ -317,7 +313,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       >
         {filteredPersonas.length === 0 ? (
           <div className="p-8 text-center text-zinc-500 space-y-2.5">
-            <PersonyLogo size={40} theme={theme} className="mx-auto opacity-40" />
             <p className="text-xs">{t('common:noPersonasFound')}</p>
             <button
               onClick={onOpenCreateModal}
@@ -341,7 +336,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 key={persona.id}
                 id={`chat-item-${persona.id}`}
                 onClick={() => onSelectPersona(persona)}
-                className={`group relative flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all ${
+                className={`group relative flex items-center gap-3 px-3 py-3 cursor-pointer transition-all ${
                   isSelected
                     ? isDark
                       ? 'bg-zinc-800 text-white'
@@ -373,10 +368,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   />
                 </div>
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-1 mb-0.5">
+                <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5 min-h-[2.75rem] pt-0.5">
+                  <div className="flex items-center justify-between gap-1">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="font-semibold text-sm truncate leading-tight">
+                      <span className="font-semibold text-sm truncate leading-normal">
                         {persona.name}
                       </span>
                       {badge && (

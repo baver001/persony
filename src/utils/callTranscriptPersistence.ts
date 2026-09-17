@@ -26,6 +26,7 @@ export function buildCallHistoryMessages(
   const messages: ChatMessage[] = [];
 
   if (durationSecs > 0 || transcripts.length > 0) {
+    const hasDialogue = transcripts.some((t) => t.text.trim().length > 0);
     messages.push({
       id: `call_summary_${sessionId}`,
       characterId: personaId,
@@ -35,6 +36,8 @@ export function buildCallHistoryMessages(
       isCallSummary: true,
       callDurationSecs: durationSecs,
       voiceCallSessionId: sessionId,
+      callTranscripts: hasDialogue ? transcripts : undefined,
+      callInsightsStatus: hasDialogue ? 'offered' : undefined,
     });
   }
 
@@ -58,6 +61,35 @@ export function buildCallHistoryMessages(
 }
 
 /** Skip if this call session was already persisted. */
+/** Latest call summary that still offers an optional insights recap. */
+export function getOfferedCallInsights(messages: ChatMessage[]): ChatMessage | null {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    if (msg.isCallSummary && msg.callInsightsStatus === 'offered') {
+      return msg;
+    }
+  }
+  return null;
+}
+
+export function collectCallTranscripts(
+  messages: ChatMessage[],
+  sessionId: string
+): CallTranscriptTurn[] {
+  const fromTurns = messages
+    .filter((m) => m.voiceCallSessionId === sessionId && m.isFromVoiceCall && m.sender !== 'system')
+    .map((m) => ({
+      id: m.id,
+      sender: m.sender as 'user' | 'character',
+      text: m.text,
+    }));
+
+  if (fromTurns.length > 0) return fromTurns;
+
+  const summary = messages.find((m) => m.id === `call_summary_${sessionId}`);
+  return summary?.callTranscripts ?? [];
+}
+
 export function isCallSessionAlreadySaved(
   messages: ChatMessage[],
   sessionId: string

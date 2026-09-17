@@ -42,6 +42,8 @@ import {
   type MessageContextMenuItem,
 } from './MessageContextMenu';
 import { normalizeUserMessageForDisplay } from '../utils/chatMessageDisplay';
+import { useMobileLayout } from '../hooks/useMobileLayout';
+import { getOfferedCallInsights } from '../utils/callTranscriptPersistence';
 
 interface ChatAreaProps {
   character: Persona;
@@ -65,6 +67,9 @@ interface ChatAreaProps {
   onEndActiveCall?: () => void;
   onRetryMessage?: () => void;
   onDeleteMessage?: (messageId: string) => void;
+  onRequestCallInsights?: (summaryMessageId: string) => void;
+  onDismissCallInsights?: (summaryMessageId: string) => void;
+  callInsightsLoadingId?: string | null;
   hasOlderMessages?: boolean;
   isLoadingOlderMessages?: boolean;
   onLoadOlderMessages?: () => void;
@@ -340,6 +345,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   onEndActiveCall,
   onRetryMessage,
   onDeleteMessage,
+  onRequestCallInsights,
+  onDismissCallInsights,
+  callInsightsLoadingId = null,
   hasOlderMessages = false,
   isLoadingOlderMessages = false,
   onLoadOlderMessages,
@@ -622,11 +630,70 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   };
 
   const isDark = theme === 'dark';
-  const showMobileBack = Boolean(onBackToList);
+  const isMobileLayout = useMobileLayout();
+  const showMobileBack = Boolean(onBackToList && isMobileLayout);
 
   const displayedMessages = searchInChat.trim()
     ? messages.filter((m) => m.text.toLowerCase().includes(searchInChat.toLowerCase()))
     : messages;
+
+  const pendingCallInsights = searchInChat.trim() ? null : getOfferedCallInsights(messages);
+  const characterFirstName = character.name.split(' ')[0];
+  const isInsightsLoading = Boolean(
+    pendingCallInsights && callInsightsLoadingId === pendingCallInsights.id
+  );
+
+  const renderCallInsightsOffer = (summaryMessageId: string, compact = false) => (
+    <div
+      className={`flex items-center gap-2.5 ${
+        compact ? 'mt-2.5 pt-2.5 border-t border-white/10' : ''
+      }`}
+    >
+      <div
+        className={`shrink-0 rounded-full p-2 ${
+          isDark ? 'bg-py-accent/15 text-py-accent' : 'bg-emerald-500/15 text-emerald-600'
+        }`}
+      >
+        <Sparkles className="w-3.5 h-3.5" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-medium leading-snug">
+          {t('callInsightsOfferTitle', { name: characterFirstName })}
+        </p>
+        {!compact && (
+          <p className="text-[11px] text-py-text-muted mt-0.5 leading-snug">
+            {t('callInsightsOfferHint')}
+          </p>
+        )}
+      </div>
+      <div className="flex items-center gap-1.5 shrink-0">
+        {onDismissCallInsights && (
+          <button
+            type="button"
+            onClick={() => onDismissCallInsights(summaryMessageId)}
+            disabled={isInsightsLoading}
+            className="px-2 py-1 text-[11px] text-py-text-muted hover:text-py-text transition-colors disabled:opacity-50"
+          >
+            {t('callInsightsNotNow')}
+          </button>
+        )}
+        {onRequestCallInsights && (
+          <button
+            type="button"
+            onClick={() => onRequestCallInsights(summaryMessageId)}
+            disabled={isInsightsLoading}
+            className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-colors disabled:opacity-60 ${
+              isDark
+                ? 'bg-py-accent text-zinc-900 hover:opacity-90'
+                : 'bg-neutral-900 text-white hover:bg-neutral-800'
+            }`}
+          >
+            {isInsightsLoading ? t('callInsightsGenerating') : t('callInsightsGet')}
+          </button>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div
@@ -899,6 +966,46 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 })()
               : msg;
           const isCallSummary = msg.isCallSummary;
+          const isCallInsights = msg.isCallInsights;
+
+          if (isCallInsights) {
+            return (
+              <div key={msg.id} className="flex items-end gap-2 justify-start my-1">
+                <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 mb-1 ring-1 ring-white/10">
+                  <img
+                    src={character.avatar}
+                    alt={character.name}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="relative max-w-[85%] sm:max-w-[75%]">
+                  <div className="text-[11px] font-semibold text-py-text-muted mb-1 flex items-center gap-1.5">
+                    <Sparkles className="w-3 h-3 text-py-accent" />
+                    <span>{character.name}</span>
+                    <span className="opacity-50">·</span>
+                    <span>{t('callInsightsBadge')}</span>
+                  </div>
+                  <div
+                    className={`px-3.5 py-2.5 rounded-2xl rounded-tl-md text-sm leading-relaxed border ${
+                      isDark
+                        ? 'bg-zinc-800/90 text-zinc-100 border-py-accent/25 shadow-md'
+                        : 'bg-white text-neutral-900 border-emerald-200/80 shadow-sm'
+                    }`}
+                  >
+                    <PersonyMarkdown content={msg.text} isUser={false} />
+                    <div
+                      className={`flex items-center justify-end gap-1 text-[10px] mt-1.5 select-none ${
+                        isDark ? 'text-zinc-400' : 'text-neutral-400'
+                      }`}
+                    >
+                      <span>{formatTime(msg.timestamp)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          }
 
           if (isCallSummary) {
             const hasTranscripts = msg.callTranscripts && msg.callTranscripts.length > 0;
@@ -976,6 +1083,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                       )}
                     </div>
                   )}
+
+                  {msg.callInsightsStatus === 'offered' &&
+                    onRequestCallInsights &&
+                    renderCallInsightsOffer(msg.id, true)}
                 </div>
               </div>
             );
@@ -1100,6 +1211,20 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         id="chat-input-bar"
         className="relative z-10 shrink-0 bg-transparent pt-2 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
       >
+        {pendingCallInsights && onRequestCallInsights && (
+          <div className="py-chat-thread mb-2">
+            <div
+              className={`rounded-2xl border px-3 py-2.5 shadow-sm ${
+                isDark
+                  ? 'bg-zinc-900/95 border-zinc-700/80 backdrop-blur-sm'
+                  : 'bg-white/95 border-neutral-200 backdrop-blur-sm'
+              }`}
+            >
+              {renderCallInsightsOffer(pendingCallInsights.id)}
+            </div>
+          </div>
+        )}
+
         {showEmojiPicker && (
           <div className="py-chat-thread mb-2">
             <div

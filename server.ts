@@ -6,6 +6,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { GoogleGenAI, Modality, LiveServerMessage } from '@google/genai';
 import { createServer as createViteServer } from 'vite';
 import {
+  GEMINI_AVATAR_IMAGE_MODELS,
   GEMINI_CHAT_MODELS,
   GEMINI_GENERATOR_MODELS,
   GEMINI_LIVE_MODEL,
@@ -261,6 +262,89 @@ async function startServer() {
       res.json({ transcript });
     } catch (err: any) {
       console.error('Error in /api/transcribe:', err);
+      res.status(500).json({ error: formatCleanErrorMessage(err) });
+    }
+  });
+
+  app.post('/api/summarize-call', async (req, res) => {
+    try {
+      const { personaName, personaTagline, systemPrompt, durationSecs, transcripts, locale } =
+        req.body as {
+          personaName?: string;
+          personaTagline?: string;
+          systemPrompt?: string;
+          durationSecs?: number;
+          transcripts?: Array<{ sender: 'user' | 'character'; text: string }>;
+          locale?: string;
+        };
+
+      if (!personaName || !Array.isArray(transcripts) || transcripts.length === 0) {
+        return res.status(400).json({ error: 'Invalid summarize-call payload' });
+      }
+
+      const { handleSummarizeCall } = await import('./worker/lib/gemini.ts');
+      const result = await handleSummarizeCall(process.env.GEMINI_API_KEY || '', {
+        personaName,
+        personaTagline,
+        systemPrompt,
+        durationSecs: durationSecs ?? 0,
+        transcripts,
+        locale,
+      });
+      return res.json(result);
+    } catch (err: any) {
+      console.error('Error in /api/summarize-call:', err);
+      res.status(500).json({ error: formatCleanErrorMessage(err) });
+    }
+  });
+
+  app.post('/api/generate-avatar', async (req, res) => {
+    try {
+      const { prompt, personaName } = req.body as { prompt?: string; personaName?: string };
+      if (!prompt?.trim()) {
+        return res.status(400).json({ error: 'Prompt is required' });
+      }
+
+      const ai = getAIClient();
+      const portraitPrompt = [
+        'Create a single square portrait avatar for a fictional AI companion in a messenger app.',
+        personaName ? `Character name: ${personaName}.` : '',
+        `Creative direction: ${prompt.trim()}.`,
+        'Centered face or bust, clean simple background, polished digital art, friendly and readable at small size.',
+        'No text, no watermark, no collage, no multiple people.',
+      ]
+        .filter(Boolean)
+        .join(' ');
+
+      let lastErr: unknown = null;
+
+      for (const model of GEMINI_AVATAR_IMAGE_MODELS) {
+        try {
+          const response = await ai.models.generateContent({
+            model,
+            contents: portraitPrompt,
+            config: {
+              responseModalities: [Modality.TEXT, Modality.IMAGE],
+            },
+          });
+
+          const parts = response.candidates?.[0]?.content?.parts ?? [];
+          for (const part of parts) {
+            const data = part.inlineData?.data;
+            if (data) {
+              const mime = part.inlineData?.mimeType || 'image/png';
+              return res.json({ imageDataUrl: `data:${mime};base64,${data}` });
+            }
+          }
+        } catch (genErr) {
+          console.warn(`[Fallback] Generate avatar model "${model}" failed:`, genErr);
+          lastErr = genErr;
+        }
+      }
+
+      throw lastErr || new Error('Avatar image generation failed');
+    } catch (err: any) {
+      console.error('Error in /api/generate-avatar:', err);
       res.status(500).json({ error: formatCleanErrorMessage(err) });
     }
   });

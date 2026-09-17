@@ -44,6 +44,19 @@
   "generateAi": "Создать AI",
   "art": "Арт",
   "upload": "Загрузить",
+  "changeAvatar": "Сменить аватар",
+  "avatarHint": "Сгенерируйте с AI, загрузите фото или выберите пресет.",
+  "avatarStudioTitle": "Аватар",
+  "avatarStudioSubtitle": "Создайте, загрузите или выберите образ",
+  "avatarPromptLabel": "Опишите образ",
+  "avatarPromptPlaceholder": "например: дружелюбный киберпанк-наставник, мягкий свет, портрет...",
+  "avatarGenerateAi": "Сгенерировать с AI",
+  "avatarUpload": "Загрузить фото",
+  "avatarRandomStyle": "Случайный абстрактный стиль",
+  "avatarPresets": "Пресеты",
+  "avatarApply": "Использовать",
+  "avatarGenerateFailed": "Не удалось сгенерировать изображение. Попробуйте другой промпт или загрузите фото.",
+  "avatarUploadFailed": "Не удалось загрузить изображение. Попробуйте другой файл.",
   "nameLabel": "Имя персонажа *",
   "taglineLabel": "Краткий статус (Tagline)",
   "categoryLabel": "Категория",
@@ -53,5 +66,7 @@
   "systemPromptHint": "Характер и знания персонажа",
   "starterLabel": "Первое приветствие в чате",
   "savePersona": "Сохранить персонажа",
-  "defaultSystemPrompt": "Ты — {{name}}. Общайся в мессенджере Persony в своём характерном стиле. Отвечай на русском языке."
+  "defaultSystemPrompt": "Ты — {{name}}. Общайся в мессенджере Persony в своём характерном стиле. Отвечай на русском языке.",
+  "relationshipRemembersTitle": "Что {{name}} помнит о вас",
+  "relationshipRemembersEmpty": "Пока ничего особенного — продолжайте общение, и Persony запомнит важное именно для этой связи."
 }

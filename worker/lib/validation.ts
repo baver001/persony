@@ -52,6 +52,25 @@ export const generateCharacterSchema = z.object({
   prompt: z.string().min(1).max(4000),
 });
 
+export const generateAvatarSchema = z.object({
+  prompt: z.string().min(1).max(2000),
+  personaName: z.string().max(120).optional(),
+});
+
+const callTranscriptTurnSchema = z.object({
+  sender: z.enum(['user', 'character']),
+  text: z.string().min(1).max(8_000),
+});
+
+export const summarizeCallSchema = z.object({
+  personaName: z.string().min(1).max(120),
+  personaTagline: z.string().max(200).optional(),
+  systemPrompt: z.string().max(8_000).optional(),
+  durationSecs: z.number().int().min(0).max(86_400),
+  locale: z.string().max(16).optional(),
+  transcripts: z.array(callTranscriptTurnSchema).min(1).max(200),
+});
+
 export const liveInitSchema = z.object({
   type: z.literal('init'),
   personaId: z.string().min(1).max(128),

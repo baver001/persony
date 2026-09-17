@@ -49,6 +49,24 @@ describe('security integration', () => {
     expect(res.status).toBe(401);
   });
 
+  it('rejects anonymous call summarization', async () => {
+    const res = await app.request(
+      '/api/summarize-call',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          personaName: 'Athena',
+          durationSecs: 60,
+          transcripts: [{ sender: 'user', text: 'Hello' }],
+        }),
+      },
+      baseEnv
+    );
+
+    expect(res.status).toBe(401);
+  });
+
   it('rejects anonymous conversation message', async () => {
     const res = await app.request(
       '/api/conversations/conv-1/messages',

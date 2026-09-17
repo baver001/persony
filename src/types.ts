@@ -44,6 +44,9 @@ export interface ChatMessage {
   isCallSummary?: boolean;
   callDurationSecs?: number;
   callTranscripts?: Array<{ id: string; sender: 'user' | 'character'; text: string }>;
+  /** Optional recap CTA after a voice call: offered → generated | dismissed */
+  callInsightsStatus?: 'offered' | 'generated' | 'dismissed';
+  isCallInsights?: boolean;
   isFromVoiceCall?: boolean;
   voiceCallSessionId?: string;
   isError?: boolean;

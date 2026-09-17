@@ -44,6 +44,19 @@
   "generateAi": "Create with AI",
   "art": "Art",
   "upload": "Upload",
+  "changeAvatar": "Change avatar",
+  "avatarHint": "Generate with AI, upload a photo, or pick a preset.",
+  "avatarStudioTitle": "Avatar",
+  "avatarStudioSubtitle": "Create, upload, or choose a look",
+  "avatarPromptLabel": "Describe the look",
+  "avatarPromptPlaceholder": "e.g. friendly cyberpunk mentor, soft lighting, portrait...",
+  "avatarGenerateAi": "Generate with AI",
+  "avatarUpload": "Upload photo",
+  "avatarRandomStyle": "Random abstract style",
+  "avatarPresets": "Presets",
+  "avatarApply": "Use this avatar",
+  "avatarGenerateFailed": "Could not generate image. Try another prompt or upload a photo.",
+  "avatarUploadFailed": "Could not load this image. Try another file.",
   "nameLabel": "Persona name *",
   "taglineLabel": "Short status (tagline)",
   "categoryLabel": "Category",
@@ -53,5 +66,7 @@
   "systemPromptHint": "Character and knowledge",
   "starterLabel": "First chat greeting",
   "savePersona": "Save persona",
-  "defaultSystemPrompt": "You are {{name}}. Chat in the Persony messenger in your characteristic style. Reply in English."
+  "defaultSystemPrompt": "You are {{name}}. Chat in the Persony messenger in your characteristic style. Reply in English.",
+  "relationshipRemembersTitle": "What {{name}} remembers about you",
+  "relationshipRemembersEmpty": "Nothing specific yet — keep chatting and Persony will remember what matters for this relationship."
 }

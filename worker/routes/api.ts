@@ -1,10 +1,20 @@
 import { Hono } from 'hono';
 import { formatCleanErrorMessage } from '../lib/errors';
-import { handleGenerateCharacter, handleTranscribe } from '../lib/gemini';
-import { generateCharacterSchema, transcribeRequestSchema } from '../lib/validation';
-import { AuthRequiredError } from '../middleware/auth';
+import {
+  handleGenerateAvatar,
+  handleGenerateCharacter,
+  handleSummarizeCall,
+  handleTranscribe,
+} from '../lib/gemini';
+import {
+  generateAvatarSchema,
+  generateCharacterSchema,
+  summarizeCallSchema,
+  transcribeRequestSchema,
+} from '../lib/validation';
 import { bodySizeLimit } from '../middleware/body-limit';
 import { requireAIEntitlement } from '../middleware/entitlement';
+import { mapApiError } from '../lib/api-errors';
 import type { PersonyEnv } from '../types/env';
 import { conversationRoutes } from './conversations';
 import { healthRoutes } from './health';
@@ -41,8 +51,8 @@ apiRoutes.post('/transcribe', async (c) => {
     );
     return c.json(result);
   } catch (err) {
-    if (err instanceof AuthRequiredError) return c.json({ error: 'Authentication required' }, 401);
-    return c.json({ error: formatCleanErrorMessage(err) }, 500);
+    const mapped = mapApiError(err, formatCleanErrorMessage(err));
+    return c.json(mapped.body, mapped.status as 401 | 402 | 500);
   }
 });
 
@@ -57,7 +67,43 @@ apiRoutes.post('/generate-character', async (c) => {
     const result = await handleGenerateCharacter(c.env.GEMINI_API_KEY, parsed.data.prompt);
     return c.json(result);
   } catch (err) {
-    if (err instanceof AuthRequiredError) return c.json({ error: 'Authentication required' }, 401);
-    return c.json({ error: formatCleanErrorMessage(err) }, 500);
+    const mapped = mapApiError(err, formatCleanErrorMessage(err));
+    return c.json(mapped.body, mapped.status as 401 | 402 | 500);
+  }
+});
+
+apiRoutes.post('/summarize-call', async (c) => {
+  try {
+    await requireAIEntitlement(c);
+    const body = await c.req.json();
+    const parsed = summarizeCallSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: 'Invalid summarize-call payload' }, 400);
+    }
+    const result = await handleSummarizeCall(c.env.GEMINI_API_KEY, parsed.data);
+    return c.json(result);
+  } catch (err) {
+    const mapped = mapApiError(err, formatCleanErrorMessage(err));
+    return c.json(mapped.body, mapped.status as 401 | 402 | 500);
+  }
+});
+
+apiRoutes.post('/generate-avatar', async (c) => {
+  try {
+    await requireAIEntitlement(c);
+    const body = await c.req.json();
+    const parsed = generateAvatarSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: 'Prompt is required' }, 400);
+    }
+    const result = await handleGenerateAvatar(
+      c.env.GEMINI_API_KEY,
+      parsed.data.prompt,
+      parsed.data.personaName
+    );
+    return c.json(result);
+  } catch (err) {
+    const mapped = mapApiError(err, formatCleanErrorMessage(err));
+    return c.json(mapped.body, mapped.status as 401 | 402 | 500);
   }
 });

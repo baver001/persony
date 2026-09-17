@@ -5,6 +5,7 @@ import {
   Phone,
   Trash2,
   Edit3,
+  ImagePlus,
   Sparkles,
   Mic,
   Share2,
@@ -15,6 +16,9 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Persona } from '../types';
 import { getLocalizedPersonaPresentation } from '../utils/personaPresentation';
+import { AvatarStudioModal } from './AvatarStudioModal';
+import { fetchRelationshipProfile } from '../lib/api/relationship';
+import { usePersonyAuth } from './PersonyAuthProvider';
 
 interface PersonaProfileDrawerProps {
   character: Persona | null;
@@ -24,6 +28,7 @@ interface PersonaProfileDrawerProps {
   onEdit: (character: Persona) => void;
   onDelete?: (characterId: string) => void;
   onClearChat?: (characterId: string) => void;
+  onAvatarChange?: (character: Persona, avatar: string) => void;
 }
 
 export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
@@ -34,9 +39,23 @@ export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
   onEdit,
   onDelete,
   onClearChat,
+  onAvatarChange,
 }) => {
   const { t, i18n } = useTranslation(['personas', 'common', 'chat']);
+  const { isSignedIn } = usePersonyAuth();
   const [copiedPrompt, setCopiedPrompt] = React.useState(false);
+  const [isAvatarStudioOpen, setIsAvatarStudioOpen] = React.useState(false);
+  const [relationshipBullets, setRelationshipBullets] = React.useState<string[]>([]);
+
+  React.useEffect(() => {
+    if (!isOpen || !character || !isSignedIn) {
+      setRelationshipBullets([]);
+      return;
+    }
+    void fetchRelationshipProfile(character.id)
+      .then((profile) => setRelationshipBullets(profile.bullets))
+      .catch(() => setRelationshipBullets([]));
+  }, [isOpen, character?.id, isSignedIn]);
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -86,16 +105,37 @@ export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 sm:space-y-6 scrollbar-thin scrollbar-thumb-white/10 min-h-0">
             {/* Avatar & Hero */}
             <div className="flex flex-col items-center text-center">
-              <div className="relative w-28 h-28 rounded-full overflow-hidden p-1 ring-2 ring-zinc-700 bg-zinc-800 shadow-xl">
+              <button
+                type="button"
+                onClick={() => character.isCustom && setIsAvatarStudioOpen(true)}
+                className={`relative w-28 h-28 rounded-full overflow-hidden p-1 ring-2 ring-zinc-700 bg-zinc-800 shadow-xl ${
+                  character.isCustom ? 'group cursor-pointer' : 'cursor-default'
+                }`}
+                disabled={!character.isCustom}
+              >
                 <img
                   src={character.avatar}
                   alt={character.name}
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover rounded-full"
                 />
-              </div>
+                {character.isCustom && (
+                  <span className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <ImagePlus className="w-5 h-5 text-white" />
+                  </span>
+                )}
+              </button>
 
               <h3 className="mt-4 text-xl font-bold text-white tracking-tight">{character.name}</h3>
+              {character.isCustom && onAvatarChange && (
+                <button
+                  type="button"
+                  onClick={() => setIsAvatarStudioOpen(true)}
+                  className="mt-2 text-xs font-medium text-zinc-400 hover:text-white transition-colors"
+                >
+                  {t('changeAvatar')}
+                </button>
+              )}
               <p className="text-xs text-zinc-400 font-medium mt-0.5">{localized.tagline}</p>
 
               {/* Call to action: Voice call */}
@@ -126,6 +166,23 @@ export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
               <span className="text-[11px] font-semibold text-white/50 uppercase tracking-wider">{t('personas:about')}</span>
               <p className="text-xs text-white/80 leading-relaxed">{localized.description}</p>
             </div>
+
+            {isSignedIn && (
+              <div className="space-y-2 bg-zinc-900 p-4 rounded-2xl border border-zinc-800">
+                <span className="text-[11px] font-semibold text-white/50 uppercase tracking-wider">
+                  {t('personas:relationshipRemembersTitle', { name: character.name.split(' ')[0] })}
+                </span>
+                {relationshipBullets.length > 0 ? (
+                  <ul className="space-y-1.5 text-xs text-white/80 list-disc pl-4">
+                    {relationshipBullets.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-white/45 leading-relaxed">{t('personas:relationshipRemembersEmpty')}</p>
+                )}
+              </div>
+            )}
 
             {/* Voice Settings */}
             <div className="space-y-3 bg-zinc-900 p-4 rounded-2xl border border-zinc-800">
@@ -192,6 +249,17 @@ export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
           </div>
         </motion.div>
       </div>
+
+      {character && onAvatarChange && (
+        <AvatarStudioModal
+          isOpen={isAvatarStudioOpen}
+          onClose={() => setIsAvatarStudioOpen(false)}
+          onApply={(nextAvatar) => onAvatarChange(character, nextAvatar)}
+          personaName={character.name}
+          category={character.category}
+          currentAvatar={character.avatar}
+        />
+      )}
     </AnimatePresence>
   );
 };

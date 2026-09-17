@@ -7,14 +7,13 @@ import {
   Wand2,
   Check,
   RefreshCw,
-  Upload,
   Mic,
-  Palette,
+  ImagePlus,
 } from 'lucide-react';
 import { Persona, VoiceName } from '../types';
 import { generateSvgAvatar, PRESET_AVATARS } from '../utils/avatarGenerator';
-import { PersonyLogo } from './PersonyLogo';
 import { getApiHeaders } from '../lib/api/headers';
+import { AvatarStudioModal } from './AvatarStudioModal';
 
 interface CreatePersonaModalProps {
   isOpen: boolean;
@@ -69,6 +68,7 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
   const [aiPrompt, setAiPrompt] = useState('');
   const [isGeneratingWithAi, setIsGeneratingWithAi] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
+  const [isAvatarStudioOpen, setIsAvatarStudioOpen] = useState(false);
 
   if (!isOpen) return null;
 
@@ -119,25 +119,6 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
     }
   };
 
-  const handleGenerateProceduralAvatar = () => {
-    const seed = Date.now().toString();
-    const newSvg = generateSvgAvatar(name || 'Custom Character', category, seed);
-    setAvatar(newSvg);
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          setAvatar(reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const handleSave = () => {
     if (!name.trim()) return;
 
@@ -176,14 +157,11 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
       >
         {/* Compact Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800 bg-[#18181b] shrink-0">
-          <div className="flex items-center gap-2.5">
-            <PersonyLogo size={32} theme="dark" className="shrink-0" />
-            <div>
-              <h2 className="text-sm sm:text-base font-bold text-white leading-tight">
-                {initialPersona ? t('editTitle') : t('createTitle')}
-              </h2>
-              <p className="text-[11px] text-white/50">{t('createSubtitle')}</p>
-            </div>
+          <div>
+            <h2 className="text-sm sm:text-base font-bold text-white leading-tight">
+              {initialPersona ? t('editTitle') : t('createTitle')}
+            </h2>
+            <p className="text-[11px] text-white/50">{t('createSubtitle')}</p>
           </div>
           <button
             onClick={onClose}
@@ -240,47 +218,34 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
           {/* LEFT COLUMN: Identity & Voice (5 cols) */}
           <div className="md:col-span-6 space-y-3">
             {/* Avatar Row */}
-            <div className="flex items-center gap-3 bg-[#18181b] p-2.5 rounded-xl border border-white/5">
-              <div className="relative w-14 h-14 rounded-xl overflow-hidden ring-2 ring-zinc-600 shadow-md bg-black/40 shrink-0">
+            <div className="flex items-center gap-3 bg-[#18181b] p-3 rounded-xl border border-white/5">
+              <button
+                type="button"
+                onClick={() => setIsAvatarStudioOpen(true)}
+                className="relative w-16 h-16 rounded-xl overflow-hidden ring-1 ring-zinc-600 bg-black/40 shrink-0 group cursor-pointer"
+                title={t('changeAvatar')}
+              >
                 <img
                   src={avatar}
-                  alt="Avatar"
+                  alt=""
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover"
                 />
-              </div>
+                <span className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <ImagePlus className="w-4 h-4 text-white" />
+                </span>
+              </button>
 
-              <div className="flex-1 min-w-0 space-y-1.5">
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={handleGenerateProceduralAvatar}
-                    className="px-2 py-1 rounded-md bg-white/10 hover:bg-white/15 text-[11px] text-white font-medium flex items-center gap-1 transition-colors cursor-pointer"
-                    title={t('generateAvatar')}
-                  >
-                    <Palette className="w-3 h-3 text-zinc-400" /> {t('art')}
-                  </button>
-                  <label className="px-2 py-1 rounded-md bg-white/10 hover:bg-white/15 text-[11px] text-white font-medium flex items-center gap-1 transition-colors cursor-pointer">
-                    <Upload className="w-3 h-3" /> {t('upload')}
-                    <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                  </label>
-                </div>
-
-                {/* Preset Avatars Circles */}
-                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
-                  {PRESET_AVATARS.slice(0, 8).map((url, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setAvatar(url)}
-                      className={`relative w-6 h-6 rounded-md overflow-hidden shrink-0 transition-transform cursor-pointer ${
-                        avatar === url ? 'ring-2 ring-white scale-110' : 'opacity-50 hover:opacity-100'
-                      }`}
-                    >
-                      <img src={url} alt={`Preset ${i}`} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-                    </button>
-                  ))}
-                </div>
+              <div className="flex-1 min-w-0 space-y-2">
+                <p className="text-[11px] text-zinc-400">{t('avatarHint')}</p>
+                <button
+                  type="button"
+                  onClick={() => setIsAvatarStudioOpen(true)}
+                  className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-xs text-white font-medium inline-flex items-center gap-1.5 transition-colors"
+                >
+                  <ImagePlus className="w-3.5 h-3.5" />
+                  {t('changeAvatar')}
+                </button>
               </div>
             </div>
 
@@ -418,6 +383,15 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
           </button>
         </div>
       </motion.div>
+
+      <AvatarStudioModal
+        isOpen={isAvatarStudioOpen}
+        onClose={() => setIsAvatarStudioOpen(false)}
+        onApply={setAvatar}
+        personaName={name}
+        category={category}
+        currentAvatar={avatar}
+      />
     </div>
   );
 };

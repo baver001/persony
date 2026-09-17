@@ -10,6 +10,7 @@ import { PwaInstallBanner } from './components/PwaInstallBanner';
 import { soundFX } from './utils/soundEffects';
 import {
   buildCallHistoryMessages,
+  collectCallTranscripts,
   isCallSessionAlreadySaved,
 } from './utils/callTranscriptPersistence';
 import { SseStreamParser } from './lib/sseParser';
@@ -229,6 +230,7 @@ function ChatApp() {
 
   // Modals & Panels
   const [isCallOpen, setIsCallOpen] = useState(false);
+  const [callInsightsLoadingId, setCallInsightsLoadingId] = useState<string | null>(null);
   const [callingPersona, setCallingPersona] = useState<Persona>(selectedPersona);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
@@ -664,6 +666,94 @@ function ChatApp() {
     setIsCallOpen(true);
   };
 
+  const handleDismissCallInsights = (personaId: string, summaryMessageId: string) => {
+    setMessagesByPersona((prev) => ({
+      ...prev,
+      [personaId]: (prev[personaId] || []).map((m) =>
+        m.id === summaryMessageId ? { ...m, callInsightsStatus: 'dismissed' } : m
+      ),
+    }));
+  };
+
+  const handleRequestCallInsights = async (personaId: string, summaryMessageId: string) => {
+    const persona = personas.find((p) => p.id === personaId) ?? selectedPersona;
+    const messages = messagesByPersona[personaId] || [];
+    const summaryMsg = messages.find((m) => m.id === summaryMessageId);
+    const sessionId = summaryMsg?.voiceCallSessionId;
+    if (!summaryMsg || !sessionId) return;
+
+    const insightsId = `call_insights_${sessionId}`;
+    if (messages.some((m) => m.id === insightsId)) {
+      setMessagesByPersona((prev) => ({
+        ...prev,
+        [personaId]: (prev[personaId] || []).map((m) =>
+          m.id === summaryMessageId ? { ...m, callInsightsStatus: 'generated' } : m
+        ),
+      }));
+      return;
+    }
+
+    const transcripts = collectCallTranscripts(messages, sessionId).map((t) => ({
+      sender: t.sender,
+      text: t.text,
+    }));
+    if (transcripts.length === 0) return;
+
+    setCallInsightsLoadingId(summaryMessageId);
+    try {
+      const res = await fetch('/api/summarize-call', {
+        method: 'POST',
+        headers: await getApiHeaders(),
+        body: JSON.stringify({
+          personaName: persona.name,
+          personaTagline: persona.tagline,
+          systemPrompt: persona.systemPrompt,
+          durationSecs: summaryMsg.callDurationSecs || 0,
+          transcripts,
+          locale: i18n.language,
+        }),
+      });
+
+      if (!res.ok) {
+        const errJson = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(errJson?.error || i18n.t('chat:callInsightsFailed'));
+      }
+
+      const data = (await res.json()) as { summary?: string };
+      if (!data.summary?.trim()) {
+        throw new Error(i18n.t('chat:callInsightsFailed'));
+      }
+
+      const now = Date.now();
+      setMessagesByPersona((prev) => {
+        const list = prev[personaId] || [];
+        if (list.some((m) => m.id === insightsId)) return prev;
+
+        return {
+          ...prev,
+          [personaId]: [
+            ...list.map((m) =>
+              m.id === summaryMessageId ? { ...m, callInsightsStatus: 'generated' as const } : m
+            ),
+            {
+              id: insightsId,
+              characterId: personaId,
+              sender: 'character',
+              text: data.summary!.trim(),
+              timestamp: now,
+              isCallInsights: true,
+              voiceCallSessionId: sessionId,
+            },
+          ],
+        };
+      });
+    } catch (err) {
+      console.error('Call insights generation failed:', err);
+    } finally {
+      setCallInsightsLoadingId(null);
+    }
+  };
+
   const handleSelectPersona = (persona: Persona) => {
     setSelectedPersona(persona);
     setMobileView('chat');
@@ -693,6 +783,22 @@ function ChatApp() {
     });
     setSelectedPersona(saved);
     setMobileView('chat');
+  };
+
+  const handleAvatarChange = async (character: Persona, avatar: string) => {
+    const updated: Persona = { ...character, avatar, isCustom: true };
+    let saved = updated;
+
+    if (isSignedIn && character.isCustom) {
+      const cloud = await updatePersonaOnCloud(saved);
+      if (cloud) saved = { ...cloud, isCustom: true };
+    }
+
+    setPersonas((prev) => prev.map((p) => (p.id === saved.id ? saved : p)));
+    if (selectedPersona.id === saved.id) {
+      setSelectedPersona(saved);
+    }
+    setProfilePersona((prev) => (prev?.id === saved.id ? saved : prev));
   };
 
   const handleDeletePersona = (id: string) => {
@@ -835,6 +941,13 @@ function ChatApp() {
             onEndActiveCall={() => setIsCallOpen(false)}
             onRetryMessage={handleRetryLastMessage}
             onDeleteMessage={handleDeleteMessage}
+            onRequestCallInsights={(summaryMessageId) =>
+              void handleRequestCallInsights(selectedPersona.id, summaryMessageId)
+            }
+            onDismissCallInsights={(summaryMessageId) =>
+              handleDismissCallInsights(selectedPersona.id, summaryMessageId)
+            }
+            callInsightsLoadingId={callInsightsLoadingId}
             hasOlderMessages={hasOlderMessages[selectedPersona.id] ?? false}
             isLoadingOlderMessages={isLoadingOlderMessages}
             onLoadOlderMessages={handleLoadOlderMessages}
@@ -901,6 +1014,7 @@ function ChatApp() {
         }}
         onDelete={handleDeletePersona}
         onClearChat={handleClearChat}
+        onAvatarChange={handleAvatarChange}
       />
     </div>
   );

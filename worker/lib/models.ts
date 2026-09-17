@@ -13,5 +13,11 @@ export const GEMINI_TRANSCRIBE_MODELS = ['gemini-3.5-transcribe', 'gemini-3.5-fl
 /** Persona JSON generator — same stack as chat. */
 export const GEMINI_GENERATOR_MODELS = ['gemini-3.8-flash', 'gemini-3.5-flash-lite'] as const;
 
+/** Persona avatar image generation (native image output). */
+export const GEMINI_AVATAR_IMAGE_MODELS = [
+  'gemini-2.0-flash-preview-image-generation',
+  'gemini-2.0-flash-exp-image-generation',
+] as const;
+
 /** Real-time voice calls (Live API) — stable gemini-3.8-live. */
 export const GEMINI_LIVE_MODEL = 'gemini-3.8-live';

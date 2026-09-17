@@ -2,6 +2,7 @@ import { GoogleGenAI, Modality, LiveServerMessage } from '@google/genai';
 import { formatCleanErrorMessage } from './errors';
 import {
   GEMINI_CHAT_MODELS,
+  GEMINI_AVATAR_IMAGE_MODELS,
   GEMINI_GENERATOR_MODELS,
   GEMINI_LIVE_MODEL,
   GEMINI_TRANSCRIBE_MODELS,
@@ -195,6 +196,115 @@ export async function handleGenerateCharacter(apiKey: string, prompt: string): P
   }
 
   throw lastErr || new Error('Не удалось сгенерировать персонажа');
+}
+
+export async function handleSummarizeCall(
+  apiKey: string,
+  input: {
+    personaName: string;
+    personaTagline?: string;
+    systemPrompt?: string;
+    durationSecs: number;
+    locale?: string;
+    transcripts: Array<{ sender: 'user' | 'character'; text: string }>;
+  }
+): Promise<{ summary: string }> {
+  const ai = getAIClient(apiKey);
+  const locale = input.locale?.toLowerCase() ?? 'en';
+  const replyLanguage = locale.startsWith('ru') ? 'Russian' : 'English';
+
+  const dialogue = input.transcripts
+    .map((turn) => {
+      const speaker = turn.sender === 'user' ? 'User' : input.personaName;
+      return `${speaker}: ${turn.text.trim()}`;
+    })
+    .join('\n');
+
+  const mins = Math.floor(input.durationSecs / 60);
+  const secs = input.durationSecs % 60;
+  const durationLabel = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+  const promptText = `You are ${input.personaName}${input.personaTagline ? ` (${input.personaTagline})` : ''}.
+${input.systemPrompt ? `Character context:\n${input.systemPrompt.slice(0, 2000)}\n` : ''}
+A voice call just ended (duration ${durationLabel}). Below is the transcript.
+
+Write a short recap message AS THIS CHARACTER in first person — as if you are sending a follow-up note in chat after the call.
+Focus on: key insights, decisions, open questions, and 1–2 concrete next steps if relevant.
+Do NOT repeat the whole dialogue. Do NOT use markdown headings. Use short paragraphs or a few bullet lines with "- ".
+Keep it under 120 words. Write in ${replyLanguage}.
+
+Transcript:
+${dialogue}`;
+
+  let lastErr: unknown = null;
+
+  for (const model of GEMINI_GENERATOR_MODELS) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: promptText,
+        config: {
+          temperature: 0.6,
+        },
+      });
+
+      const summary = response.text?.trim();
+      if (summary) return { summary };
+    } catch (err) {
+      lastErr = err;
+      const kind = classifyProviderError(err);
+      if (!shouldFallbackToNextModel(kind, false)) break;
+    }
+  }
+
+  throw lastErr || new Error('Call summary generation failed');
+}
+
+export async function handleGenerateAvatar(
+  apiKey: string,
+  prompt: string,
+  personaName?: string
+): Promise<{ imageDataUrl: string }> {
+  const ai = getAIClient(apiKey);
+
+  const portraitPrompt = [
+    'Create a single square portrait avatar for a fictional AI companion in a messenger app.',
+    personaName ? `Character name: ${personaName}.` : '',
+    `Creative direction: ${prompt}.`,
+    'Centered face or bust, clean simple background, polished digital art, friendly and readable at small size.',
+    'No text, no watermark, no collage, no multiple people.',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  let lastErr: unknown = null;
+
+  for (const model of GEMINI_AVATAR_IMAGE_MODELS) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: portraitPrompt,
+        config: {
+          responseModalities: [Modality.TEXT, Modality.IMAGE],
+        },
+      });
+
+      const parts = response.candidates?.[0]?.content?.parts ?? [];
+      for (const part of parts) {
+        const data = part.inlineData?.data;
+        if (data) {
+          const mime = part.inlineData?.mimeType || 'image/png';
+          return { imageDataUrl: `data:${mime};base64,${data}` };
+        }
+      }
+    } catch (err) {
+      lastErr = err;
+      const kind = classifyProviderError(err);
+      if (!shouldFallbackToNextModel(kind, false)) break;
+    }
+  }
+
+  throw lastErr || new Error('Avatar image generation failed');
 }
 
 export type LiveClientSocket = {
