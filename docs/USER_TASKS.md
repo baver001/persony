@@ -37,6 +37,12 @@
 4. В Clerk → **Domains** добавить:
    - Allowed origins: `https://beta.persony.org`, `http://localhost:5173`
    - Redirect URLs: `https://beta.persony.org`, `http://localhost:5173`
+5. **Обязательно для Production:** настроить DNS для `clerk.persony.org` (Frontend API):
+   - Clerk Dashboard → **Configure → Domains**: https://dashboard.clerk.com/last-active?path=domains
+   - Скопировать CNAME для `clerk` → в Cloudflare DNS для `persony.org`
+   - Режим записи: **DNS only** (серое облако), не Proxied — иначе Clerk не пройдёт проверку
+   - Дождаться Verify в Clerk (до 48 ч, обычно минуты)
+   - Без этой записи SDK падает: `failed_to_load_clerk_js` / `clerk.persony.org net::ERR_FAILED`
 
 ## 5. Безопасность
 
