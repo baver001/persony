@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { ClerkProvider, useAuth } from '@clerk/clerk-react';
 import { fetchAppConfig, type AppConfig } from '../lib/api/config';
 import { setAuthTokenGetter } from '../lib/api/auth';
+import { getPersonyClerkAppearance, personyClerkLocalization } from '../lib/clerkAppearance';
 
 type PersonyAuthState = {
   isLoaded: boolean;
@@ -98,8 +99,25 @@ function AuthSetupRequired({ children }: { children: React.ReactNode }) {
   );
 }
 
+function useDocumentTheme(): 'dark' | 'light' {
+  const [theme, setTheme] = useState<'dark' | 'light'>(() =>
+    document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+  );
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const sync = () => setTheme(root.classList.contains('dark') ? 'dark' : 'light');
+    const observer = new MutationObserver(sync);
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
+  return theme;
+}
+
 export function PersonyAuthProvider({ children }: { children: React.ReactNode }) {
   const [config, setConfig] = useState<AppConfig | null>(null);
+  const theme = useDocumentTheme();
 
   useEffect(() => {
     void fetchAppConfig().then(setConfig);
@@ -109,11 +127,15 @@ export function PersonyAuthProvider({ children }: { children: React.ReactNode })
     const bootValue: PersonyAuthState = {
       isLoaded: false,
       isSignedIn: false,
-      clerkEnabled: Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY),
+      clerkEnabled: false,
       authRequired: !import.meta.env.DEV,
     };
     return (
-      <PersonyAuthContext.Provider value={bootValue}>{children}</PersonyAuthContext.Provider>
+      <PersonyAuthContext.Provider value={bootValue}>
+        <div className="fixed inset-0 flex items-center justify-center bg-py-app text-py-text-muted text-sm">
+          Загрузка…
+        </div>
+      </PersonyAuthContext.Provider>
     );
   }
 
@@ -122,7 +144,12 @@ export function PersonyAuthProvider({ children }: { children: React.ReactNode })
 
   if (publishableKey) {
     return (
-      <ClerkProvider publishableKey={publishableKey} afterSignOutUrl="/">
+      <ClerkProvider
+        publishableKey={publishableKey}
+        afterSignOutUrl="/"
+        appearance={getPersonyClerkAppearance(theme)}
+        localization={personyClerkLocalization}
+      >
         <ClerkBridge authRequired={config.authRequired}>{children}</ClerkBridge>
       </ClerkProvider>
     );

@@ -43,23 +43,12 @@ export async function requireOwner(c: Context<{ Bindings: PersonyEnv }>) {
   return requireOwnerAccess(c);
 }
 
-/** OWNER role + optional Clerk allowlist (`PERSONY_OWNER_CLERK_IDS`). */
+/** OWNER access is granted by `user_roles` (source of truth after bootstrap). */
 export async function requireOwnerAccess(
   c: Context<{ Bindings: PersonyEnv }>
 ): Promise<{ userId: string }> {
   const userId = await requireUser(c);
   if (!c.env.DB) throw new Error('Database not configured');
-
-  const auth = await getAuthContext(c);
-  const allowlist = parseOwnerClerkIds(c.env);
-
-  if (allowlist.length > 0) {
-    const clerkUserId = auth.authProviderUserId;
-    if (!clerkUserId || !allowlist.includes(clerkUserId)) {
-      throw new RoleRequiredError('OWNER');
-    }
-    await grantRole(c.env.DB, userId, 'OWNER');
-  }
 
   const allowed = await userHasRole(c.env.DB, userId, 'OWNER');
   if (!allowed) throw new RoleRequiredError('OWNER');

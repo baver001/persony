@@ -15,6 +15,23 @@ type OwnerPersonaDto = {
   starterMessages?: string[];
 };
 
+type PublicPersonaDto = {
+  id: string;
+  slug?: string;
+  name: string;
+  tagline: string;
+  description: string;
+  avatarUrl: string;
+  voice: Persona['voice'];
+  category: Persona['category'];
+  badge?: string;
+  color?: string;
+  starterMessages?: string[];
+  disclosure?: string;
+  isOfficial?: boolean;
+  sortOrder?: number;
+};
+
 function dtoToPersona(dto: OwnerPersonaDto): Persona {
   return {
     id: dto.id,
@@ -31,6 +48,48 @@ function dtoToPersona(dto: OwnerPersonaDto): Persona {
     isCustom: true,
     createdAt: Date.now(),
   };
+}
+
+function publicDtoToPersona(dto: PublicPersonaDto): Persona {
+  return {
+    id: dto.id,
+    name: dto.name,
+    tagline: dto.tagline,
+    description: dto.description,
+    systemPrompt: '',
+    avatar: dto.avatarUrl,
+    voice: dto.voice,
+    category: dto.category,
+    badge: dto.badge,
+    color: dto.color || '#6366f1',
+    starterMessages: dto.starterMessages,
+    isOfficial: dto.isOfficial,
+    sortOrder: dto.sortOrder,
+    disclosure: dto.disclosure,
+  };
+}
+
+export async function fetchAvailablePersonas(): Promise<Persona[]> {
+  const res = await fetch('/api/personas', { headers: await getApiHeaders() });
+  if (!res.ok) return [];
+  const data = (await res.json()) as { personas?: PublicPersonaDto[] };
+  return (data.personas ?? []).map(publicDtoToPersona);
+}
+
+export async function installPersona(personaId: string): Promise<boolean> {
+  const res = await fetch(`/api/me/personas/${personaId}/install`, {
+    method: 'POST',
+    headers: await getApiHeaders(),
+  });
+  return res.ok;
+}
+
+export async function uninstallPersona(personaId: string): Promise<boolean> {
+  const res = await fetch(`/api/me/personas/${personaId}`, {
+    method: 'DELETE',
+    headers: await getApiHeaders(),
+  });
+  return res.ok;
 }
 
 export async function fetchMyPersonas(): Promise<Persona[]> {

@@ -22,6 +22,11 @@ export interface Persona {
   isCustom?: boolean;
   createdAt?: number;
   starterMessages?: string[];
+  isOfficial?: boolean;
+  sortOrder?: number;
+  disclosure?: string;
+  installedVersion?: number;
+  pinned?: boolean;
 }
 
 export interface ChatMessage {

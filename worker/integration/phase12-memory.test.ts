@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { grantRole } from '../repositories/role-repository';
 import { userHasRole } from '../repositories/role-repository';
 import { listMemoriesForUser } from '../repositories/memory-repository';
-import { ensureAthenaInstalled } from '../repositories/user-persona-repository';
+import { ensureOfficialPersonasSeeded } from '../repositories/persona-repository';
+import { installPersonaForUser } from '../repositories/user-persona-repository';
+import { OFFICIAL_PERSONA_IDS } from '../../shared/personas/official-roster';
 import {
   buildMemoryContextBlocks,
   extractMemoryCandidatesFromText,
@@ -78,8 +80,19 @@ describe('Phase 1.2 memory foundation', () => {
     expect(await userHasRole(db, userB, 'OWNER')).toBe(false);
   });
 
-  it('auto-installs Athena for user', async () => {
-    await ensureAthenaInstalled(db, userA, 1);
+  it('seeds all six official personas idempotently', async () => {
+    await ensureOfficialPersonasSeeded(db);
+    await ensureOfficialPersonasSeeded(db);
+    const { results } = await db
+      .prepare(`SELECT id FROM personas WHERE owner_user_id = 'system'`)
+      .all<{ id: string }>();
+    const ids = (results ?? []).map((r) => r.id).sort();
+    expect(ids).toEqual([...OFFICIAL_PERSONA_IDS].sort());
+  });
+
+  it('installs persona only when user starts chat', async () => {
+    await ensureOfficialPersonasSeeded(db);
+    await installPersonaForUser(db, userA, 'athena', 1);
     const row = await db
       .prepare(`SELECT persona_id FROM user_personas WHERE user_id = ?`)
       .bind(userA)

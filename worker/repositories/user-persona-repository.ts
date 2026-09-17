@@ -1,4 +1,3 @@
-import { ATHENA_PERSONA_ID } from '../../shared/personas/athena-spec';
 import { generateId } from '../lib/ids';
 
 export type InstalledPersonaRecord = {
@@ -64,10 +63,15 @@ export async function uninstallPersonaForUser(
   return (result.meta?.changes ?? 0) > 0;
 }
 
-export async function ensureAthenaInstalled(
+export async function setPersonaPinned(
   db: D1Database,
   userId: string,
-  athenaVersion = 1
-): Promise<void> {
-  await installPersonaForUser(db, userId, ATHENA_PERSONA_ID, athenaVersion);
+  personaId: string,
+  pinned: boolean
+): Promise<boolean> {
+  const result = await db
+    .prepare(`UPDATE user_personas SET pinned = ? WHERE user_id = ? AND persona_id = ?`)
+    .bind(pinned ? 1 : 0, userId, personaId)
+    .run();
+  return (result.meta?.changes ?? 0) > 0;
 }

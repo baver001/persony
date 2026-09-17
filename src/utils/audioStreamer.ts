@@ -18,6 +18,7 @@ export class AudioStreamer {
   private outputAudioCtx: AudioContext | null = null;
   private mediaStream: MediaStream | null = null;
   private processor: ScriptProcessorNode | null = null;
+  private workletNode: AudioWorkletNode | null = null;
   private source: MediaStreamAudioSourceNode | null = null;
   private silentGain: GainNode | null = null;
   private nextPlayTime = 0;
@@ -102,20 +103,13 @@ export class AudioStreamer {
     this.inputAnalyser.fftSize = 256;
     this.source.connect(this.inputAnalyser);
 
-    // ScriptProcessor kept for broad mobile support; mic NOT routed to speakers
-    this.processor = this.inputAudioCtx.createScriptProcessor(this.processorBufferSize, 1, 1);
     this.silentGain = this.inputAudioCtx.createGain();
     this.silentGain.gain.value = 0;
-
-    this.source.connect(this.processor);
-    this.processor.connect(this.silentGain);
     this.silentGain.connect(this.inputAudioCtx.destination);
 
     const inputDataArray = new Uint8Array(this.inputAnalyser.frequencyBinCount);
 
-    this.processor.onaudioprocess = (e) => {
-      const channelData = e.inputBuffer.getChannelData(0);
-
+    const pushMicSamples = (channelData: Float32Array) => {
       const now = performance.now();
       if (this.inputAnalyser && this.onMicVolumeChange && now - this.lastMicVolumeTick > 100) {
         this.inputAnalyser.getByteFrequencyData(inputDataArray);
@@ -130,6 +124,26 @@ export class AudioStreamer {
         this.pendingUplink.push(resampled);
       }
     };
+
+    try {
+      await this.inputAudioCtx.audioWorklet.addModule('/audio-capture-processor.js');
+      this.workletNode = new AudioWorkletNode(this.inputAudioCtx, 'persony-capture-processor');
+      this.workletNode.port.onmessage = (event: MessageEvent<Float32Array>) => {
+        if (event.data instanceof Float32Array) {
+          pushMicSamples(event.data);
+        }
+      };
+      this.source.connect(this.workletNode);
+      this.workletNode.connect(this.silentGain);
+    } catch (workletErr) {
+      console.warn('[Persony Call] AudioWorklet unavailable, falling back to ScriptProcessor:', workletErr);
+      this.processor = this.inputAudioCtx.createScriptProcessor(this.processorBufferSize, 1, 1);
+      this.source.connect(this.processor);
+      this.processor.connect(this.silentGain);
+      this.processor.onaudioprocess = (e) => {
+        pushMicSamples(e.inputBuffer.getChannelData(0));
+      };
+    }
 
     this.uplinkFlushTimer = window.setInterval(() => {
       if (this.pendingUplink.length === 0) return;
@@ -277,6 +291,11 @@ export class AudioStreamer {
 
     this.stopAllPlayback();
 
+    if (this.workletNode) {
+      this.workletNode.port.onmessage = null;
+      this.workletNode.disconnect();
+      this.workletNode = null;
+    }
     if (this.processor) {
       this.processor.disconnect();
       this.processor.onaudioprocess = null;

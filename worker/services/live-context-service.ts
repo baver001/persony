@@ -5,11 +5,11 @@ import { ConversationAccessError } from './chat-service';
 import { buildMemoryContextBlocks } from './memory-service';
 import { resolveCompiledInstructions } from './persona-compiler';
 import { PersonaNotFoundError, resolvePersonaForInference } from './persona-service';
-import type { PersonaRecord } from '../domain/persona';
+import type { PersonaRuntime } from '../domain/persona';
 import type { PersonyEnv } from '../types/env';
 
 export type LiveConversationContext = {
-  persona: PersonaRecord;
+  persona: PersonaRuntime;
   compiledSystemPrompt: string;
   recentChatContext: Array<{ sender: string; text: string }>;
 };

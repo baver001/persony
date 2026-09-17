@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { toPersonaOwnerDTO, toPersonaPublicDTO } from './persona-dto';
-import type { PersonaRecord } from './persona';
+import type { PersonaRecord, PersonaRuntime } from './persona';
 
-const sample: PersonaRecord = {
+const sample: PersonaRuntime = {
   id: 'p1',
   ownerUserId: 'user-1',
+  slug: 'p1',
   name: 'Test',
   tagline: 'tag',
   description: 'desc',
@@ -12,8 +13,11 @@ const sample: PersonaRecord = {
   voice: 'Puck',
   category: 'custom',
   visibility: 'private',
+  status: 'active',
   currentVersion: 1,
   systemPrompt: 'SECRET_PROMPT',
+  configurationJson: null,
+  resolvedVersion: 1,
 };
 
 describe('persona DTO', () => {

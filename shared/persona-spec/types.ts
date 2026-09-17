@@ -37,6 +37,7 @@ export type LocalizedPresentation = Record<
     tagline?: string;
     description?: string;
     starterMessages?: string[];
+    disclosure?: string;
   }
 >;
 

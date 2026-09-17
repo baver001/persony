@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { toPersonaOwnerDTO, toPersonaPublicDTO } from '../domain/persona-dto';
 import {
-  ensureDefaultPersonasSeeded,
+  ensureOfficialPersonasSeeded,
   getAccessiblePersona,
   listPublicPersonas,
   listUserPersonas,
@@ -23,7 +23,7 @@ import type { PersonyEnv } from '../types/env';
 export const personaRoutes = new Hono<{ Bindings: PersonyEnv }>();
 
 personaRoutes.get('/personas', async (c) => {
-  if (c.env.DB) await ensureDefaultPersonasSeeded(c.env.DB);
+  if (c.env.DB) await ensureOfficialPersonasSeeded(c.env.DB);
   const personas = await listPublicPersonas(c.env, c.env.DB);
   return c.json({ personas });
 });

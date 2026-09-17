@@ -22,7 +22,6 @@ import {
   PhoneOff,
   ChevronDown,
   ChevronUp,
-  Paperclip,
   Search,
   Pin,
   X,
@@ -335,7 +334,6 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 }) => {
   const [inputText, setInputText] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const [expandedCallId, setExpandedCallId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -836,10 +834,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         id="messages-scroll-container"
         ref={scrollContainerRef}
         onScroll={handleMessagesScroll}
-        className={`flex-1 overflow-y-auto p-3 sm:p-6 space-y-3.5 scrollbar-thin scrollbar-thumb-white/10 min-h-0 ${
+        className={`flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 min-h-0 ${
           isCallingActive ? 'py-call-pill-offset' : ''
         }`}
       >
+        <div className="py-chat-thread py-3 sm:py-6 space-y-3.5 min-h-full">
         {/* Date Badge */}
         <div className="flex justify-center my-2 select-none">
           <span
@@ -855,7 +854,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
         {/* If no messages, render character intro */}
         {messages.length === 0 && (
-          <div className="max-w-md mx-auto my-6 text-center space-y-4">
+          <div className="max-w-lg mx-auto my-6 text-center space-y-4">
             <div
               className={`w-20 h-20 rounded-full mx-auto overflow-hidden shadow-md ${
                 isCallingActive
@@ -970,7 +969,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 onTouchEnd={handleMessageTouchEnd}
                 onTouchCancel={handleMessageTouchEnd}
               >
-                <div className={`rounded-2xl p-3 shadow-md w-full max-w-[min(90vw,20rem)] sm:max-w-sm border ${
+                <div className={`rounded-2xl p-3 shadow-md w-full max-w-md ml-auto border ${
                   isDark
                     ? 'bg-zinc-800 text-white border-zinc-700'
                     : 'bg-neutral-800 text-white border-neutral-700'
@@ -1059,8 +1058,12 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
               {/* Message Bubble */}
               <div
-                className={`relative max-w-[85%] sm:max-w-md md:max-w-lg px-4 py-2.5 text-sm leading-relaxed transition-all ${
-                  isUser ? 'py-bubble-out' : 'py-bubble-in'
+                className={`relative text-sm leading-relaxed transition-all ${
+                  isUser
+                    ? 'max-w-[min(100%,28rem)] px-4 py-2.5 py-bubble-out'
+                    : displayMsg.isVoiceNote || msg.isError
+                      ? 'max-w-[min(100%,28rem)] px-4 py-2.5 py-bubble-in'
+                      : 'w-full max-w-full px-0 sm:px-1 py-1'
                 }`}
               >
                 {!isUser && (
@@ -1125,9 +1128,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 className="w-full h-full object-cover"
               />
             </div>
-            <div
-              className="relative max-w-[85%] sm:max-w-md md:max-w-lg px-4 py-2.5 text-sm leading-relaxed py-bubble-in"
-            >
+            <div className="relative w-full max-w-full px-0 sm:px-1 py-1 text-sm leading-relaxed">
               <div className="text-[11px] font-bold text-zinc-400 mb-1 flex items-center gap-1.5">
                 <span>{character.name}</span>
               </div>
@@ -1146,43 +1147,42 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         )}
 
         <div ref={messagesEndRef} />
+        </div>
       </div>
 
-      {/* Quick Emoji Reaction Bar (Toggleable) */}
-      {showEmojiPicker && (
-        <div
-          className={`flex items-center gap-2 px-4 py-2 border-t text-lg overflow-x-auto ${
-            isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-neutral-100 border-neutral-200'
-          }`}
-        >
-          {EMOJI_LIST.map((emo) => (
-            <button
-              key={emo}
-              type="button"
-              onClick={() => {
-                setInputText((prev) => prev + emo);
-                setShowEmojiPicker(false);
-              }}
-              className="p-1 hover:scale-125 transition-transform"
-            >
-              {emo}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Bottom Input Bar */}
+      {/* Bottom Input Bar — transparent strip, thread-width composer */}
       <div
         id="chat-input-bar"
-        className={`relative z-10 px-3 sm:px-4 py-composer-bar border-t transition-all ${
-          isDark
-            ? 'bg-[#18181b] border-zinc-800'
-            : 'bg-white border-neutral-200'
-        }`}
+        className="relative z-10 shrink-0 bg-transparent pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
       >
-        <div className="flex items-center gap-2 w-full">
+        {showEmojiPicker && (
+          <div className="py-chat-thread mb-2">
+            <div
+              className={`flex items-center gap-2 px-1 py-2 text-lg overflow-x-auto rounded-2xl border ${
+                isDark ? 'border-zinc-800/80 bg-zinc-900/40' : 'border-neutral-200 bg-neutral-50/80'
+              }`}
+            >
+              {EMOJI_LIST.map((emo) => (
+                <button
+                  key={emo}
+                  type="button"
+                  onClick={() => {
+                    setInputText((prev) => prev + emo);
+                    setShowEmojiPicker(false);
+                  }}
+                  className="p-1 hover:scale-125 transition-transform"
+                >
+                  {emo}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="py-chat-thread">
+        <div className="py-composer-row">
           {isRecordingVoice ? (
-            <div className="flex-1 flex items-center justify-between bg-rose-500/15 border border-rose-500/30 rounded-[22px] px-4 py-2 text-xs text-rose-400 min-h-[44px]">
+            <div className="flex-1 flex items-center justify-between bg-rose-500/15 border border-rose-500/30 rounded-[26px] px-4 min-h-11 text-xs text-rose-400">
               <div className="flex items-center gap-2.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
                 <span className="font-mono font-bold text-sm">
@@ -1210,30 +1210,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             </div>
           ) : (
             <>
-              <div
-                className={`flex-1 flex items-center min-h-[44px] rounded-[22px] px-1.5 sm:px-2 py-1 transition-all border min-w-0 gap-0.5 ${
-                  isDark
-                    ? 'bg-zinc-800/90 border-zinc-700/80 focus-within:border-zinc-500'
-                    : 'bg-[#f4f4f5] border-transparent focus-within:border-neutral-400'
-                }`}
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (character.starterMessages && character.starterMessages[0]) {
-                      setInputText(character.starterMessages[0]);
-                    }
-                  }}
-                  className={`p-2 rounded-full transition-colors shrink-0 cursor-pointer ${
-                    isDark
-                      ? 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700/60'
-                      : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200/80'
-                  }`}
-                  title="Прикрепить (Подставить тему)"
-                >
-                  <Paperclip className="w-5 h-5" />
-                </button>
-
+              <div className="py-composer-input">
                 <textarea
                   ref={textareaRef}
                   rows={1}
@@ -1241,7 +1218,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Сообщение..."
-                  className={`flex-1 min-w-0 resize-none bg-transparent text-sm leading-relaxed focus:outline-none overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-1 py-1.5 ${
+                  className={`flex-1 min-w-0 resize-none bg-transparent text-sm leading-relaxed focus:outline-none overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden py-1 ${
                     isDark
                       ? 'text-zinc-100 placeholder-zinc-500'
                       : 'text-neutral-900 placeholder-neutral-400'
@@ -1303,11 +1280,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 id="quick-live-call-btn"
                 type="button"
                 onClick={() => (isCallingActive ? onExpandCall?.() : onStartCall(character))}
-                className={`w-11 h-11 rounded-full transition-all shrink-0 cursor-pointer flex items-center justify-center ${
+                className={`py-composer-action transition-all cursor-pointer ${
                   isCallingActive
                     ? 'bg-py-accent/15 text-py-accent border border-py-accent/40 hover:bg-py-accent/25'
                     : isDark
-                    ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700'
+                    ? 'bg-py-elevated hover:bg-zinc-700 text-zinc-300 hover:text-white border border-py-border'
                     : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-800 border border-neutral-200'
                 }`}
                 title={isCallingActive ? 'Развернуть звонок' : 'Голосовой звонок'}
@@ -1316,6 +1293,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               </button>
             </>
           )}
+        </div>
         </div>
       </div>
 

@@ -7,6 +7,7 @@ import {
   type MemoryRecord,
   type MemoryScope,
 } from '../repositories/memory-repository';
+import { insertMemoryCandidate } from '../repositories/memory-candidate-repository';
 
 const REMEMBER_PATTERNS = [
   /\bremember(?:\s+that)?\s+(.+)/i,
@@ -91,6 +92,17 @@ export async function persistMemoryCandidates(
 
   for (const candidate of candidates) {
     if (candidate.sensitivity !== 'normal' && !options?.allowSensitiveAutoStore) {
+      await insertMemoryCandidate(db, {
+        userId,
+        personaId,
+        conversationId,
+        scope: candidate.scope,
+        kind: candidate.kind,
+        content: candidate.content,
+        sensitivity: candidate.sensitivity,
+        confidence: candidate.confidence,
+        sourceMessageId: userMessageId,
+      });
       continue;
     }
 

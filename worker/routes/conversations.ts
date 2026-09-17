@@ -9,7 +9,7 @@ import {
   softDeleteConversation,
 } from '../repositories/conversation-repository';
 import { listMessages } from '../repositories/message-repository';
-import { ensureDefaultPersonasSeeded, getAccessiblePersona } from '../repositories/persona-repository';
+import { ensureOfficialPersonasSeeded, getAccessiblePersona } from '../repositories/persona-repository';
 import {
   ConversationAccessError,
   InferenceInProgressError,
@@ -37,7 +37,7 @@ conversationRoutes.post('/conversations', async (c) => {
     const userId = await requireUser(c);
     if (!c.env.DB) return c.json({ error: 'Database not configured' }, 503);
 
-    await ensureDefaultPersonasSeeded(c.env.DB);
+    await ensureOfficialPersonasSeeded(c.env.DB);
     const body = await c.req.json();
     const parsed = createConversationSchema.safeParse(body);
     if (!parsed.success) return c.json({ error: 'Invalid payload' }, 400);

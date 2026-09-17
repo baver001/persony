@@ -1,21 +1,15 @@
 import React, { useState } from 'react';
 import {
   Search,
-  Plus,
-  Moon,
-  Sun,
-  Volume2,
-  VolumeX,
   Phone,
   X,
   PanelLeftClose,
   SquarePen,
   CheckCheck,
-  ShieldAlert,
-  Settings2,
 } from 'lucide-react';
 import { Persona, ChatMessage } from '../types';
 import { PersonyLogo } from './PersonyLogo';
+import { SidebarBottomBar } from './SidebarBottomBar';
 
 interface SidebarProps {
   personas: Persona[];
@@ -31,7 +25,6 @@ interface SidebarProps {
   onResetDefaults?: () => void;
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
-  authMenu?: React.ReactNode;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -47,10 +40,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleSound,
   onResetDefaults,
   onToggleSidebar,
-  authMenu,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 
   const isDark = theme === 'dark';
 
@@ -95,8 +86,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-1">
-            {authMenu}
+          <div className="flex items-center gap-1 shrink-0">
             {/* Create Persona Button */}
             <button
               id="sidebar-create-persona-btn"
@@ -323,106 +313,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
       </div>
 
-      {/* 3. Bottom Bar: Theme, Sound & Settings */}
-      <div
-        className={`px-3 py-2.5 border-t text-xs flex items-center justify-between shrink-0 ${
-          isDark ? 'bg-[#18181b] border-zinc-800 text-zinc-400' : 'bg-neutral-50 border-neutral-200 text-neutral-600'
-        }`}
-      >
-        <div className="flex items-center gap-1">
-          {/* Theme Toggle */}
-          <button
-            onClick={onToggleTheme}
-            className={`py-touch-target p-2 rounded-lg transition-colors cursor-pointer ${
-              isDark ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200' : 'hover:bg-neutral-200 text-neutral-600'
-            }`}
-            title={isDark ? 'Включить светлую тему' : 'Включить тёмную тему'}
-          >
-            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </button>
-
-          {/* Sound Toggle */}
-          <button
-            onClick={onToggleSound}
-            className={`py-touch-target p-2 rounded-lg transition-colors cursor-pointer ${
-              isDark ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200' : 'hover:bg-neutral-200 text-neutral-600'
-            }`}
-            title="Звуковые эффекты"
-          >
-            {soundEnabled ? (
-              <Volume2 className="w-4 h-4 text-emerald-400" />
-            ) : (
-              <VolumeX className="w-4 h-4 text-zinc-500" />
-            )}
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 text-[11px]">
-            <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            <span className="text-zinc-400">В сети</span>
-          </div>
-
-          {/* Settings Menu Trigger */}
-          <div className="relative">
-            <button
-              onClick={() => setShowSettingsMenu(!showSettingsMenu)}
-              className={`py-touch-target p-2 rounded-lg transition-colors cursor-pointer ${
-                isDark ? 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200' : 'hover:bg-neutral-200 text-neutral-600'
-              }`}
-              title="Настройки"
-            >
-              <Settings2 className="w-4 h-4" />
-            </button>
-
-            {showSettingsMenu && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setShowSettingsMenu(false)}
-                />
-                <div
-                  className={`absolute bottom-full right-0 mb-2 w-52 rounded-xl p-1.5 shadow-xl border z-50 text-xs ${
-                    isDark
-                      ? 'bg-zinc-800 border-zinc-700 text-zinc-200'
-                      : 'bg-white border-neutral-200 text-neutral-800'
-                  }`}
-                >
-                  <button
-                    onClick={() => {
-                      setShowSettingsMenu(false);
-                      onOpenCreateModal();
-                    }}
-                    className={`w-full px-2.5 py-2 rounded-lg flex items-center gap-2 text-left transition-colors cursor-pointer ${
-                      isDark ? 'hover:bg-zinc-700' : 'hover:bg-neutral-100'
-                    }`}
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Создать персонажа</span>
-                  </button>
-
-                  {onResetDefaults && (
-                    <button
-                      onClick={() => {
-                        setShowSettingsMenu(false);
-                        if (confirm('Сбросить список персонажей к исходному состоянию?')) {
-                          onResetDefaults();
-                        }
-                      }}
-                      className={`w-full px-2.5 py-2 rounded-lg flex items-center gap-2 text-left transition-colors cursor-pointer text-rose-400 ${
-                        isDark ? 'hover:bg-rose-500/10' : 'hover:bg-rose-50'
-                      }`}
-                    >
-                      <ShieldAlert className="w-3.5 h-3.5" />
-                      <span>Сбросить персонажей</span>
-                    </button>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    </aside>
+      <SidebarBottomBar
+        isDark={isDark}
+        theme={theme}
+        onToggleTheme={onToggleTheme}
+        soundEnabled={soundEnabled}
+        onToggleSound={onToggleSound}
+        onOpenCreateModal={onOpenCreateModal}
+        onResetDefaults={onResetDefaults}
+      />    </aside>
   );
 };

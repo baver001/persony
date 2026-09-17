@@ -1,4 +1,5 @@
 import type { PersonaSpecV1 } from '../../shared/persona-spec/types';
+import { parsePersonaSpecV1 } from '../../shared/persona-spec/schema';
 import { MESSENGER_FORMAT_POLICY, PLATFORM_SAFETY_POLICY } from '../domain/platform-policy';
 
 export type CompilePersonaContext = {
@@ -9,22 +10,45 @@ export type CompilePersonaContext = {
   providerSuffix?: string;
 };
 
-function behaviorHints(spec: PersonaSpecV1): string {
-  const b = spec.behavior.profile;
-  const traits: string[] = [];
-  if (b.directness >= 60) traits.push('direct');
-  if (b.warmth >= 60) traits.push('warm');
-  if (b.challenge_level >= 60) traits.push('constructively challenging');
-  if (b.verbosity <= 40) traits.push('concise');
-  return traits.length ? `Behavior emphasis: ${traits.join(', ')}.` : '';
+type BehaviorBand = 'low' | 'medium' | 'high';
+
+function behaviorBand(value: number): BehaviorBand {
+  if (value <= 25) return 'low';
+  if (value >= 75) return 'high';
+  return 'medium';
 }
 
-function safetyNotice(profile: PersonaSpecV1['safetyProfile']): string {
+function behaviorHints(spec: PersonaSpecV1): string {
+  const b = spec.behavior.profile;
+  const lines: string[] = [];
+
+  const map: Array<[string, BehaviorBand]> = [
+    ['warmth', behaviorBand(b.warmth)],
+    ['directness', behaviorBand(b.directness)],
+    ['initiative', behaviorBand(b.initiative)],
+    ['creativity', behaviorBand(b.creativity)],
+    ['skepticism', behaviorBand(b.skepticism)],
+    ['empathy', behaviorBand(b.empathy)],
+    ['humor', behaviorBand(b.humor)],
+    ['formality', behaviorBand(b.formality)],
+    ['verbosity', behaviorBand(b.verbosity)],
+    ['challenge', behaviorBand(b.challenge_level)],
+  ];
+
+  for (const [trait, band] of map) {
+    lines.push(`${trait}: ${band}`);
+  }
+
+  return `Behavior profile (${map.map(([t, v]) => `${t}=${v}`).join(', ')}).`;
+}
+
+function safetyNotice(profile: PersonaSpecV1['safetyProfile'], disclosure?: string): string {
+  if (disclosure) return disclosure;
   if (profile === 'REGULATED') {
     return 'This persona may discuss regulated topics only with clear disclaimers and without professional claims.';
   }
   if (profile === 'SENSITIVE') {
-    return 'Handle sensitive topics carefully; encourage professional help when appropriate.';
+    return 'Handle sensitive topics carefully; encourage professional help when appropriate. You are not a licensed professional.';
   }
   return '';
 }
@@ -32,9 +56,9 @@ function safetyNotice(profile: PersonaSpecV1['safetyProfile']): string {
 export function parsePersonaSpec(configurationJson: string | null | undefined): PersonaSpecV1 | null {
   if (!configurationJson?.trim()) return null;
   try {
-    const parsed = JSON.parse(configurationJson) as PersonaSpecV1;
-    if (parsed?.schemaVersion !== 1) return null;
-    return parsed;
+    const parsed = JSON.parse(configurationJson) as unknown;
+    const result = parsePersonaSpecV1(parsed);
+    return result.ok ? (result.spec as PersonaSpecV1) : null;
   } catch {
     return null;
   }
@@ -50,7 +74,7 @@ export function compilePersonaInstructions(
 
   const sections = [
     PLATFORM_SAFETY_POLICY,
-    safetyNotice(spec.safetyProfile),
+    safetyNotice(spec.safetyProfile, presentation?.disclosure),
     `You are ${fallbackName}, an AI persona on Persony.`,
     presentation?.description ? `About you: ${presentation.description}` : '',
     `Mission: ${spec.mission.summary}`,

@@ -1,6 +1,6 @@
-import type { PersonaRecord } from '../domain/persona';
+import type { PersonaRuntime } from '../domain/persona';
 import {
-  ensureDefaultPersonasSeeded,
+  ensureOfficialPersonasSeeded,
   getAccessiblePersona,
 } from '../repositories/persona-repository';
 import type { PersonyEnv } from '../types/env';
@@ -17,9 +17,9 @@ export async function resolvePersonaForInference(
   env: PersonyEnv,
   personaId: string,
   requesterUserId: string | null
-): Promise<PersonaRecord> {
+): Promise<PersonaRuntime> {
   if (env.DB) {
-    await ensureDefaultPersonasSeeded(env.DB);
+    await ensureOfficialPersonasSeeded(env.DB);
   }
 
   const persona = await getAccessiblePersona(env, env.DB, personaId, requesterUserId);

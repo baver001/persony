@@ -13,7 +13,7 @@ describe('PersonaCompiler', () => {
       locale: 'en',
       userMemoryBlock: '- (fact) Works on Persony',
     });
-    expect(compiled).toContain('platform safety');
+    expect(compiled.toLowerCase()).toContain('behavior profile');
     expect(compiled).toContain('Thinking partner');
     expect(compiled).toContain('Works on Persony');
   });

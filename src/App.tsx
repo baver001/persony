@@ -38,13 +38,13 @@ import {
   remapMessagesByPersona,
   remapPersonaIds,
 } from './lib/cloudMigration';
-import { AuthMenu } from './components/AuthMenu';
 import { ImportLocalDataModal } from './components/ImportLocalDataModal';
 import { usePersonyAuth } from './components/PersonyAuthProvider';
 import { fetchInstalledPersonas } from './lib/api/me';
 import { MemoryPage } from './pages/MemoryPage';
 import { OwnerConsole } from './pages/OwnerConsole';
 import { SettingsPage } from './pages/SettingsPage';
+import { MeetPersonasPage } from './pages/MeetPersonasPage';
 
 const STORAGE_KEY_PERSONAS = 'persony_personas_v1';
 const STORAGE_KEY_MESSAGES = 'persony_messages_v1';
@@ -176,26 +176,8 @@ function navigateHome() {
   window.dispatchEvent(new PopStateEvent('popstate'));
 }
 
-export default function App() {
-  migrateLegacyStorageKeys();
+function ChatApp() {
   const { isLoaded: isAuthLoaded, isSignedIn, clerkEnabled, authRequired } = usePersonyAuth();
-  const [pathname, setPathname] = useState(() => window.location.pathname);
-
-  useEffect(() => {
-    const onPopState = () => setPathname(window.location.pathname);
-    window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
-  }, []);
-
-  if (pathname.startsWith('/memory')) {
-    return <MemoryPage onBack={navigateHome} />;
-  }
-  if (pathname.startsWith('/owner')) {
-    return <OwnerConsole onBack={navigateHome} />;
-  }
-  if (pathname.startsWith('/settings')) {
-    return <SettingsPage onBack={navigateHome} isSignedIn={Boolean(isSignedIn)} />;
-  }
 
   // Theme state
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -261,6 +243,7 @@ export default function App() {
   const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [cloudPersonasLoaded, setCloudPersonasLoaded] = useState(false);
+  const [showMeetPersonas, setShowMeetPersonas] = useState(false);
 
   useEffect(() => {
     if (!isAuthLoaded || !isSignedIn || !clerkEnabled || cloudPersonasLoaded) return;
@@ -271,24 +254,35 @@ export default function App() {
 
       const installedPersonas = await fetchInstalledPersonas();
       const cloudCustomPersonas = await fetchMyPersonas();
-      setPersonas((prev) => {
-        const customOnly = [
-          ...prev.filter((p) => p.isCustom),
-          ...cloudCustomPersonas.filter((p) => p.isCustom),
-        ];
-        const uniqueCustom = customOnly.filter(
-          (p, idx, arr) => arr.findIndex((x) => x.id === p.id) === idx
-        );
-        const installed =
-          installedPersonas.length > 0 ? installedPersonas : DEFAULT_PERSONAS;
-        return [...installed, ...uniqueCustom];
-      });
+      const customOnly = cloudCustomPersonas.filter((p) => p.isCustom);
+      const uniqueCustom = customOnly.filter(
+        (p, idx, arr) => arr.findIndex((x) => x.id === p.id) === idx
+      );
+
+      if (installedPersonas.length === 0) {
+        setPersonas(uniqueCustom);
+        setShowMeetPersonas(true);
+      } else {
+        setPersonas([...installedPersonas, ...uniqueCustom]);
+        setShowMeetPersonas(false);
+        setSelectedPersona(installedPersonas[0]);
+      }
       setCloudPersonasLoaded(true);
       if (hasLegacyLocalData()) {
         setIsImportModalOpen(true);
       }
     })();
   }, [isAuthLoaded, isSignedIn, clerkEnabled, cloudPersonasLoaded]);
+
+  const handleMeetPersonaStart = (persona: Persona) => {
+    setPersonas((prev) => {
+      const exists = prev.some((p) => p.id === persona.id);
+      return exists ? prev : [persona, ...prev];
+    });
+    setSelectedPersona(persona);
+    setShowMeetPersonas(false);
+    setMobileView('chat');
+  };
 
   useEffect(() => {
     if (!isAuthLoaded || !isSignedIn || !clerkEnabled || !selectedPersona) return;
@@ -739,7 +733,22 @@ export default function App() {
     localStorage.removeItem(STORAGE_KEY_PERSONAS);
   };
 
-  const activeMessages = messagesByPersona[selectedPersona.id] || [];
+  const activeMessages = messagesByPersona[selectedPersona?.id ?? ''] || [];
+
+  if (showMeetPersonas && isSignedIn && clerkEnabled) {
+    return (
+      <div
+        id="app-root"
+        className="fixed inset-0 flex flex-col overflow-hidden font-sans transition-colors bg-py-app text-py-text py-safe-top"
+      >
+        <MeetPersonasPage theme={theme} onStartChat={handleMeetPersonaStart} />
+      </div>
+    );
+  }
+
+  if (!selectedPersona) {
+    return null;
+  }
 
   return (
     <div
@@ -778,7 +787,6 @@ export default function App() {
             onResetDefaults={handleResetDefaults}
             isSidebarOpen={isSidebarOpen}
             onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
-            authMenu={<AuthMenu />}
           />
         </div>
 
@@ -877,4 +885,28 @@ export default function App() {
       />
     </div>
   );
+}
+
+export default function App() {
+  migrateLegacyStorageKeys();
+  const { isSignedIn } = usePersonyAuth();
+  const [pathname, setPathname] = useState(() => window.location.pathname);
+
+  useEffect(() => {
+    const onPopState = () => setPathname(window.location.pathname);
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  if (pathname.startsWith('/memory')) {
+    return <MemoryPage onBack={navigateHome} />;
+  }
+  if (pathname.startsWith('/owner')) {
+    return <OwnerConsole onBack={navigateHome} />;
+  }
+  if (pathname.startsWith('/settings')) {
+    return <SettingsPage onBack={navigateHome} isSignedIn={Boolean(isSignedIn)} />;
+  }
+
+  return <ChatApp />;
 }

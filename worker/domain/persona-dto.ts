@@ -1,4 +1,4 @@
-import type { PersonaRecord, PersonaVisibility } from './persona';
+import type { PersonaRecord, PersonaRuntime, PersonaVisibility } from './persona';
 
 export type PersonaPublicDTO = {
   id: string;
@@ -39,7 +39,7 @@ export function toPersonaPublicDTO(record: PersonaRecord, isSystem = false): Per
   };
 }
 
-export function toPersonaOwnerDTO(record: PersonaRecord): PersonaOwnerDTO {
+export function toPersonaOwnerDTO(record: PersonaRuntime): PersonaOwnerDTO {
   return {
     ...toPersonaPublicDTO(record, record.ownerUserId === 'system'),
     systemPrompt: record.systemPrompt,
