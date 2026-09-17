@@ -42,8 +42,12 @@ export async function loadBatteryConfig(db: D1Database): Promise<BatteryConfig> 
       merged.battery_enabled = Boolean(value);
     } else if (key === 'battery_mode') {
       merged.battery_mode = value === 'paid' ? 'paid' : 'beta_regen';
-    } else if (typeof merged[key] === 'number' && typeof value === 'number') {
-      (merged as Record<string, number>)[key] = value;
+    } else if (
+      key !== 'battery_enabled' &&
+      key !== 'battery_mode' &&
+      typeof value === 'number'
+    ) {
+      merged[key] = value;
     }
   }
 

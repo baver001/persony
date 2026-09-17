@@ -8,7 +8,8 @@ export type MemoryKind =
   | 'decision'
   | 'instruction'
   | 'relationship'
-  | 'open_loop';
+  | 'open_task'
+  | 'summary';
 
 export type MemoryExtractionAction = 'create' | 'update' | 'supersede' | 'ignore';
 
@@ -39,9 +40,13 @@ export class HeuristicMemoryExtractor implements MemoryExtractor {
   async extract(input: { userMessage: string }): Promise<MemoryExtractionCandidate[]> {
     const { extractMemoryCandidatesFromText } = await import('./memory-service');
     const legacy = extractMemoryCandidatesFromText(input.userMessage);
-    return legacy.map((c) => ({
-      scope: c.scope,
-      kind: c.kind as MemoryKind,
+    return legacy.map((c): MemoryExtractionCandidate => ({
+      scope: c.scope === 'relationship' ? 'relationship' : 'user',
+      kind: (['fact', 'preference', 'goal', 'project', 'decision', 'relationship', 'open_task', 'summary'].includes(
+        c.kind
+      )
+        ? c.kind
+        : 'fact') as MemoryKind,
       content: c.content,
       normalizedKey: c.content.toLowerCase().slice(0, 120),
       confidence: c.confidence,
