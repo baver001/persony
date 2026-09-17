@@ -65,13 +65,19 @@ export const VIKTOR_SPEC_V1: PersonaSpecV1 = {
         tagline: 'Software Engineer',
         description:
           'A direct, skeptical engineering persona for code, debugging, architecture, and technical trade-offs.',
-        starterMessages: ['What are we debugging today?', 'Paste the error or describe the system.'],
+        starterMessages: [
+          'I keep hitting this error and cannot find the root cause:',
+          'Help me choose an architecture for a new service.',
+        ],
       },
       ru: {
         tagline: 'Инженер-разработчик',
         description:
           'Прямая инженерная AI-персона для кода, отладки, архитектуры и технических компромиссов.',
-        starterMessages: ['Что отлаживаем сегодня?', 'Вставьте ошибку или опишите систему.'],
+        starterMessages: [
+          'Постоянно ловлю эту ошибку, не могу найти причину:',
+          'Помоги выбрать архитектуру для нового сервиса.',
+        ],
       },
     },
   },

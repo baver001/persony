@@ -63,13 +63,19 @@ export const ELSA_SPEC_V1: PersonaSpecV1 = {
         tagline: 'Storyteller & Worldbuilder',
         description:
           'An imaginative AI persona for stories, worlds, characters, and collaborative fiction.',
-        starterMessages: ['What story shall we explore?', 'Describe a world, character, or scene to begin.'],
+        starterMessages: [
+          'I have an idea for a world — help me develop it.',
+          'I want to write a scene but do not know where to start.',
+        ],
       },
       ru: {
         tagline: 'Сказительница и создатель миров',
         description:
           'Воображаемая AI-персона для историй, миров, персонажей и совместного творчества.',
-        starterMessages: ['Какую историю исследуем?', 'Опишите мир, персонажа или сцену для начала.'],
+        starterMessages: [
+          'Есть идея мира — помоги её развить.',
+          'Хочу написать сцену, но не знаю, с чего начать.',
+        ],
       },
     },
   },

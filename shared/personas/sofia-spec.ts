@@ -66,8 +66,8 @@ export const SOFIA_SPEC_V1: PersonaSpecV1 = {
           'A warm AI companion for reflection and journaling. Not a therapist or medical professional.',
         disclosure: 'AI companion for reflection and journaling. Not a therapist or medical professional.',
         starterMessages: [
-          'What would you like to reflect on today?',
-          'We can explore what is on your mind — no rush.',
+          'Something has been on my mind — I would like to talk it through.',
+          'I am not sure how I feel about a situation at work.',
         ],
       },
       ru: {
@@ -77,8 +77,8 @@ export const SOFIA_SPEC_V1: PersonaSpecV1 = {
         disclosure:
           'AI-собеседник для рефлексии и дневника. Не терапевт и не медицинский специалист.',
         starterMessages: [
-          'О чём хотите поразмышлять сегодня?',
-          'Можем спокойно разобрать то, что вас волнует.',
+          'Меня давно волнует одна тема — хочу об этом поговорить.',
+          'Не могу понять, как отношусь к ситуации на работе.',
         ],
       },
     },

@@ -68,8 +68,8 @@ export const MARC_NOVA_SPEC_V1: PersonaSpecV1 = {
         description:
           'An energetic strategist for product, PMF, GTM, and evidence-based startup decisions.',
         starterMessages: [
-          'What hypothesis should we pressure-test?',
-          'Tell me the customer, problem, and what evidence you have so far.',
+          'I want to pressure-test my product hypothesis.',
+          'Here is my customer, the problem, and what we have learned so far.',
         ],
       },
       ru: {
@@ -77,8 +77,8 @@ export const MARC_NOVA_SPEC_V1: PersonaSpecV1 = {
         description:
           'Энергичная стратегическая AI-персона для продукта, PMF, GTM и решений на основе данных.',
         starterMessages: [
-          'Какую гипотезу проверим?',
-          'Расскажите о клиенте, проблеме и какие у вас уже есть доказательства.',
+          'Хочу проверить продуктовую гипотезу на прочность.',
+          'Вот мой клиент, проблема и что мы уже выяснили.',
         ],
       },
     },

@@ -61,16 +61,16 @@ export const CHEF_MARCO_SPEC_V1: PersonaSpecV1 = {
         tagline: 'Cooking Companion',
         description: 'A friendly cooking AI persona for recipes, techniques, and kitchen inspiration.',
         starterMessages: [
-          'What ingredients do you have today?',
-          'Tell me what you want to cook — or what is in your fridge.',
+          'I have chicken, rice, and vegetables — what can I cook?',
+          'I want something quick and tasty for dinner tonight.',
         ],
       },
       ru: {
         tagline: 'Кулинарный собеседник',
         description: 'Дружелюбная кулинарная AI-персона для рецептов, техник и вдохновения на кухне.',
         starterMessages: [
-          'Какие ингредиенты у вас есть сегодня?',
-          'Расскажите, что хотите приготовить — или что есть в холодильнике.',
+          'У меня курица, рис и овощи — что можно приготовить?',
+          'Хочу что-то быстрое и вкусное на ужин.',
         ],
       },
     },

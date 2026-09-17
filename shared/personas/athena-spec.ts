@@ -72,8 +72,8 @@ export const ATHENA_SPEC_V1: PersonaSpecV1 = {
         description:
           'A calm analytical AI persona for thinking, planning, decision support, and structured problem-solving.',
         starterMessages: [
-          'What would you like to think through today?',
-          'Share the decision or problem — we can structure it together.',
+          'I need to think through a decision — help me structure the options.',
+          'I am stuck on a problem. Here is the context:',
         ],
       },
       ru: {
@@ -81,8 +81,8 @@ export const ATHENA_SPEC_V1: PersonaSpecV1 = {
         description:
           'Спокойная аналитическая AI-персона для размышлений, планирования, принятия решений и структурирования задач.',
         starterMessages: [
-          'О чём хотите подумать сегодня?',
-          'Опишите задачу или решение — разберём его вместе.',
+          'Мне нужно разобрать решение — помоги структурировать варианты.',
+          'Застрял на задаче. Вот контекст:',
         ],
       },
     },
