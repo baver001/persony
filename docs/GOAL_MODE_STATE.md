@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Current production SHA** | `39e4ad6` — CI post-deploy economics smoke |
+| **Current production SHA** | `dcad14f` — immutable inference costs guard (deploy verified) |
 | **Production health** | `GET https://beta.persony.org/api/health` → ok, database ready |
 | **Last migration (remote D1)** | `0014_pricing_catalog_db.sql` |
 | **CI** | Green (see latest `main` deploy) |
@@ -34,6 +34,8 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 | Owner Console | **partial** | economy, inference, pricing, users/personas detail, settings, errors |
 | Economics E2E (Milestone 1) | **open** | [`docs/PRODUCTION_ECONOMICS_SMOKE.md`](./PRODUCTION_ECONOMICS_SMOKE.md) |
 | DB-backed pricing admin | deployed | migration `0014`, POST `/owner/pricing/entries`, audit log |
+| Immutable inference costs | deployed | `updateInferenceRunEconomics` blocks rewrite after `cost_calculated_at` |
+| CI post-deploy economics smoke | deployed | `.github/workflows/deploy.yml` |
 | Mobile/desktop layout gates | **partial** | card lists on all main sections `<md`; manual 390/1440 sign-off open |
 
 ## Manual verification gates
@@ -45,9 +47,4 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 | Voice note → `voice_transcription` inference row | **open** | — | — |
 | Avatar Studio → `avatar_generation` inference row | **open** | — | — |
 | Owner Console 390px / 1440px | **open** | — | — |
-| Owner API smoke (`smoke:economics:owner`) | **open** | — | — |
-
-## Next actions
-
-1. Owner runs Milestone 1 smoke on beta; record inference run ids in this file.
-2. Owner Console mobile/desktop gates (390px / 1440px) — manual verify on beta.
+| Owner API smoke (`smoke:economics:owner`) | **open** | �

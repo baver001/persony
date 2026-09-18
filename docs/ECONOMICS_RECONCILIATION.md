@@ -3,7 +3,7 @@
 **Stage:** Verified Economics & Owner Control Center (Milestone 1 in progress)  
 **Audited:** 2026-09-18  
 **Production URL:** https://beta.persony.org  
-**Production SHA (deployed):** `39e4ad6` — CI post-deploy economics smoke (see `/api/health` `gitSha`)  
+**Production SHA (deployed):** `dcad14f` — immutable costs + CI post-deploy smoke (see `/api/health` `gitSha`)  
 **D1 migrations (remote):** `0001`–`0014` applied  
 **Production health:** `GET /api/health` → `status: ok`, `database: ready`, `gitSha` present  
 **Automated tests:** 124/124 (`npm test`, incl. settled cost immutability)  
