@@ -12,6 +12,14 @@ export async function fetchOwnerBatteryOverview(): Promise<Record<string, unknow
   return ownerFetch('/owner/battery/overview');
 }
 
+export async function fetchOwnerAiOverview(): Promise<{
+  chatTextProvider: string;
+  providers: Record<string, { configured: boolean }>;
+  billingEnabled: boolean;
+}> {
+  return ownerFetch('/owner/ai/overview');
+}
+
 export async function fetchOwnerUsers(): Promise<{
   users: Array<{
     id: string;

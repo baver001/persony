@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "description": "Minimal persona chat eval fixture for multi-provider regression.",
+  "cases": [
+    {
+      "id": "greeting_ru",
+      "personaSlug": "athena",
+      "userMessage": "Привет! Кто ты?",
+      "expect": {
+        "language": "ru",
+        "maxChars": 800,
+        "mustNotContain": ["system prompt", "I am an AI language model"]
+      }
+    }
+  ]
+}

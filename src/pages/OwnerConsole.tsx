@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { usePersonyAuth } from '../components/PersonyAuthProvider';
 import { fetchMeProfile, fetchOwnerOverview } from '../lib/api/me';
 import {
+  fetchOwnerAiOverview,
   fetchOwnerAudit,
   fetchOwnerBatteryOverview,
   fetchOwnerMemoryStats,
@@ -58,6 +59,7 @@ export function OwnerConsole({ onBack }: Props) {
   const [users, setUsers] = useState<Array<Record<string, string | null>>>([]);
   const [memoryStats, setMemoryStats] = useState<Record<string, number> | null>(null);
   const [audit, setAudit] = useState<Array<Record<string, string>>>([]);
+  const [aiOverview, setAiOverview] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<'AUTH_REQUIRED' | 'FORBIDDEN' | 'INTERNAL_ERROR' | null>(
     null
   );
@@ -101,6 +103,8 @@ export function OwnerConsole({ onBack }: Props) {
         } else if (section === 'audit') {
           const data = await fetchOwnerAudit();
           setAudit(data.entries);
+        } else if (section === 'ai') {
+          setAiOverview(await fetchOwnerAiOverview());
         }
       } catch {
         // section-level errors stay empty
@@ -239,10 +243,15 @@ export function OwnerConsole({ onBack }: Props) {
               )}
 
               {section === 'ai' && (
-                <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm">
+                <div className="space-y-4 text-sm">
                   <p className="text-zinc-300">
                     {t('owner:aiHint', { count: String(metrics.failedInferenceRuns ?? 0) })}
                   </p>
+                  {aiOverview && (
+                    <pre className="text-xs bg-black/40 border border-white/10 rounded-xl p-4 overflow-x-auto text-zinc-300">
+                      {JSON.stringify(aiOverview, null, 2)}
+                    </pre>
+                  )}
                 </div>
               )}
 

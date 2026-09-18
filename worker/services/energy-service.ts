@@ -1,6 +1,7 @@
 import {
   type BatteryConfig,
   DEFAULT_BATTERY_CONFIG,
+  isSimulationBatteryMode,
   loadBatteryConfig,
   percentageFromUnits,
   unitsForOperation,
@@ -70,7 +71,7 @@ export function computeRegeneratedUnits(
   config: BatteryConfig,
   nowMs: number
 ): { units: number; isRecharging: boolean; fullAt: string | null } {
-  if (config.battery_mode !== 'beta_regen') {
+  if (!isSimulationBatteryMode(config.battery_mode)) {
     return { units: wallet.available_units, isRecharging: false, fullAt: null };
   }
 
@@ -186,10 +187,13 @@ export async function getBatterySnapshot(
   );
   const pct = percentageFromUnits(availableUnits, config.battery_capacity_units);
 
+  const displayMode =
+    config.battery_mode === 'beta_regen' ? 'simulation' : config.battery_mode;
+
   return {
     percentage: pct,
     status: statusFromPercentage(pct, isRecharging),
-    mode: config.battery_mode,
+    mode: displayMode,
     isRecharging,
     fullAt,
     enabled: true,

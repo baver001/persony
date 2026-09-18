@@ -383,6 +383,89 @@ export async function listUserPersonas(db: D1Database, ownerUserId: string): Pro
   return (results ?? []).map((row) => rowToRuntime(row));
 }
 
+export async function findPublicPersonaBySlug(
+  _env: PersonyEnv,
+  db: D1Database | undefined,
+  slug: string,
+  locale: 'en' | 'ru' = 'en'
+): Promise<PersonaPublicMeta | null> {
+  const normalized = slug.trim().toLowerCase();
+  if (!normalized) return null;
+
+  const official = OFFICIAL_PERSONA_ROSTER.find(
+    (p) => p.id === normalized || p.spec.identity.slug === normalized
+  );
+  if (official) {
+    const localized = localizedPresentation(official.spec, locale);
+    return {
+      id: official.id,
+      slug: official.spec.identity.slug,
+      name: official.name,
+      tagline: localized.tagline,
+      description: localized.description,
+      avatarUrl: official.avatarUrl,
+      voice: official.voice,
+      category: official.category,
+      visibility: 'public',
+      badge: official.badge,
+      color: official.color,
+      starterMessages: localized.starterMessages,
+      disclosure: localized.disclosure,
+      isOfficial: true,
+      sortOrder: official.sortOrder,
+    };
+  }
+
+  if (!db || !(await isDbReady(db))) return null;
+
+  const row = await db
+    .prepare(
+      `SELECT p.id, p.slug, p.name, p.tagline, p.description, p.avatar_url, p.voice, p.category,
+              p.visibility, p.badge, p.color, p.starter_messages_json, pv.configuration_json
+       FROM personas p
+       JOIN persona_versions pv ON pv.persona_id = p.id AND pv.version = p.current_version
+       WHERE (p.slug = ? OR p.id = ?) AND p.visibility IN ('public', 'unlisted')
+         AND p.status = 'active'
+       LIMIT 1`
+    )
+    .bind(normalized, normalized)
+    .first<{
+      id: string;
+      slug: string | null;
+      name: string;
+      tagline: string | null;
+      description: string | null;
+      avatar_url: string | null;
+      voice: string;
+      category: string;
+      visibility: string;
+      badge: string | null;
+      color: string | null;
+      starter_messages_json: string | null;
+      configuration_json: string | null;
+    }>();
+
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    slug: row.slug || row.id,
+    name: row.name,
+    tagline: row.tagline || '',
+    description: row.description || '',
+    avatarUrl: row.avatar_url || '',
+    voice: row.voice,
+    category: row.category,
+    visibility: row.visibility as PersonaPublicMeta['visibility'],
+    badge: row.badge || undefined,
+    color: row.color || undefined,
+    starterMessages: row.starter_messages_json
+      ? (JSON.parse(row.starter_messages_json) as string[])
+      : undefined,
+    isOfficial: false,
+  };
+}
+
 export async function findPersonaBySlugForOwner(
   db: D1Database,
   ownerUserId: string,

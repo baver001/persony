@@ -5,5 +5,9 @@
   "russian": "Русский",
   "dataControls": "Данные и персонализация",
   "exportData": "Экспорт данных",
-  "deleteAccount": "Удалить аккаунт"
+  "deleteAccount": "Удалить аккаунт",
+  "billingTitle": "Оплата",
+  "billingDisabledHint": "Платежи пока не подключены. Батарея работает в режиме симуляции с автовосстановлением.",
+  "billingEnabledHint": "Биллинг настроен, но checkout ещё не открыт.",
+  "billingComingSoon": "Пакеты пополнения появятся здесь после запуска Paddle checkout."
 }

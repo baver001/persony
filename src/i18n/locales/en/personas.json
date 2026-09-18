@@ -2,6 +2,8 @@
   "meetTitle": "Meet your Personas",
   "meetSubtitle": "Persony is a small ecosystem of persistent AI personas — each with its own character, mission, and memory.",
   "startChat": "Start chat",
+  "publicPageTitle": "Persona",
+  "personaNotFound": "Persona not found or not public.",
   "available": "Available Personas",
   "installed": "Your Personas",
   "editTitle": "Edit persona",

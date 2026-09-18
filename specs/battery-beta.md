@@ -4,7 +4,7 @@
 
 - One Battery per user (not per Persona).
 - User sees percentage only (`🔋 84%`), never internal units or provider cost.
-- `battery_mode = beta_regen` — lazy regeneration after idle delay.
+- `battery_mode = simulation` (или legacy `beta_regen`) — lazy regeneration after idle delay.
 - No payments, checkout, or Paddle on this phase.
 
 ## Domain pipeline
@@ -18,7 +18,7 @@ InferenceRun → UsageEvent (future) → EnergyLedger → energy_wallets
 | Key | Default |
 |-----|---------|
 | `battery_enabled` | `true` |
-| `battery_mode` | `beta_regen` |
+| `battery_mode` | `simulation` |
 | `battery_capacity_units` | `10000` |
 | `battery_welcome_units` | `10000` |
 | `battery_regen_delay_minutes` | `30` |

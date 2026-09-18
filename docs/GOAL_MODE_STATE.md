@@ -1,40 +1,45 @@
 # Goal mode state
 
-**Objective:** Closed beta — Persona as long-term object, memory/relationships, unified Battery (no payments).
+**Objective:** Closed beta — Persona platform with simulation battery, multi-provider AI, Paddle prepared (not live).
 
-**Last updated:** 2026-09-17 UTC  
-**Current phase:** Phase 1.3 — **complete (pending CI + prod verify)**
+**Last updated:** 2026-09-18 UTC  
+**Current phase:** Phase 2–4 prep **complete (code)** — verify deploy + D1 `0007`
 
 ## Roadmap
 
 | Phase | Status |
 |-------|--------|
 | 1.1 Integrity Hardening | **Complete** |
-| 1.2 Persona + Memory + Trust + i18n | **Complete** (core) |
-| 1.3 Closed beta (Battery, Relationship, Discover polish) | **Complete** (verify deploy) |
-| 2 Multi-provider AI | Planned |
-| 3 Energy + paid recharge | Planned |
-| 4 Paddle payments | Planned |
+| 1.2 Persona + Memory + Trust + i18n | **Complete** |
+| 1.3 Closed beta (Battery, Discover, Owner) | **Complete** |
+| 2 Multi-provider AI | **Complete** (code) |
+| 3 Energy simulation | **Complete** — `battery_mode=simulation`, drain + lazy regen |
+| 4 Paddle payments | **Prepared** — schema + stubs, `BILLING_ENABLED` off |
+| 5 Public persona `/p/:slug` | **Complete** (code) |
+| 6–10 Rooms, tools, OSS | **Planned** |
 
-## Phase 1.3 component status
+## Phase 2–4 component status
 
-| Component | Implemented | CI verified | Production verified |
-|-----------|---------------|---------------|---------------------|
-| Migration `0006_phase13_battery_relationships` | ✅ | Pending | Pending |
-| EnergyService + lazy regen | ✅ | Pending | Pending |
-| Battery UI + settings + empty chat UX | ✅ | Pending | Pending |
-| Battery charge (chat, voice, transcribe, avatar, summarize, character) | ✅ | Pending | Pending |
-| PersonaRelationship | ✅ | Pending | Pending |
-| Structured memory + supersede + pending UI | ✅ | Pending | Pending |
-| Discover `/discover` + My Personas `/my-personas` | ✅ | Pending | Pending |
-| Live call stable UI + transcript panel | ✅ | Pending | Pending |
-| Feedback 👍👎 | ✅ | Pending | Pending |
-| Owner Console nav (8 sections) | ✅ | Pending | Pending |
-| Persona Creator v2 (PersonaSpec sliders) | ✅ | Pending | Pending |
+| Component | Implemented | CI | Production |
+|-----------|---------------|-----|------------|
+| ModelRouter + Gemini + DeepSeek adapters | ✅ | Pending | Pending |
+| `chat_text_provider` system setting | ✅ | Pending | Pending |
+| Owner AI overview | ✅ | Pending | Pending |
+| `battery_mode=simulation` (+ beta_regen alias) | ✅ | Pending | Pending |
+| Migration `0007` billing tables | ✅ | Pending | Pending |
+| Billing API stubs (501/503) | ✅ | Pending | Pending |
+| Settings billing “coming soon” | ✅ | Pending | Pending |
+| Public persona `/p/:slug` + API | ✅ | Pending | Pending |
 
-## Next
+## Operator next steps
 
-1. Green CI on latest push
-2. Confirm D1 migration `0006` on production
-3. Production smoke: chat, call, battery drain, discover, memory candidates
-4. Phase 2 planning (multi-provider)
+1. Apply D1 migration `0007` on production
+2. Optional: set `DEEPSEEK_API_KEY` secret for Phase 2 fallback
+3. Smoke: chat drain/regen, `/p/athena`, `/api/me/billing` returns disabled
+4. Do **not** set `BILLING_ENABLED` until Paddle catalog + legal ready
+
+## Constraints (unchanged)
+
+- No live Paddle checkout
+- No real payments
+- Battery = simulation only (auto regen, no paid recharge)

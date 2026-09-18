@@ -1,5 +1,4 @@
-import { handleChat } from '../lib/gemini';
-import { GEMINI_CHAT_MODELS } from '../lib/models';
+import { resolveChatRoute, streamChatWithRouter } from './model-router';
 import { formatCleanErrorMessage } from '../lib/errors';
 import {
   createInferenceRun,
@@ -40,9 +39,6 @@ export class InferenceInProgressError extends Error {
     this.name = 'InferenceInProgressError';
   }
 }
-
-const DEFAULT_PROVIDER = 'google';
-const DEFAULT_MODEL = GEMINI_CHAT_MODELS[0] ?? 'gemini-2.5-flash';
 
 function extractTextFromSseChunk(chunk: string, onText: (text: string) => void): void {
   const blocks = chunk.split('\n\n');
@@ -117,7 +113,10 @@ async function executeInferenceStream(
   const db = env.DB!;
   await markInferenceRunStreaming(db, run.id, userMessageId);
 
-  const upstream = await handleChat(env.GEMINI_API_KEY, systemPrompt, history);
+  const { stream: upstream } = await streamChatWithRouter(env, {
+    systemPrompt,
+    messages: history,
+  });
   const personaMessageKey = `persona:${run.clientRequestId}`;
 
   return new ReadableStream({
@@ -247,6 +246,8 @@ export async function streamConversationReply(
   );
   await touchConversation(env.DB, conversationId);
 
+  const chatRoute = await resolveChatRoute(env);
+
   let run = existingRun;
   if (!run) {
     run = await createInferenceRun(env.DB, {
@@ -255,8 +256,8 @@ export async function streamConversationReply(
       clientRequestId,
       personaId: persona.id,
       personaVersion: conversation.personaVersion,
-      provider: DEFAULT_PROVIDER,
-      model: DEFAULT_MODEL,
+      provider: chatRoute.provider,
+      model: chatRoute.model,
     });
   } else if (existingRun?.status === 'failed') {
     await resetInferenceRunForRetry(env.DB, existingRun.id);

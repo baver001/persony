@@ -95,14 +95,32 @@ flowchart TD
 - SSE parser, provider error fallback, Vitest + CI
 - `specs/05-platform-roadmap.md`
 
-### Дальше (Master Implementation v2)
+### Готово — Phase 2 Multi-provider AI
 
-1. **Phase 1.2** — Persona + Memory + Data + Trust Foundation
-2. **Phase 1.3** — Curated Discover
-3. **Phase 2** — Multi-provider AI (DeepSeek + Gemini), ModelRouter
-4. **Phase 3** — Energy + Trial
-5. **Phase 4** — Payments (Paddle)
-6. **Phase 5+** — Public catalog, Rooms, tools, voice hardening, OSS
+- `worker/providers/` — Gemini + DeepSeek chat adapters
+- `worker/services/model-router.ts` — `chat_text_provider` setting (`google` | `deepseek` | `auto`)
+- `specs/07-ai-provider-router.md`, `eval/persona-chat.json`
+
+### Готово — Phase 3 Energy simulation
+
+- `battery_mode = simulation` (alias `beta_regen`) — списание + lazy regen, без оплат
+- UI: режим симуляции в Battery sheet и Settings
+
+### Готово — Phase 4 Paddle prep (не подключено)
+
+- Migration `0007`: `energy_packs`, `billing_purchase_intents`, `paddle_webhook_events`
+- `PaddleBillingProvider` stub, `GET /api/me/billing`, checkout/webhook → 501/503
+- `specs/billing-future.md` — чеклист включения
+
+### Готово — Phase 5 (частично)
+
+- Публичная страница `/p/:slug`, `GET /api/personas/by-slug/:slug`
+
+### Дальше
+
+1. **Phase 6–7** — Memory polish, Rooms
+2. **Phase 8–10** — Tools, voice hardening, OSS/BYOK
+3. Включить Paddle (оператор) после legal + Live catalog
 
 ### Проверить
 

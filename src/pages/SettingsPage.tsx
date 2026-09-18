@@ -1,8 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import i18n, { setStoredLocale } from '../i18n';
 import { updatePreferredLocale } from '../lib/api/me';
+import { useEffect, useState } from 'react';
 import { useBattery } from '../hooks/useBattery';
 import { BatteryIndicator } from '../components/BatteryIndicator';
+import { fetchBillingStatus, type BillingStatus } from '../lib/api/billing';
 
 type Props = {
   onBack: () => void;
@@ -12,6 +14,14 @@ type Props = {
 export function SettingsPage({ onBack, isSignedIn }: Props) {
   const { t } = useTranslation(['settings', 'common', 'battery']);
   const { battery, refresh } = useBattery();
+  const [billing, setBilling] = useState<BillingStatus | null>(null);
+
+  useEffect(() => {
+    if (!isSignedIn) return;
+    void fetchBillingStatus()
+      .then(setBilling)
+      .catch(() => setBilling(null));
+  }, [isSignedIn]);
 
   const switchLocale = async (locale: 'en' | 'ru') => {
     setStoredLocale(locale);
@@ -40,11 +50,29 @@ export function SettingsPage({ onBack, isSignedIn }: Props) {
         {isSignedIn && battery?.enabled && (
           <section className="py-surface-card p-4 space-y-3">
             <h2 className="font-medium">{t('battery:settingsTitle')}</h2>
-            <p className="text-sm text-py-text-secondary">{t('battery:settingsHint')}</p>
+            <p className="text-sm text-py-text-secondary">
+              {battery.mode === 'simulation'
+                ? t('battery:simulationHint')
+                : t('battery:settingsHint')}
+            </p>
             <BatteryIndicator
               battery={battery}
               onClick={() => void refresh()}
             />
+          </section>
+        )}
+
+        {isSignedIn && billing && (
+          <section className="py-surface-card p-4 space-y-3">
+            <h2 className="font-medium">{t('settings:billingTitle')}</h2>
+            <p className="text-sm text-py-text-secondary">
+              {billing.enabled
+                ? t('settings:billingEnabledHint')
+                : t('settings:billingDisabledHint')}
+            </p>
+            {!billing.checkoutAvailable && (
+              <p className="text-xs text-py-text-muted">{t('settings:billingComingSoon')}</p>
+            )}
           </section>
         )}
 

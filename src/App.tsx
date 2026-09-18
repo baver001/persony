@@ -48,6 +48,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { MeetPersonasPage } from './pages/MeetPersonasPage';
 import { DiscoverPage } from './pages/DiscoverPage';
 import { MyPersonasPage } from './pages/MyPersonasPage';
+import { PublicPersonaPage } from './pages/PublicPersonaPage';
 import i18n from './i18n';
 import { applyLocaleToPersona, applyLocaleToPersonas } from './utils/personaPresentation';
 
@@ -1068,6 +1069,22 @@ export default function App() {
   }
   if (pathname.startsWith('/settings')) {
     return <SettingsPage onBack={navigateHome} isSignedIn={Boolean(isSignedIn)} />;
+  }
+  if (pathname.startsWith('/p/')) {
+    const slug = decodeURIComponent(pathname.slice(3).split('/')[0] || '');
+    if (slug) {
+      return (
+        <PublicPersonaPage
+          slug={slug}
+          theme={getStoredTheme()}
+          onBack={navigateHome}
+          onStartChat={(persona) => {
+            sessionStorage.setItem(PENDING_PERSONA_KEY, JSON.stringify(persona));
+            navigateHome();
+          }}
+        />
+      );
+    }
   }
   if (pathname.startsWith('/discover')) {
     return (

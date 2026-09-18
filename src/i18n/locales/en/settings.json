@@ -5,5 +5,9 @@
   "russian": "Russian",
   "dataControls": "Data & Personalisation",
   "exportData": "Export Data",
-  "deleteAccount": "Delete Account"
+  "deleteAccount": "Delete Account",
+  "billingTitle": "Billing",
+  "billingDisabledHint": "Payments are not enabled yet. Battery runs in simulation mode with automatic recharge.",
+  "billingEnabledHint": "Billing is configured but checkout is not open yet.",
+  "billingComingSoon": "Recharge packs will appear here when Paddle checkout goes live."
 }

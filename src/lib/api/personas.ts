@@ -69,6 +69,17 @@ function publicDtoToPersona(dto: PublicPersonaDto): Persona {
   };
 }
 
+export async function fetchPersonaBySlug(slug: string): Promise<Persona | null> {
+  const locale = document.documentElement.lang === 'ru' ? 'ru' : 'en';
+  const res = await fetch(`/api/personas/by-slug/${encodeURIComponent(slug)}?locale=${locale}`, {
+    headers: await getApiHeaders(),
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error('Failed to load persona');
+  const data = (await res.json()) as { persona?: PublicPersonaDto };
+  return data.persona ? publicDtoToPersona(data.persona) : null;
+}
+
 export async function fetchAvailablePersonas(): Promise<Persona[]> {
   const res = await fetch('/api/personas', { headers: await getApiHeaders() });
   if (!res.ok) return [];

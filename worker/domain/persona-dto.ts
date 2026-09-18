@@ -2,6 +2,7 @@ import type { PersonaRecord, PersonaRuntime, PersonaVisibility } from './persona
 
 export type PersonaPublicDTO = {
   id: string;
+  slug?: string;
   name: string;
   tagline: string;
   description: string;
@@ -25,6 +26,7 @@ export type PersonaOwnerDTO = PersonaPublicDTO & {
 export function toPersonaPublicDTO(record: PersonaRecord, isSystem = false): PersonaPublicDTO {
   return {
     id: record.id,
+    slug: record.slug,
     name: record.name,
     tagline: record.tagline,
     description: record.description,

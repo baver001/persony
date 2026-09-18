@@ -50,8 +50,12 @@ export const BatterySheet: React.FC<Props> = ({ isOpen, onClose, battery }) => {
             <BatteryIndicator battery={battery} />
 
             <div className="rounded-xl bg-white/5 border border-white/10 px-3 py-3 space-y-2 text-xs text-zinc-300">
-              <p className="font-medium text-white">{t('betaAccess')}</p>
-              <p>{t('betaRechargeHint')}</p>
+              <p className="font-medium text-white">
+                {battery?.mode === 'simulation' ? t('simulationMode') : t('betaAccess')}
+              </p>
+              <p>
+                {battery?.mode === 'simulation' ? t('simulationHint') : t('betaRechargeHint')}
+              </p>
               <p className="text-zinc-500">{t('fullRechargeEta', { hours: 8 })}</p>
             </div>
 

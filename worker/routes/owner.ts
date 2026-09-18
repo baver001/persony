@@ -111,6 +111,27 @@ ownerRoutes.put('/owner/system/settings', async (c) => {
   }
 });
 
+ownerRoutes.get('/owner/ai/overview', async (c) => {
+  try {
+    await requireOwnerAccess(c);
+    const provider =
+      c.env.DB
+        ? ((await getSystemSetting(c.env.DB, 'chat_text_provider')) as string | null)
+        : null;
+
+    return c.json({
+      chatTextProvider: provider ?? 'google',
+      providers: {
+        google: { configured: Boolean(c.env.GEMINI_API_KEY?.trim()) },
+        deepseek: { configured: Boolean(c.env.DEEPSEEK_API_KEY?.trim()) },
+      },
+      billingEnabled: c.env.BILLING_ENABLED === 'true',
+    });
+  } catch (err) {
+    return ownerErrorResponse(c, err);
+  }
+});
+
 ownerRoutes.get('/owner/battery/overview', async (c) => {
   try {
     await requireOwnerAccess(c);

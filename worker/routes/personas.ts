@@ -3,6 +3,7 @@ import { toPersonaOwnerDTO, toPersonaPublicDTO } from '../domain/persona-dto';
 import {
   ensureOfficialPersonasSeeded,
   getAccessiblePersona,
+  findPublicPersonaBySlug,
   listPublicPersonas,
   listUserPersonas,
   createPersonaInDb,
@@ -42,6 +43,14 @@ personaRoutes.get('/personas/mine', async (c) => {
     if (err instanceof AuthRequiredError) return c.json({ error: 'Authentication required' }, 401);
     throw err;
   }
+});
+
+personaRoutes.get('/personas/by-slug/:slug', async (c) => {
+  const slug = c.req.param('slug');
+  const locale = c.req.query('locale') === 'ru' ? 'ru' : 'en';
+  const persona = await findPublicPersonaBySlug(c.env, c.env.DB, slug, locale);
+  if (!persona) return c.json({ error: 'Persona not found' }, 404);
+  return c.json({ persona });
 });
 
 personaRoutes.get('/personas/:id', async (c) => {
