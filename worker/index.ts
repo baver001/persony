@@ -18,10 +18,13 @@ import { ConversationAccessError } from './services/chat-service';
 import {
   assertBatteryAllowsAI,
   BatteryEmptyError,
-  releaseEnergyForInference,
-  reserveEnergyForInference,
-  settleEnergyForInference,
 } from './services/energy-service';
+import {
+  beginVoiceCallInference,
+  completeVoiceCallInference,
+  failVoiceCallInference,
+} from './services/voice-call-inference-service';
+import { GEMINI_LIVE_MODEL } from './lib/models';
 import { resolveLiveConversationContext } from './services/live-context-service';
 import { PersonaNotFoundError } from './services/persona-service';
 import type { PersonyEnv } from './types/env';
@@ -49,8 +52,9 @@ app.get(
     let initInProgress = false;
     let sessionTimeout: ReturnType<typeof setTimeout> | null = null;
     let malformedCount = 0;
-    let liveChargeKey: string | null = null;
+    let liveRunId: string | null = null;
     let liveUserId: string | null = null;
+    let liveStartedAt: number | null = null;
 
     const cleanup = () => {
       if (sessionTimeout) {
@@ -109,27 +113,31 @@ app.get(
                 throw new AuthRequiredError();
               }
 
-              if (c.env.DB) {
-                await assertBatteryAllowsAI(c.env.DB, auth.userId);
-                const chargeKey =
-                  parsed.data.callSessionId ||
-                  `live:${parsed.data.conversationId || parsed.data.personaId}:${generateId()}`;
-                await reserveEnergyForInference(
-                  c.env.DB,
-                  auth.userId,
-                  chargeKey,
-                  'voice_call'
-                );
-                liveChargeKey = chargeKey;
-                liveUserId = auth.userId;
-              }
-
               const liveContext = await resolveLiveConversationContext(
                 c.env,
                 auth.userId,
                 parsed.data.personaId,
                 parsed.data.conversationId
               );
+
+              if (c.env.DB) {
+                await assertBatteryAllowsAI(c.env.DB, auth.userId);
+                const runId =
+                  parsed.data.callSessionId ||
+                  `live:${parsed.data.conversationId || parsed.data.personaId}:${generateId()}`;
+                await beginVoiceCallInference(c.env.DB, {
+                  runId,
+                  userId: auth.userId,
+                  personaId: parsed.data.personaId,
+                  personaVersion: liveContext.persona.resolvedVersion ?? 1,
+                  conversationId: parsed.data.conversationId,
+                  provider: 'google',
+                  model: GEMINI_LIVE_MODEL,
+                });
+                liveRunId = runId;
+                liveUserId = auth.userId;
+                liveStartedAt = Date.now();
+              }
 
               session = await initLiveSession(c.env.GEMINI_API_KEY, toLiveSocket(ws), {
                 characterName: parsed.data.characterName || liveContext.persona.name,
@@ -143,15 +151,16 @@ app.get(
               armSessionTimeout(ws);
               ws.send(JSON.stringify({ type: 'connected' }));
             } catch (err) {
-              if (c.env.DB && liveChargeKey && liveUserId) {
-                void releaseEnergyForInference(
+              if (c.env.DB && liveRunId && liveUserId) {
+                void failVoiceCallInference(
                   c.env.DB,
                   liveUserId,
-                  liveChargeKey,
-                  'live_voice_init_failed'
+                  liveRunId,
+                  err instanceof BatteryEmptyError ? 'BATTERY_EMPTY' : 'live_init_failed'
                 );
-                liveChargeKey = null;
+                liveRunId = null;
                 liveUserId = null;
+                liveStartedAt = null;
               }
               const message =
                 err instanceof AuthRequiredError
@@ -211,17 +220,14 @@ app.get(
         }
       },
       onClose() {
-        if (c.env.DB && liveChargeKey && liveUserId) {
-          void settleEnergyForInference(
-            c.env.DB,
-            liveUserId,
-            liveChargeKey,
-            'voice_call'
-          ).catch(() =>
-            releaseEnergyForInference(c.env.DB!, liveUserId!, liveChargeKey!, 'live_voice_close')
+        if (c.env.DB && liveRunId && liveUserId && liveStartedAt) {
+          const durationMs = Math.max(0, Date.now() - liveStartedAt);
+          void completeVoiceCallInference(c.env.DB, liveUserId, liveRunId, durationMs).catch(
+            () => failVoiceCallInference(c.env.DB!, liveUserId!, liveRunId!, 'live_close_failed')
           );
-          liveChargeKey = null;
+          liveRunId = null;
           liveUserId = null;
+          liveStartedAt = null;
         }
         cleanup();
       },

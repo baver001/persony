@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  computeDurationCost,
   computeUsageCost,
   findBestPricingEntry,
   findPricingEntries,
@@ -126,5 +127,16 @@ describe('findPricingEntries', () => {
       'default'
     );
     expect(entry?.priceMicrousdPerUnit).toBe(600_000);
+  });
+
+  it('prices voice call duration by per_minute catalog row', () => {
+    const result = computeDurationCost({
+      provider: 'google',
+      model: 'gemini-3.8-live',
+      durationMs: 120_000,
+    });
+    expect(result.priced).toBe(true);
+    expect(result.totalMicrousd).toBe(160_000);
+    expect(result.lines[0]?.dimension).toBe('per_minute');
   });
 });

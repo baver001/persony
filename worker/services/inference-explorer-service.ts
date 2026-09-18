@@ -28,6 +28,7 @@ export type OwnerInferenceListItem = {
   fallbackCount: number;
   status: string;
   usageEstimated: boolean;
+  errorCode: string | null;
 };
 
 export type InferenceCostExplanation = {
@@ -82,6 +83,7 @@ function toListItem(run: InferenceRunRecord): OwnerInferenceListItem {
     fallbackCount: run.fallbackCount,
     status: run.status,
     usageEstimated: run.usageEstimated,
+    errorCode: run.errorCode,
   };
 }
 

@@ -59,6 +59,10 @@
   "personasColInferences30d": "Inference 30д",
   "personasColKnownCogs30d": "Известный COGS 30д",
   "personasColUnpriced30d": "Без цены 30д",
+  "errorsTotal": "Неудачных inference: {{count}}",
+  "errorsEmpty": "Неудачных inference нет.",
+  "errorsColOperation": "Операция",
+  "errorsColCode": "Код ошибки",
   "nav": {
     "overview": "Обзор",
     "ai": "AI",
@@ -80,6 +84,7 @@
     "pricing": "Тарифы",
     "settings": "Настройки",
     "audit": "Аудит",
+    "errors": "Ошибки",
     "inference": "Inference"
   }
 }

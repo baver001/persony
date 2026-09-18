@@ -32,6 +32,7 @@ function entry(
     timeRule?: TimeRule;
     sourceReference?: string;
     verifiedAt?: string;
+    unit?: PricingEntry['unit'];
   }
 ): PricingEntry {
   return {
@@ -42,7 +43,7 @@ function entry(
     effectiveFrom: opts.effectiveFrom,
     effectiveTo: opts.effectiveTo ?? null,
     priceMicrousdPerUnit,
-    unit: 'per_million_tokens',
+    unit: opts.unit ?? 'per_million_tokens',
     currency: 'USD',
     pricingTier: opts.pricingTier ?? 'default',
     timeRule: opts.timeRule ?? 'any',
@@ -128,6 +129,12 @@ export const PRICING_CATALOG: PricingEntry[] = [
   }),
   ...deepseekTokenPair('deepseek-chat', 140_000, 280_000, 14_000),
   ...deepseekTokenPair('deepseek-reasoner', 550_000, 2_190_000, 55_000),
+  // Gemini Live — duration-based estimate until provider usage API is wired
+  entry('gemini-3.8-live:per_minute:default', 'google', 'gemini-3.8-live', 'per_minute', 80_000, {
+    effectiveFrom: '2026-01-01',
+    unit: 'per_minute',
+    sourceReference: GEMINI_PRICING,
+  }),
 ];
 
 export function isEntryEffective(entry: PricingEntry, atMs: number): boolean {
@@ -168,8 +175,13 @@ export function findBestPricingEntry(
   return matches[0] ?? null;
 }
 
-function costForUnits(units: number, priceMicrousdPerUnit: number): number {
+function costForUnits(
+  units: number,
+  priceMicrousdPerUnit: number,
+  unit: PricingEntry['unit']
+): number {
   if (units <= 0 || priceMicrousdPerUnit <= 0) return 0;
+  if (unit === 'per_minute') return Math.round(units * priceMicrousdPerUnit);
   return Math.round((units * priceMicrousdPerUnit) / 1_000_000);
 }
 
@@ -179,9 +191,44 @@ function lineFromEntry(entry: PricingEntry, units: number): PricingComputationLi
     dimension: entry.dimension,
     units,
     priceMicrousdPerUnit: entry.priceMicrousdPerUnit,
-    costMicrousd: costForUnits(units, entry.priceMicrousdPerUnit),
+    costMicrousd: costForUnits(units, entry.priceMicrousdPerUnit, entry.unit),
     pricingTier: entry.pricingTier,
     timeRule: entry.timeRule,
+  };
+}
+
+/** Duration-based COGS (voice call live sessions). Units = fractional minutes. */
+export function computeDurationCost(input: {
+  provider: string;
+  model: string;
+  durationMs: number;
+  atIso?: string;
+}): PricingComputationResult {
+  const atIso = input.atIso ?? new Date().toISOString();
+  const minutes = Math.max(0, input.durationMs) / 60_000;
+  const minuteEntry = findBestPricingEntry(
+    input.provider,
+    input.model,
+    'per_minute',
+    atIso,
+    'default'
+  );
+  if (!minuteEntry || minutes <= 0) {
+    return {
+      lines: [],
+      totalMicrousd: 0,
+      pricingEntryIds: [],
+      catalogVersion: PRICING_CATALOG_VERSION,
+      priced: false,
+    };
+  }
+  const line = lineFromEntry(minuteEntry, minutes);
+  return {
+    lines: [line],
+    totalMicrousd: line.costMicrousd,
+    pricingEntryIds: [line.pricingEntryId],
+    catalogVersion: PRICING_CATALOG_VERSION,
+    priced: line.costMicrousd > 0,
   };
 }
 

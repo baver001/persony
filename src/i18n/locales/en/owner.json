@@ -59,6 +59,10 @@
   "personasColInferences30d": "Inferences 30d",
   "personasColKnownCogs30d": "Known COGS 30d",
   "personasColUnpriced30d": "Unpriced 30d",
+  "errorsTotal": "{{count}} failed inference runs",
+  "errorsEmpty": "No failed inference runs.",
+  "errorsColOperation": "Operation",
+  "errorsColCode": "Error code",
   "nav": {
     "overview": "Overview",
     "ai": "AI",
@@ -80,6 +84,7 @@
     "pricing": "Pricing",
     "settings": "Settings",
     "audit": "Audit",
+    "errors": "Errors",
     "inference": "Inference"
   }
 }

@@ -26,7 +26,7 @@ export const OWNER_NAV_GROUPS: OwnerNavGroup[] = [
   {
     id: 'system',
     labelKey: 'nav.system',
-    sections: ['settings', 'audit'],
+    sections: ['settings', 'audit', 'errors'],
   },
 ];
 
@@ -45,6 +45,7 @@ export const MOBILE_MORE_SECTIONS: OwnerSectionId[] = [
   'memory',
   'battery',
   'audit',
+  'errors',
   'settings',
 ];
 

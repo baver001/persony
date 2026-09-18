@@ -1,4 +1,5 @@
 import { toSqlCount } from '../lib/sql-count';
+import { getOwnerInferenceList } from './inference-explorer-service';
 
 const KNOWN_COST_SQL = `CASE WHEN cost_confidence IN ('actual', 'estimated') THEN provider_cost_microusd ELSE 0 END`;
 
@@ -61,6 +62,39 @@ export async function getOwnerPersonasAnalytics(
     knownCostMicrousd30d: row.known_cost_microusd_30d ?? 0,
     unpricedCount30d: toSqlCount({ count: row.unpriced_count_30d }),
   }));
+}
+
+export type OwnerErrorCodeRow = {
+  errorCode: string;
+  count: number;
+};
+
+export async function getOwnerErrorsSummary(db: D1Database) {
+  const [totals, byCode, recent] = await Promise.all([
+    db
+      .prepare(`SELECT COUNT(*) as count FROM inference_runs WHERE status = 'failed'`)
+      .first<{ count: number }>(),
+    db
+      .prepare(
+        `SELECT error_code, COUNT(*) as count
+         FROM inference_runs
+         WHERE status = 'failed' AND error_code IS NOT NULL
+         GROUP BY error_code
+         ORDER BY count DESC
+         LIMIT 15`
+      )
+      .all<{ error_code: string; count: number }>(),
+    getOwnerInferenceList(db, { status: 'failed', limit: 25 }),
+  ]);
+
+  return {
+    totalFailed: toSqlCount(totals),
+    byErrorCode: (byCode.results ?? []).map((row) => ({
+      errorCode: row.error_code,
+      count: toSqlCount({ count: row.count }),
+    })),
+    recent: recent.items,
+  };
 }
 
 export async function getOwnerUsersAnalytics(db: D1Database): Promise<OwnerUserAnalyticsRow[]> {

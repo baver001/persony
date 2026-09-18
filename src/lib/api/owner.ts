@@ -47,6 +47,14 @@ export async function fetchOwnerPersonasOverview(): Promise<{ personas: OwnerPer
   return ownerFetch('/owner/personas/overview');
 }
 
+export async function fetchOwnerErrorsSummary(): Promise<{
+  totalFailed: number;
+  byErrorCode: Array<{ errorCode: string; count: number }>;
+  recent: OwnerInferenceListItem[];
+}> {
+  return ownerFetch('/owner/errors/summary');
+}
+
 export async function fetchOwnerMemoryStats(): Promise<{
   stats: {
     activeMemories: number;
@@ -118,6 +126,7 @@ export type OwnerInferenceListItem = {
   fallbackCount: number;
   status: string;
   usageEstimated: boolean;
+  errorCode: string | null;
 };
 
 export type OwnerInferenceDetail = OwnerInferenceListItem & {
@@ -130,7 +139,6 @@ export type OwnerInferenceDetail = OwnerInferenceListItem & {
   pricingEntryId: string | null;
   pricingVersion: string | null;
   costCalculatedAt: string | null;
-  errorCode: string | null;
   costExplanation: {
     lines: Array<{
       pricingEntryId: string;

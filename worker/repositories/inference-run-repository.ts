@@ -249,6 +249,87 @@ export async function findInferenceRunByClientRequest(
   return row ? rowToRecord(row) : null;
 }
 
+export async function createInferenceRunWithId(
+  db: D1Database,
+  input: {
+    id: string;
+    userId: string;
+    conversationId: string;
+    clientRequestId: string;
+    personaId: string;
+    personaVersion: number;
+    provider?: string;
+    model?: string;
+    operationType?: InferenceOperation;
+  }
+): Promise<InferenceRunRecord> {
+  const existing = await findInferenceRunById(db, input.id);
+  if (existing) return existing;
+
+  const now = new Date().toISOString();
+  const operationType = input.operationType ?? 'chat_text';
+
+  await db
+    .prepare(
+      `INSERT INTO inference_runs (
+        id, user_id, conversation_id, client_request_id,
+        user_message_id, persona_message_id, persona_id, persona_version,
+        status, provider, model, operation_type, started_at, completed_at, error_code
+      ) VALUES (?, ?, ?, ?, NULL, NULL, ?, ?, 'streaming', ?, ?, ?, ?, NULL, NULL)`
+    )
+    .bind(
+      input.id,
+      input.userId,
+      input.conversationId,
+      input.clientRequestId,
+      input.personaId,
+      input.personaVersion,
+      input.provider || null,
+      input.model || null,
+      operationType,
+      now
+    )
+    .run();
+
+  return {
+    id: input.id,
+    userId: input.userId,
+    conversationId: input.conversationId,
+    clientRequestId: input.clientRequestId,
+    userMessageId: null,
+    personaMessageId: null,
+    personaId: input.personaId,
+    personaVersion: input.personaVersion,
+    status: 'streaming',
+    provider: input.provider || null,
+    model: input.model || null,
+    operationType,
+    requestedProvider: input.provider || null,
+    requestedModel: input.model || null,
+    actualProvider: input.provider || null,
+    actualModel: input.model || null,
+    inputTokens: null,
+    outputTokens: null,
+    cachedInputTokens: null,
+    usageEstimated: false,
+    providerCostMicrousd: null,
+    costConfidence: 'unpriced',
+    pricingVersion: null,
+    pricingEntryId: null,
+    costCalculatedAt: null,
+    costBreakdownJson: null,
+    energyReserved: 0,
+    energyCharged: 0,
+    latencyMs: null,
+    fallbackCount: 0,
+    fallbackReason: null,
+    providerRequestId: null,
+    startedAt: now,
+    completedAt: null,
+    errorCode: null,
+  };
+}
+
 export async function createInferenceRun(
   db: D1Database,
   input: {
@@ -444,7 +525,7 @@ export async function markInferenceRunStreaming(
 export async function markInferenceRunCompleted(
   db: D1Database,
   runId: string,
-  personaMessageId: string
+  personaMessageId: string | null = null
 ): Promise<void> {
   const now = new Date().toISOString();
   await db

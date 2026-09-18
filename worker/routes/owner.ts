@@ -18,6 +18,7 @@ import {
   getOwnerInferenceList,
 } from '../services/inference-explorer-service';
 import {
+  getOwnerErrorsSummary,
   getOwnerPersonasAnalytics,
   getOwnerUsersAnalytics,
 } from '../services/owner-analytics-service';
@@ -289,6 +290,18 @@ ownerRoutes.get('/owner/users', async (c) => {
 
     const users = await getOwnerUsersAnalytics(c.env.DB);
     return c.json({ users });
+  } catch (err) {
+    return ownerErrorResponse(c, err);
+  }
+});
+
+ownerRoutes.get('/owner/errors/summary', async (c) => {
+  try {
+    await requireOwnerAccess(c);
+    if (!c.env.DB) return c.json({ error_code: 'DB_NOT_CONFIGURED' }, 503);
+
+    const summary = await getOwnerErrorsSummary(c.env.DB);
+    return c.json(summary);
   } catch (err) {
     return ownerErrorResponse(c, err);
   }

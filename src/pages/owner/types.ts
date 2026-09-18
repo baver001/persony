@@ -9,6 +9,7 @@ export type OwnerSectionId =
   | 'memory'
   | 'battery'
   | 'audit'
+  | 'errors'
   | 'settings';
 
 export type OwnerNavGroup = {

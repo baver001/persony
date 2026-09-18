@@ -10,6 +10,7 @@ import {
   fetchOwnerMemoryStats,
   fetchOwnerUsers,
   fetchOwnerPersonasOverview,
+  fetchOwnerErrorsSummary,
   fetchOwnerInferenceList,
   fetchOwnerInferenceDetail,
   fetchOwnerPricing,
@@ -27,6 +28,7 @@ import { OwnerPricingSection } from './owner/sections/OwnerPricingSection';
 import { OwnerAiSection } from './owner/sections/OwnerAiSection';
 import { OwnerUsersSection } from './owner/sections/OwnerUsersSection';
 import { OwnerPersonasSection } from './owner/sections/OwnerPersonasSection';
+import { OwnerErrorsSection } from './owner/sections/OwnerErrorsSection';
 import type { OwnerSectionId } from './owner/types';
 import { useOwnerNoIndex } from './owner/utils';
 
@@ -48,6 +50,13 @@ export function OwnerConsole({ onBack }: Props) {
   const [personas, setPersonas] = useState<OwnerPersonaRow[]>([]);
   const [personasError, setPersonasError] = useState(false);
   const [personasLoading, setPersonasLoading] = useState(false);
+  const [errorsSummary, setErrorsSummary] = useState<{
+    totalFailed: number;
+    byErrorCode: Array<{ errorCode: string; count: number }>;
+    recent: OwnerInferenceListItem[];
+  } | null>(null);
+  const [errorsError, setErrorsError] = useState(false);
+  const [errorsLoading, setErrorsLoading] = useState(false);
   const [memoryStats, setMemoryStats] = useState<Record<string, number> | null>(null);
   const [audit, setAudit] = useState<Array<Record<string, string>>>([]);
   const [aiOverview, setAiOverview] = useState<Awaited<
@@ -155,6 +164,19 @@ export function OwnerConsole({ onBack }: Props) {
     }
   }, []);
 
+  const loadErrors = useCallback(async () => {
+    setErrorsLoading(true);
+    setErrorsError(false);
+    try {
+      setErrorsSummary(await fetchOwnerErrorsSummary());
+    } catch {
+      setErrorsError(true);
+      setErrorsSummary(null);
+    } finally {
+      setErrorsLoading(false);
+    }
+  }, []);
+
   const loadAi = useCallback(async () => {
     setAiLoading(true);
     setAiError(false);
@@ -211,6 +233,8 @@ export function OwnerConsole({ onBack }: Props) {
         } else if (section === 'audit') {
           const data = await fetchOwnerAudit();
           setAudit(data.entries);
+        } else if (section === 'errors') {
+          await loadErrors();
         } else if (section === 'ai') {
           await loadAi();
         } else if (section === 'economy') {
@@ -224,7 +248,7 @@ export function OwnerConsole({ onBack }: Props) {
         // section-level errors handled per section
       }
     })();
-  }, [section, error, overview, loadEconomy, loadPricing, loadInference, loadUsers, loadPersonas, loadAi]);
+  }, [section, error, overview, loadEconomy, loadPricing, loadInference, loadUsers, loadPersonas, loadAi, loadErrors]);
 
   const loadInferenceDetail = async (id: string) => {
     try {
@@ -377,6 +401,17 @@ export function OwnerConsole({ onBack }: Props) {
 
       {section === 'settings' && (
         <p className="text-sm text-zinc-400">{t('owner:settingsHint')}</p>
+      )}
+
+      {section === 'errors' && (
+        <OwnerErrorsSection
+          totalFailed={errorsSummary?.totalFailed ?? 0}
+          byErrorCode={errorsSummary?.byErrorCode ?? []}
+          recent={errorsSummary?.recent ?? []}
+          loading={errorsLoading}
+          error={errorsError}
+          onRetry={() => void loadErrors()}
+        />
       )}
 
       {section === 'audit' && (
