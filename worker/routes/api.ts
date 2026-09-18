@@ -19,7 +19,6 @@ import { mapApiError } from '../lib/api-errors';
 import { clientIp, rateLimitMiddleware } from '../middleware/rate-limit';
 import { withEnergyReservation } from '../services/energy-service';
 import { runTranscribeWithInference } from '../services/transcribe-inference-service';
-import { runTranscribeWithInference } from '../services/transcribe-inference-service';
 import type { PersonyEnv } from '../types/env';
 import { conversationRoutes } from './conversations';
 import { healthRoutes } from './health';

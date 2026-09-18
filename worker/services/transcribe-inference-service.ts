@@ -82,10 +82,14 @@ export async function runTranscribeWithInference(
 
     const batteryConfig = await loadBatteryConfig(db);
     const retailPricing = await loadRetailPricingConfig(db);
+    const tokenHint = {
+      input: merged.usage.inputTokens,
+      output: merged.usage.outputTokens,
+    };
     const energyCharged = actualEnergyUnitsForUsage(
       'voice_transcription',
       batteryConfig,
-      merged.usage,
+      tokenHint,
       cost.providerCostMicrousd ?? undefined,
       retailPricing
     );
@@ -118,7 +122,7 @@ export async function runTranscribeWithInference(
       userId,
       run.id,
       'voice_transcription',
-      merged.usage,
+      tokenHint,
       cost.providerCostMicrousd ?? undefined
     );
 
