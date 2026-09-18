@@ -92,11 +92,11 @@ export const deepseekChatProvider: ChatProvider = {
     return Boolean(env.DEEPSEEK_API_KEY?.trim());
   },
 
-  streamChat(env, request: ChatStreamRequest) {
+  async streamChat(env, request: ChatStreamRequest) {
     const apiKey = env.DEEPSEEK_API_KEY!;
     const encoder = new TextEncoder();
 
-    return new ReadableStream({
+    return new ReadableStream<Uint8Array>({
       async start(controller) {
         let streamedAny = false;
         let lastError: unknown = null;
