@@ -17,6 +17,7 @@
     "smoke:economics": "npm run smoke:economics:public",
     "smoke:economics:public": "node scripts/economics-smoke-public.mjs",
     "smoke:economics:owner": "node scripts/economics-smoke-owner.mjs",
+    "smoke:economics:d1": "node scripts/economics-smoke-d1.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "types": "wrangler types",

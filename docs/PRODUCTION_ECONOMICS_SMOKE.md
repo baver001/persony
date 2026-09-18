@@ -23,7 +23,8 @@ Token extraction (summary):
 SMOKE_OWNER_BEARER="<jwt>" npm run smoke:economics:owner
 ```
 
-Public gates only (no auth): `npm run smoke:economics:public`
+Public gates only (no auth): `npm run smoke:economics:public`  
+Operator D1 audit (wrangler): `npm run smoke:economics:d1`
 
 ## Steps
 

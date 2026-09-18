@@ -8,7 +8,8 @@
 **Production health:** `GET /api/health` → `status: ok`, `database: ready`, `gitSha` present  
 **Automated tests:** 124/124 (`npm test`, incl. settled cost immutability)  
 **Public smoke:** `npm run smoke:economics:public` (health + owner auth gate)  
-**Owner API smoke:** `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner`
+**Owner API smoke:** `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner`  
+**D1 operator smoke:** `npm run smoke:economics:d1` (2026-09-18: 0/8 runs with `cost_calculated_at` — need fresh chat post-deploy)
 
 Status labels:
 

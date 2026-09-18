@@ -16,7 +16,8 @@
 | **CI** | Green (see latest `main` deploy) |
 | **Public smoke** | `npm run smoke:economics:public` |
 | **Owner API smoke** | `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner` |
-| **Production smoke (economics)** | **NOT RUN** — owner login required |
+| **D1 operator smoke** | `npm run smoke:economics:d1` (wrangler remote) |
+| **Production smoke (economics)** | **PARTIAL** — D1: 0 runs with `cost_calculated_at` in 7d; need fresh chat post-`dcad14f` |
 | **Tests (local)** | 124/124 (incl. settled cost immutability) |
 
 Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
@@ -42,9 +43,14 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 
 | Check | Status | Inference run id | Date |
 |-------|--------|------------------|------|
-| Text chat → Inference detail with line-item COGS | **open** | — | — |
+| Text chat → Inference detail with line-item COGS | **open** | legacy `b3df07fa` (no breakdown) | 2026-09-18 |
 | Economy coverage % after real inference | **open** | — | — |
 | Voice note → `voice_transcription` inference row | **open** | — | — |
 | Avatar Studio → `avatar_generation` inference row | **open** | — | — |
 | Owner Console 390px / 1440px | **open** | — | — |
-| Owner API smoke (`smoke:economics:owner`) | **open** | �
+| Owner API smoke (`smoke:economics:owner`) | **open** | — | — |
+
+## Next actions
+
+1. Owner runs Milestone 1 smoke on beta; record inference run ids in this file.
+2. Owner Console mobile/desktop gates (390px / 1440px) — manual verify on beta.
