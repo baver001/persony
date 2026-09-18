@@ -15,6 +15,7 @@
     "validate:i18n": "node scripts/validate-i18n.mjs",
     "ci": "npm run validate:i18n && npm run lint && npm test && npm run build",
     "smoke:economics:public": "node scripts/economics-smoke-public.mjs",
+    "smoke:economics:owner": "node scripts/economics-smoke-owner.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "types": "wrangler types",

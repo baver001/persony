@@ -10,11 +10,12 @@
 
 | Field | Value |
 |-------|--------|
-| **Current production SHA** | `c5b3fc1` — Owner mobile cards complete + docs sync |
+| **Current production SHA** | `9553647` — formatMicrousd(null) test + doc sync (deploy verified) |
 | **Production health** | `GET https://beta.persony.org/api/health` → ok, database ready |
 | **Last migration (remote D1)** | `0014_pricing_catalog_db.sql` |
 | **CI** | Green (see latest `main` deploy) |
-| **Public smoke** | `npm run smoke:economics:public` passes when reachable |
+| **Public smoke** | `npm run smoke:economics:public` |
+| **Owner API smoke** | `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner` |
 | **Production smoke (economics)** | **NOT RUN** — owner login required |
 | **Tests (local)** | 123/123 |
 

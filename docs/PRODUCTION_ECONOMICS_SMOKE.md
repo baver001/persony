@@ -2,7 +2,17 @@
 
 **Goal:** One controlled text-chat inference on https://beta.persony.org is fully explainable end-to-end.
 
-**Prerequisites:** Owner Clerk account, deploy includes migrations `0010`–`0013`, economics commits deployed.
+**Prerequisites:** Owner Clerk account, deploy includes migrations `0010`–`0014`, economics commits deployed.
+
+### Automated helper (API checks)
+
+After signing in on beta, copy the Clerk `Authorization: Bearer …` token from any `/api/owner/*` network request:
+
+```bash
+SMOKE_OWNER_BEARER="<jwt>" npm run smoke:economics:owner
+```
+
+Public gates only (no auth): `npm run smoke:economics:public`
 
 ## Steps
 
