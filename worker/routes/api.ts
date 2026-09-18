@@ -97,12 +97,12 @@ apiRoutes.post('/generate-character', aiHeavyRateLimit, async (c) => {
     if (!parsed.success) {
       return c.json({ error: 'Prompt is required' }, 400);
     }
-    const result = await handleGenerateCharacter(c.env.GEMINI_API_KEY, parsed.data.prompt);
-    if (c.env.DB) {
-      await chargeBatteryForInference(c.env.DB, userId, generateId(), 'generate_character').catch(
-        () => undefined
-      );
-    }
+    const result = await withEnergyReservation(
+      c.env.DB,
+      userId,
+      'generate_character',
+      () => handleGenerateCharacter(c.env.GEMINI_API_KEY, parsed.data.prompt)
+    );
     return c.json(result);
   } catch (err) {
     const mapped = mapApiError(err, formatCleanErrorMessage(err));
@@ -118,12 +118,12 @@ apiRoutes.post('/summarize-call', aiUserRateLimit, async (c) => {
     if (!parsed.success) {
       return c.json({ error: 'Invalid summarize-call payload' }, 400);
     }
-    const result = await handleSummarizeCall(c.env.GEMINI_API_KEY, parsed.data);
-    if (c.env.DB) {
-      await chargeBatteryForInference(c.env.DB, userId, generateId(), 'summarize_call').catch(
-        () => undefined
-      );
-    }
+    const result = await withEnergyReservation(
+      c.env.DB,
+      userId,
+      'summarize_call',
+      () => handleSummarizeCall(c.env.GEMINI_API_KEY, parsed.data)
+    );
     return c.json(result);
   } catch (err) {
     const mapped = mapApiError(err, formatCleanErrorMessage(err));
@@ -139,16 +139,17 @@ apiRoutes.post('/generate-avatar', aiHeavyRateLimit, async (c) => {
     if (!parsed.success) {
       return c.json({ error: 'Prompt is required' }, 400);
     }
-    const result = await handleGenerateAvatar(
-      c.env.GEMINI_API_KEY,
-      parsed.data.prompt,
-      parsed.data.personaName
+    const result = await withEnergyReservation(
+      c.env.DB,
+      userId,
+      'generate_avatar',
+      () =>
+        handleGenerateAvatar(
+          c.env.GEMINI_API_KEY,
+          parsed.data.prompt,
+          parsed.data.personaName
+        )
     );
-    if (c.env.DB) {
-      await chargeBatteryForInference(c.env.DB, userId, generateId(), 'generate_avatar').catch(
-        () => undefined
-      );
-    }
     return c.json(result);
   } catch (err) {
     const mapped = mapApiError(err, formatCleanErrorMessage(err));
