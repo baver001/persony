@@ -42,7 +42,29 @@ export function OwnerUsersSection({
         onRetry={onRetry}
       />
       {users.length > 0 && (
-        <div className="rounded-xl border border-white/10 overflow-x-auto">
+        <ul className="md:hidden space-y-2">
+          {users.map((user) => (
+            <li key={user.id}>
+              <button
+                type="button"
+                onClick={() => onSelectUser(user)}
+                className={`w-full rounded-xl border border-white/10 p-3 text-left min-h-[44px] ${
+                  selectedUser?.id === user.id ? 'bg-white/10' : 'bg-white/[0.02] hover:bg-white/5'
+                }`}
+              >
+                <div className="font-mono text-xs text-zinc-300 truncate">{user.id}</div>
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-zinc-400">
+                  <span>{user.inferenceCount7d} inf / 7d</span>
+                  <span>{formatMicrousd(user.knownCostMicrousd7d, 4)} COGS</span>
+                  <span>{user.preferredLocale || '—'}</span>
+                </div>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {users.length > 0 && (
+        <div className="hidden md:block rounded-xl border border-white/10 overflow-x-auto">
           <table className="w-full text-sm min-w-[560px]">
             <thead className="bg-white/5 text-zinc-400 text-left">
               <tr>

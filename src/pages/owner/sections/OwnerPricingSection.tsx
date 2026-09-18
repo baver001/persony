@@ -187,7 +187,23 @@ export function OwnerPricingSection({
         onRetry={onRetry}
       />
       {entries.length > 0 && (
-        <div className="rounded-xl border border-white/10 overflow-x-auto">
+        <ul className="md:hidden space-y-2 max-h-[50vh] overflow-y-auto">
+          {entries.map((e) => (
+            <li
+              key={e.id}
+              className="rounded-xl border border-white/10 bg-white/[0.02] p-3 text-sm space-y-1"
+            >
+              <div className="font-mono text-xs truncate">{e.provider}/{e.model}</div>
+              <div className="text-[11px] text-zinc-400">
+                {e.dimension} · {e.pricingTier} · {e.source ?? 'code'}
+              </div>
+              <div className="font-mono text-xs">{formatMicrousd(e.priceMicrousdPerUnit)}</div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {entries.length > 0 && (
+        <div className="hidden md:block rounded-xl border border-white/10 overflow-x-auto">
           <table className="w-full text-sm min-w-[820px]">
             <thead className="bg-white/5 text-zinc-400 text-left">
               <tr>

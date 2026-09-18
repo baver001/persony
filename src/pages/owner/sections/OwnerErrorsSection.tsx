@@ -43,7 +43,29 @@ export function OwnerErrorsSection({
         </div>
       )}
       {recent.length > 0 && (
-        <div className="rounded-xl border border-white/10 overflow-x-auto">
+        <ul className="md:hidden space-y-2">
+          {recent.map((item) => (
+            <li
+              key={item.id}
+              className="rounded-xl border border-white/10 bg-white/[0.02] p-3 space-y-1"
+            >
+              <div className="flex justify-between gap-2 text-xs font-mono">
+                <span className="text-amber-300 truncate">{item.errorCode || '—'}</span>
+                <span>{formatMicrousd(item.providerCostMicrousd)}</span>
+              </div>
+              <div className="text-[11px] text-zinc-500">{item.operationType}</div>
+              <div className="text-[11px] text-zinc-400 truncate">
+                {item.actualProvider}/{item.actualModel}
+              </div>
+              <div className="text-[11px] text-zinc-500">
+                {new Date(item.startedAt).toLocaleString()}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {recent.length > 0 && (
+        <div className="hidden md:block rounded-xl border border-white/10 overflow-x-auto">
           <table className="w-full text-sm min-w-[640px]">
             <thead className="bg-white/5 text-zinc-400 text-left">
               <tr>
