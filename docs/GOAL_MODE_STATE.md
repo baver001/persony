@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Current production SHA** | `f101fea` — D1 operator smoke + production audit |
+| **Current production SHA** | `5ec4873` — D1 smoke in CI deploy (verified in run 35379803990) |
 | **Production health** | `GET https://beta.persony.org/api/health` → ok, database ready |
 | **Last migration (remote D1)** | `0014_pricing_catalog_db.sql` |
 | **CI** | Green (see latest `main` deploy) |
