@@ -614,6 +614,9 @@ function ChatApp() {
               body: JSON.stringify({
                 audioBase64,
                 mimeType: 'audio/wav',
+                personaId: selectedPersona.id,
+                clientRequestId,
+                conversationId: conversationIds[selectedPersona.id],
               }),
             })
               .then(async (transRes) => {
@@ -737,6 +740,9 @@ function ChatApp() {
           durationSecs: summaryMsg.callDurationSecs || 0,
           transcripts,
           locale: i18n.language,
+          personaId,
+          clientRequestId: insightsId,
+          conversationId: sessionId,
         }),
       });
 
@@ -897,7 +903,14 @@ function ChatApp() {
   }
 
   if (!selectedPersona) {
-    return null;
+    return (
+      <div
+        id="app-root"
+        className="fixed inset-0 flex items-center justify-center bg-py-app text-py-text-muted text-sm"
+      >
+        {i18n.t('common:loading')}
+      </div>
+    );
   }
 
   return (

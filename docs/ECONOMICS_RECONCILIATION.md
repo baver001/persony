@@ -40,7 +40,7 @@ Status labels:
 | Voice call (`voice_call`, duration COGS) | ✓ | ✓ | **MANUAL open** |
 | Transcribe (`voice_transcription`, usageMetadata) | ✓ | ✓ | **MANUAL open** |
 | Avatar (`avatar_generation`, per_image COGS) | ✓ | ✓ | **MANUAL open** |
-| Call summary / persona gen inference rows | partial (energy only) | — | NOT VERIFIED |
+| Call summary / persona gen inference rows | deployed | `text-generation-inference-service.ts` | NOT VERIFIED |
 
 ---
 

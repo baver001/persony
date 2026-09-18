@@ -108,7 +108,10 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
       const res = await fetch('/api/generate-character', {
         method: 'POST',
         headers: await getApiHeaders(),
-        body: JSON.stringify({ prompt: aiPrompt.trim() }),
+        body: JSON.stringify({
+          prompt: aiPrompt.trim(),
+          clientRequestId: `persona-gen:${crypto.randomUUID()}`,
+        }),
       });
 
       if (!res.ok) {

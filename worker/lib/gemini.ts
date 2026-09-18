@@ -192,8 +192,23 @@ export async function handleTranscribe(
   return { transcript: '', usageEstimated: true, latencyMs: Date.now() - started };
 }
 
-export async function handleGenerateCharacter(apiKey: string, prompt: string): Promise<Record<string, unknown>> {
+export type TextGenerationResult = {
+  model?: string;
+  usage?: ProviderUsageMetrics;
+  usageEstimated: boolean;
+  latencyMs: number;
+};
+
+export type CharacterGenerateResult = TextGenerationResult & {
+  character: Record<string, unknown>;
+};
+
+export async function handleGenerateCharacter(
+  apiKey: string,
+  prompt: string
+): Promise<CharacterGenerateResult> {
   const ai = getAIClient(apiKey);
+  const started = Date.now();
 
   const promptText = `Создай уникального agentic-персонажа для общения в мессенджере Persony по идее: "${prompt}".
 
@@ -223,8 +238,17 @@ export async function handleGenerateCharacter(apiKey: string, prompt: string): P
         },
       });
 
+      const usage = mapGeminiUsageMetadata(response.usageMetadata);
       const parsed = JSON.parse(response.text || '{}');
-      if (parsed?.name) return parsed;
+      if (parsed?.name) {
+        return {
+          character: parsed,
+          model,
+          usage,
+          usageEstimated: !usage,
+          latencyMs: Date.now() - started,
+        };
+      }
     } catch (err) {
       lastErr = err;
       const kind = classifyProviderError(err);
@@ -245,8 +269,9 @@ export async function handleSummarizeCall(
     locale?: string;
     transcripts: Array<{ sender: 'user' | 'character'; text: string }>;
   }
-): Promise<{ summary: string }> {
+): Promise<TextGenerationResult & { summary: string }> {
   const ai = getAIClient(apiKey);
+  const started = Date.now();
   const locale = input.locale?.toLowerCase() ?? 'en';
   const replyLanguage = locale.startsWith('ru') ? 'Russian' : 'English';
 
@@ -285,8 +310,17 @@ ${dialogue}`;
         },
       });
 
+      const usage = mapGeminiUsageMetadata(response.usageMetadata);
       const summary = response.text?.trim();
-      if (summary) return { summary };
+      if (summary) {
+        return {
+          summary,
+          model,
+          usage,
+          usageEstimated: !usage,
+          latencyMs: Date.now() - started,
+        };
+      }
     } catch (err) {
       lastErr = err;
       const kind = classifyProviderError(err);

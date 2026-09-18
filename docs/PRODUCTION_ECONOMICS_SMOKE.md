@@ -50,6 +50,16 @@
 9. Persona profile → Avatar Studio → generate with prompt.
 10. Inference filter `avatar_generation` → `costConfidence: actual`, per-image COGS (~$4 catalog row).
 
+## Optional: persona generation (Create Persona AI)
+
+11. Create Persona → «Generate with AI» with a short prompt.
+12. Inference filter `persona_generation` → token COGS, `usageEstimated: false` when provider reports usage.
+
+## Optional: call summary insights
+
+13. After a voice call, open call insights recap on the summary message.
+14. Inference filter `call_summary` → token COGS linked to `personaId`.
+
 ## Record outcome
 
 Update `docs/GOAL_MODE_STATE.md` manual verification table with date, inference run id, and pass/fail per row.

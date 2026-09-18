@@ -73,6 +73,8 @@ export const transcribeRequestSchema = z.object({
 
 export const generateCharacterSchema = z.object({
   prompt: z.string().min(1).max(4000),
+  clientRequestId: z.string().min(1).max(128).optional(),
+  personaId: z.string().min(1).max(64).optional(),
 });
 
 export const generateAvatarSchema = z.object({
@@ -94,6 +96,9 @@ export const summarizeCallSchema = z.object({
   durationSecs: z.number().int().min(0).max(86_400),
   locale: z.string().max(16).optional(),
   transcripts: z.array(callTranscriptTurnSchema).min(1).max(200),
+  personaId: z.string().min(1).max(64).optional(),
+  clientRequestId: z.string().min(1).max(128).optional(),
+  conversationId: z.string().min(1).max(128).optional(),
 });
 
 export const liveInitSchema = z.object({

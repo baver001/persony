@@ -19,6 +19,10 @@ import { mapApiError } from '../lib/api-errors';
 import { clientIp, rateLimitMiddleware } from '../middleware/rate-limit';
 import { withEnergyReservation } from '../services/energy-service';
 import { runAvatarWithInference } from '../services/avatar-inference-service';
+import {
+  runCallSummaryWithInference,
+  runPersonaGenerationWithInference,
+} from '../services/text-generation-inference-service';
 import { runTranscribeWithInference } from '../services/transcribe-inference-service';
 import type { PersonyEnv } from '../types/env';
 import { conversationRoutes } from './conversations';
@@ -115,11 +119,28 @@ apiRoutes.post('/generate-character', aiHeavyRateLimit, async (c) => {
     if (!parsed.success) {
       return c.json({ error: 'Prompt is required' }, 400);
     }
+    if (c.env.DB && parsed.data.clientRequestId) {
+      const tracked = await runPersonaGenerationWithInference(
+        c.env.DB,
+        userId,
+        c.env.GEMINI_API_KEY,
+        {
+          prompt: parsed.data.prompt,
+          clientRequestId: parsed.data.clientRequestId,
+          personaId: parsed.data.personaId,
+        }
+      );
+      return c.json(tracked.character);
+    }
+
     const result = await withEnergyReservation(
       c.env.DB,
       userId,
       'persona_generation',
-      () => handleGenerateCharacter(c.env.GEMINI_API_KEY, parsed.data.prompt)
+      async () => {
+        const generated = await handleGenerateCharacter(c.env.GEMINI_API_KEY, parsed.data.prompt);
+        return generated.character;
+      }
     );
     return c.json(result);
   } catch (err) {
@@ -136,13 +157,28 @@ apiRoutes.post('/summarize-call', aiUserRateLimit, async (c) => {
     if (!parsed.success) {
       return c.json({ error: 'Invalid summarize-call payload' }, 400);
     }
+    if (c.env.DB && parsed.data.personaId && parsed.data.clientRequestId) {
+      const tracked = await runCallSummaryWithInference(
+        c.env.DB,
+        userId,
+        c.env.GEMINI_API_KEY,
+        {
+          ...parsed.data,
+          personaId: parsed.data.personaId,
+          clientRequestId: parsed.data.clientRequestId,
+          conversationId: parsed.data.conversationId,
+        }
+      );
+      return c.json({ summary: tracked.summary });
+    }
+
     const result = await withEnergyReservation(
       c.env.DB,
       userId,
       'call_summary',
       () => handleSummarizeCall(c.env.GEMINI_API_KEY, parsed.data)
     );
-    return c.json(result);
+    return c.json({ summary: result.summary });
   } catch (err) {
     const mapped = mapApiError(err, formatCleanErrorMessage(err));
     return c.json(mapped.body, mapped.status as 401 | 402 | 429 | 500);
