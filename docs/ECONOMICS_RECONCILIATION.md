@@ -37,7 +37,7 @@ Status labels:
 |------|:-----------:|:------:|:--------------:|
 | Central `model-registry.ts` + `listOwnerRoutingMatrix` | ✓ | ✓ | NOT VERIFIED |
 | Chat text (Gemini + DeepSeek stream usage) | ✓ | ✓ | **MANUAL open** |
-| Voice call (`voice_call`, duration COGS) | ✓ | ✓ | **MANUAL open** |
+| Voice call (`voice_call`, Live usageMetadata + duration fallback) | ✓ | ✓ | **MANUAL open** |
 | Transcribe (`voice_transcription`, usageMetadata) | ✓ | ✓ | **MANUAL open** |
 | Avatar (`avatar_generation`, per_image COGS) | ✓ | ✓ | **MANUAL open** |
 | Call summary / persona gen inference rows | deployed | `text-generation-inference-service.ts` | NOT VERIFIED |
@@ -104,5 +104,5 @@ Status labels:
 
 1. **Owner:** run Milestone 1 smoke; record inference ids in `GOAL_MODE_STATE.md`.
 2. **Code:** DB-backed pricing catalog + audit trail.
-3. **Code:** Gemini Live provider-reported usage (replace duration-only COGS).
+3. **Verify:** voice_call on beta shows `provider_usage` when Live sends `usageMetadata`.
 4. **Manual:** Owner Console 390px / 1440px verification.
