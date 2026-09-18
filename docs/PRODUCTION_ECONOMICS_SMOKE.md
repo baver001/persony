@@ -6,7 +6,18 @@
 
 ### Automated helper (API checks)
 
-After signing in on beta, copy the Clerk `Authorization: Bearer …` token from any `/api/owner/*` network request:
+After signing in on beta as owner:
+
+1. Open `/owner` (must not show «Sign in required» or «Forbidden»).
+2. DevTools → Network → filter `owner`.
+3. Reload Economy or Inference section.
+4. Click any `/api/owner/*` request → Headers → copy `Authorization: Bearer …` (JWT only, without the `Bearer ` prefix is also fine if you include it in the env var as shown below).
+
+```bash
+SMOKE_OWNER_BEARER="<jwt>" npm run smoke:economics:owner
+```
+
+Token extraction (summary):
 
 ```bash
 SMOKE_OWNER_BEARER="<jwt>" npm run smoke:economics:owner
