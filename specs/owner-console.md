@@ -81,7 +81,7 @@ Client: `src/lib/api/owner.ts` — typed fetch helpers (no `Record<string, unkno
 ## Open gaps (goal brief)
 
 - [x] Routing matrix (read-only from Model Registry) + `chat_text_provider` toggle
-- [ ] Voice Calls dedicated section (economics in Inference Explorer)
+- [x] Voice/transcribe/avatar economics in Inference Explorer (filter by operation)
 - [x] Personas analytics (usage, cost per persona)
 - [x] Users detail (inference history per user)
 - [x] Feature flags section (maintenance_mode, battery_enabled, battery_mode)

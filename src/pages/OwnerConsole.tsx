@@ -57,6 +57,10 @@ export function OwnerConsole({ onBack }: Props) {
   const [personas, setPersonas] = useState<OwnerPersonaRow[]>([]);
   const [personasError, setPersonasError] = useState(false);
   const [personasLoading, setPersonasLoading] = useState(false);
+  const [selectedPersona, setSelectedPersona] = useState<OwnerPersonaRow | null>(null);
+  const [personaInferences, setPersonaInferences] = useState<OwnerInferenceListItem[]>([]);
+  const [personaInferencesTotal, setPersonaInferencesTotal] = useState(0);
+  const [personaInferencesLoading, setPersonaInferencesLoading] = useState(false);
   const [errorsSummary, setErrorsSummary] = useState<{
     totalFailed: number;
     byErrorCode: Array<{ errorCode: string; count: number }>;
@@ -188,6 +192,20 @@ export function OwnerConsole({ onBack }: Props) {
       setPersonas([]);
     } finally {
       setPersonasLoading(false);
+    }
+  }, []);
+
+  const loadPersonaInferences = useCallback(async (personaId: string) => {
+    setPersonaInferencesLoading(true);
+    try {
+      const data = await fetchOwnerInferenceList({ personaId, limit: 25 });
+      setPersonaInferences(data.items);
+      setPersonaInferencesTotal(data.total);
+    } catch {
+      setPersonaInferences([]);
+      setPersonaInferencesTotal(0);
+    } finally {
+      setPersonaInferencesLoading(false);
     }
   }, []);
 
@@ -431,9 +449,26 @@ export function OwnerConsole({ onBack }: Props) {
       {section === 'personas' && (
         <OwnerPersonasSection
           personas={personas}
+          selectedPersona={selectedPersona}
+          personaInferences={personaInferences}
+          personaInferencesTotal={personaInferencesTotal}
+          personaInferencesLoading={personaInferencesLoading}
           loading={personasLoading}
           error={personasError}
           onRetry={() => void loadPersonas()}
+          onSelectPersona={(persona) => {
+            setSelectedPersona(persona);
+            void loadPersonaInferences(persona.id);
+          }}
+          onClearPersona={() => {
+            setSelectedPersona(null);
+            setPersonaInferences([]);
+            setPersonaInferencesTotal(0);
+          }}
+          onSelectInference={(id) => {
+            setSection('inference');
+            void loadInferenceDetail(id);
+          }}
         />
       )}
 

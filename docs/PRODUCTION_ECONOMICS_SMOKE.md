@@ -39,6 +39,17 @@
    - `operation_type = chat_text`
    - `pricing_entry_id` not null for priced chat model
 
+## Optional: voice note (transcribe)
+
+6. Send a short voice note in chat (with `personaId` context).
+7. Owner Console → Inference → filter `voice_transcription`.
+8. Expect `usageEstimated: false` when Gemini returns `usageMetadata`; COGS > 0.
+
+## Optional: avatar generation
+
+9. Persona profile → Avatar Studio → generate with prompt.
+10. Inference filter `avatar_generation` → `costConfidence: actual`, per-image COGS (~$4 catalog row).
+
 ## Record outcome
 
 Update `docs/GOAL_MODE_STATE.md` manual verification table with date, inference run id, and pass/fail per row.
