@@ -47,6 +47,6 @@ Normalized in `worker/ai/operations.ts`:
 
 - [x] Central registry file + tests
 - [x] `worker/lib/models.ts` derives from registry
-- [ ] DeepSeek provider imports models from registry
-- [ ] Owner API exposes registry read-only
+- [x] DeepSeek provider imports models from registry (`deepseek-chat-provider.ts`)
+- [x] Owner API exposes registry read-only (`GET /owner/ai/overview` → `routingMatrix`)
 - [ ] Production model smoke per operation

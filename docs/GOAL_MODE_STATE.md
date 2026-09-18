@@ -10,14 +10,14 @@
 
 | Field | Value |
 |-------|--------|
-| **Current production SHA** | `30cf678` — docs sync + owner auth gate in public smoke |
+| **Current production SHA** | `39e4ad6` — CI post-deploy economics smoke |
 | **Production health** | `GET https://beta.persony.org/api/health` → ok, database ready |
 | **Last migration (remote D1)** | `0014_pricing_catalog_db.sql` |
 | **CI** | Green (see latest `main` deploy) |
 | **Public smoke** | `npm run smoke:economics:public` |
 | **Owner API smoke** | `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner` |
 | **Production smoke (economics)** | **NOT RUN** — owner login required |
-| **Tests (local)** | 123/123 |
+| **Tests (local)** | 124/124 (incl. settled cost immutability) |
 
 Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 

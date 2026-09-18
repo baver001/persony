@@ -3,10 +3,10 @@
 **Stage:** Verified Economics & Owner Control Center (Milestone 1 in progress)  
 **Audited:** 2026-09-18  
 **Production URL:** https://beta.persony.org  
-**Production SHA (deployed):** `30cf678` — public smoke incl. owner auth gate (see `/api/health` `gitSha`)  
+**Production SHA (deployed):** `39e4ad6` — CI post-deploy economics smoke (see `/api/health` `gitSha`)  
 **D1 migrations (remote):** `0001`–`0014` applied  
 **Production health:** `GET /api/health` → `status: ok`, `database: ready`, `gitSha` present  
-**Automated tests:** 123/123 (`npm test`)  
+**Automated tests:** 124/124 (`npm test`, incl. settled cost immutability)  
 **Public smoke:** `npm run smoke:economics:public` (health + owner auth gate)  
 **Owner API smoke:** `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner`
 
@@ -51,7 +51,7 @@ Status labels:
 | Item | IMPLEMENTED | TESTED | PRODUCTION E2E |
 |------|:-----------:|:------:|:--------------:|
 | Cost confidence actual/estimated/unpriced | ✓ m0010 | ✓ | MANUAL open |
-| `pricing_entry_id` + `cost_breakdown_json` immutable | ✓ m0011–0012 | ✓ | MANUAL open |
+| `pricing_entry_id` + `cost_breakdown_json` immutable | ✓ m0011–0012 + `updateInferenceRunEconomics` guard | ✓ | MANUAL open |
 | Token pricing (text, cache, peak/off-peak) | ✓ catalog | ✓ | — |
 | `per_minute` (Gemini Live) | ✓ | ✓ | MANUAL open |
 | `per_image` (avatar models) | ✓ | ✓ | MANUAL open |

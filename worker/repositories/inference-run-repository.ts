@@ -415,32 +415,62 @@ export async function createInferenceRun(
   };
 }
 
+export type InferenceRunEconomicsUpdate = {
+  requestedProvider?: string;
+  requestedModel?: string;
+  actualProvider?: string;
+  actualModel?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  cachedInputTokens?: number;
+  usageEstimated?: boolean;
+  providerCostMicrousd?: number | null;
+  costConfidence?: CostConfidence;
+  pricingVersion?: string;
+  pricingEntryId?: string | null;
+  costCalculatedAt?: string;
+  costBreakdownJson?: string | null;
+  energyReserved?: number;
+  energyCharged?: number;
+  latencyMs?: number;
+  fallbackCount?: number;
+  fallbackReason?: string;
+  providerRequestId?: string;
+};
+
+const SETTLED_COST_FIELDS: (keyof InferenceRunEconomicsUpdate)[] = [
+  'inputTokens',
+  'outputTokens',
+  'cachedInputTokens',
+  'usageEstimated',
+  'providerCostMicrousd',
+  'costConfidence',
+  'pricingVersion',
+  'pricingEntryId',
+  'costCalculatedAt',
+  'costBreakdownJson',
+];
+
+function withoutSettledCostFields(
+  input: InferenceRunEconomicsUpdate
+): InferenceRunEconomicsUpdate {
+  const next = { ...input };
+  for (const key of SETTLED_COST_FIELDS) {
+    delete next[key];
+  }
+  return next;
+}
+
 export async function updateInferenceRunEconomics(
   db: D1Database,
   runId: string,
-  input: {
-    requestedProvider?: string;
-    requestedModel?: string;
-    actualProvider?: string;
-    actualModel?: string;
-    inputTokens?: number;
-    outputTokens?: number;
-    cachedInputTokens?: number;
-    usageEstimated?: boolean;
-    providerCostMicrousd?: number | null;
-    costConfidence?: CostConfidence;
-    pricingVersion?: string;
-    pricingEntryId?: string | null;
-    costCalculatedAt?: string;
-    costBreakdownJson?: string | null;
-    energyReserved?: number;
-    energyCharged?: number;
-    latencyMs?: number;
-    fallbackCount?: number;
-    fallbackReason?: string;
-    providerRequestId?: string;
-  }
+  input: InferenceRunEconomicsUpdate
 ): Promise<void> {
+  const existing = await findInferenceRunById(db, runId);
+  const effectiveInput = existing?.costCalculatedAt
+    ? withoutSettledCostFields(input)
+    : input;
+
   const fields: string[] = [];
   const values: unknown[] = [];
 
@@ -449,53 +479,61 @@ export async function updateInferenceRunEconomics(
     values.push(value);
   };
 
-  if (input.requestedProvider !== undefined) {
-    set('requested_provider', input.requestedProvider);
+  if (effectiveInput.requestedProvider !== undefined) {
+    set('requested_provider', effectiveInput.requestedProvider);
   }
-  if (input.requestedModel !== undefined) {
-    set('requested_model', input.requestedModel);
+  if (effectiveInput.requestedModel !== undefined) {
+    set('requested_model', effectiveInput.requestedModel);
   }
-  if (input.actualProvider !== undefined) {
-    set('actual_provider', input.actualProvider);
-    set('provider', input.actualProvider);
+  if (effectiveInput.actualProvider !== undefined) {
+    set('actual_provider', effectiveInput.actualProvider);
+    set('provider', effectiveInput.actualProvider);
   }
-  if (input.actualModel !== undefined) {
-    set('actual_model', input.actualModel);
-    set('model', input.actualModel);
+  if (effectiveInput.actualModel !== undefined) {
+    set('actual_model', effectiveInput.actualModel);
+    set('model', effectiveInput.actualModel);
   }
-  if (input.inputTokens !== undefined) set('input_tokens', input.inputTokens);
-  if (input.outputTokens !== undefined) set('output_tokens', input.outputTokens);
-  if (input.cachedInputTokens !== undefined) {
-    set('cached_input_tokens', input.cachedInputTokens);
+  if (effectiveInput.inputTokens !== undefined) set('input_tokens', effectiveInput.inputTokens);
+  if (effectiveInput.outputTokens !== undefined) set('output_tokens', effectiveInput.outputTokens);
+  if (effectiveInput.cachedInputTokens !== undefined) {
+    set('cached_input_tokens', effectiveInput.cachedInputTokens);
   }
-  if (input.usageEstimated !== undefined) {
-    set('usage_estimated', input.usageEstimated ? 1 : 0);
+  if (effectiveInput.usageEstimated !== undefined) {
+    set('usage_estimated', effectiveInput.usageEstimated ? 1 : 0);
   }
-  if (input.providerCostMicrousd !== undefined) {
-    set('provider_cost_microusd', input.providerCostMicrousd ?? 0);
+  if (effectiveInput.providerCostMicrousd !== undefined) {
+    set('provider_cost_microusd', effectiveInput.providerCostMicrousd ?? 0);
   }
-  if (input.costConfidence !== undefined) {
-    set('cost_confidence', input.costConfidence);
+  if (effectiveInput.costConfidence !== undefined) {
+    set('cost_confidence', effectiveInput.costConfidence);
   }
-  if (input.pricingVersion !== undefined) {
-    set('pricing_version', input.pricingVersion);
+  if (effectiveInput.pricingVersion !== undefined) {
+    set('pricing_version', effectiveInput.pricingVersion);
   }
-  if (input.pricingEntryId !== undefined) {
-    set('pricing_entry_id', input.pricingEntryId);
+  if (effectiveInput.pricingEntryId !== undefined) {
+    set('pricing_entry_id', effectiveInput.pricingEntryId);
   }
-  if (input.costCalculatedAt !== undefined) {
-    set('cost_calculated_at', input.costCalculatedAt);
+  if (effectiveInput.costCalculatedAt !== undefined) {
+    set('cost_calculated_at', effectiveInput.costCalculatedAt);
   }
-  if (input.costBreakdownJson !== undefined) {
-    set('cost_breakdown_json', input.costBreakdownJson);
+  if (effectiveInput.costBreakdownJson !== undefined) {
+    set('cost_breakdown_json', effectiveInput.costBreakdownJson);
   }
-  if (input.energyReserved !== undefined) set('energy_reserved', input.energyReserved);
-  if (input.energyCharged !== undefined) set('energy_charged', input.energyCharged);
-  if (input.latencyMs !== undefined) set('latency_ms', input.latencyMs);
-  if (input.fallbackCount !== undefined) set('fallback_count', input.fallbackCount);
-  if (input.fallbackReason !== undefined) set('fallback_reason', input.fallbackReason);
-  if (input.providerRequestId !== undefined) {
-    set('provider_request_id', input.providerRequestId);
+  if (effectiveInput.energyReserved !== undefined) {
+    set('energy_reserved', effectiveInput.energyReserved);
+  }
+  if (effectiveInput.energyCharged !== undefined) {
+    set('energy_charged', effectiveInput.energyCharged);
+  }
+  if (effectiveInput.latencyMs !== undefined) set('latency_ms', effectiveInput.latencyMs);
+  if (effectiveInput.fallbackCount !== undefined) {
+    set('fallback_count', effectiveInput.fallbackCount);
+  }
+  if (effectiveInput.fallbackReason !== undefined) {
+    set('fallback_reason', effectiveInput.fallbackReason);
+  }
+  if (effectiveInput.providerRequestId !== undefined) {
+    set('provider_request_id', effectiveInput.providerRequestId);
   }
 
   if (!fields.length) return;
