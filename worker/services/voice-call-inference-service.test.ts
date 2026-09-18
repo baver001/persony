@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_BATTERY_CONFIG } from '../billing/battery-config';
 import { findInferenceRunById } from '../repositories/inference-run-repository';
+import { setSystemSetting } from '../repositories/settings-repository';
 import { ensureEnergyWallet } from './energy-service';
 import {
   beginVoiceCallInference,
@@ -49,6 +50,39 @@ describe('voice-call-inference-service', () => {
     };
     expect(breakdown.estimateSource).toBe('session_duration');
     expect(breakdown.durationMs).toBe(120_000);
+  });
+
+  it('prefers provider-reported token usage over duration estimate', async () => {
+    const db = createTestD1(migrationsDir);
+    const userId = 'user-voice-usage';
+    const runId = 'voice-run-usage';
+    await ensureEnergyWallet(db, userId, DEFAULT_BATTERY_CONFIG);
+    await setSystemSetting(db, 'battery_enabled', false, 'test');
+
+    await beginVoiceCallInference(db, {
+      runId,
+      userId,
+      personaId: 'persona-1',
+      personaVersion: 1,
+    });
+
+    await completeVoiceCallInference(db, userId, runId, 60_000, {
+      inputTokens: 1_000_000,
+      outputTokens: 500_000,
+      totalTokens: 1_500_000,
+    });
+
+    const completed = await findInferenceRunById(db, runId);
+    expect(completed?.usageEstimated).toBe(false);
+    expect(completed?.costConfidence).toBe('actual');
+    expect(completed?.inputTokens).toBe(1_000_000);
+    expect(completed?.outputTokens).toBe(500_000);
+    expect(completed?.providerCostMicrousd).toBe(450_000);
+
+    const breakdown = JSON.parse(completed?.costBreakdownJson ?? '{}') as {
+      estimateSource?: string;
+    };
+    expect(breakdown.estimateSource).toBe('provider_usage');
   });
 
   it('marks failed voice call and releases reserved energy', async () => {

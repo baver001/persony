@@ -24,6 +24,7 @@ import {
   completeVoiceCallInference,
   failVoiceCallInference,
 } from './services/voice-call-inference-service';
+import { createLiveUsageTracker } from './services/live-usage-tracker';
 import { GEMINI_LIVE_MODEL } from './lib/models';
 import { resolveLiveConversationContext } from './services/live-context-service';
 import { PersonaNotFoundError } from './services/persona-service';
@@ -55,6 +56,7 @@ app.get(
     let liveRunId: string | null = null;
     let liveUserId: string | null = null;
     let liveStartedAt: number | null = null;
+    const liveUsageTracker = createLiveUsageTracker();
 
     const cleanup = () => {
       if (sessionTimeout) {
@@ -144,6 +146,7 @@ app.get(
                 systemPrompt: liveContext.compiledSystemPrompt,
                 voiceName: parsed.data.voiceName || liveContext.persona.voice,
                 recentChatContext: liveContext.recentChatContext,
+                onUsageUpdate: (usage) => liveUsageTracker.update(usage),
               });
 
               initDone = true;
@@ -222,8 +225,14 @@ app.get(
       onClose() {
         if (c.env.DB && liveRunId && liveUserId && liveStartedAt) {
           const durationMs = Math.max(0, Date.now() - liveStartedAt);
-          void completeVoiceCallInference(c.env.DB, liveUserId, liveRunId, durationMs).catch(
-            () => failVoiceCallInference(c.env.DB!, liveUserId!, liveRunId!, 'live_close_failed')
+          void completeVoiceCallInference(
+            c.env.DB,
+            liveUserId,
+            liveRunId,
+            durationMs,
+            liveUsageTracker.snapshot()
+          ).catch(() =>
+            failVoiceCallInference(c.env.DB!, liveUserId!, liveRunId!, 'live_close_failed')
           );
           liveRunId = null;
           liveUserId = null;

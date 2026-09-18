@@ -15,7 +15,7 @@
 | **Last migration (remote D1)** | `0013_operation_type_normalize.sql` |
 | **CI** | Green on `8761878` deploy |
 | **Production smoke (economics)** | **NOT RUN** — owner login required |
-| **Tests (local)** | 117/117 |
+| **Tests (local)** | 121/121 |
 
 Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 
@@ -26,7 +26,7 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 | Model Registry | deployed | `worker/ai/model-registry.ts`, routing matrix in Owner AI |
 | Pricing Catalog 2.0 | deployed | tokens + per_minute + per_image dimensions |
 | Cost confidence | deployed | actual/estimated/unpriced, `formatMicrousd(null)` → `—` |
-| Provider usage | **partial** | chat stream + transcribe `usageMetadata`; voice duration estimate |
+| Provider usage | **partial** | chat/transcribe/text-gen actual; voice_call Live `usageMetadata` + duration fallback |
 | Voice / transcribe / avatar inference rows | deployed | voice-call, transcribe, avatar services |
 | Call summary / persona gen inference rows | deployed | `text-generation-inference-service.ts` |
 | Owner Console | **partial** | economy, inference, pricing, users/personas detail, settings, errors |
@@ -47,5 +47,4 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 ## Next actions
 
 1. Owner runs Milestone 1 smoke on beta; record inference run ids in this file.
-2. DB-backed pricing admin (edit + audit).
-3. Provider-reported usage for Gemini Live voice calls.
+2. Owner Console mobile/desktop gates (390px / 1440px) — manual verify on beta.

@@ -138,6 +138,7 @@ function deepseekTokenPair(
  */
 export const PRICING_CATALOG: PricingEntry[] = [
   ...geminiText('gemini-3.8-flash', 150_000, 600_000),
+  ...geminiText('gemini-3.8-live', 150_000, 600_000),
   ...geminiText('gemini-3.5-flash-lite', 75_000, 300_000),
   ...geminiText('gemini-3.5-transcribe', 75_000, 300_000),
   // Historical price row — superseded but kept for inference repricing

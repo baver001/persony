@@ -57,8 +57,10 @@ export function OwnerInferenceSection({
               <option value="">{t('inferenceFilterAll')}</option>
               <option value="chat_text">chat_text</option>
               <option value="voice_call">voice_call</option>
-              <option value="transcribe">transcribe</option>
-              <option value="avatar">avatar</option>
+              <option value="voice_transcription">voice_transcription</option>
+              <option value="avatar_generation">avatar_generation</option>
+              <option value="call_summary">call_summary</option>
+              <option value="persona_generation">persona_generation</option>
             </select>
           </label>
           <label className="text-xs text-zinc-500 flex flex-col gap-1">

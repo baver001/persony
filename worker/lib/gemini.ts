@@ -413,6 +413,7 @@ export async function initLiveSession(
     systemPrompt?: string;
     voiceName?: string;
     recentChatContext?: Array<{ sender: string; text: string }>;
+    onUsageUpdate?: (usage: ProviderUsageMetrics) => void;
   }
 ): Promise<LiveSessionHandle> {
   const ai = getAIClient(apiKey);
@@ -452,6 +453,21 @@ export async function initLiveSession(
     callbacks: {
       onmessage: (serverMessage: LiveServerMessage) => {
         if (clientWs.readyState !== 1) return;
+
+        const usage = mapGeminiUsageMetadata(
+          (serverMessage as { usageMetadata?: Record<string, unknown> }).usageMetadata as
+            | {
+                promptTokenCount?: number;
+                candidatesTokenCount?: number;
+                responseTokenCount?: number;
+                cachedContentTokenCount?: number;
+                totalTokenCount?: number;
+              }
+            | undefined
+        );
+        if (usage) {
+          init.onUsageUpdate?.(usage);
+        }
 
         const audioPart = serverMessage.serverContent?.modelTurn?.parts?.find(
           (p) => p.inlineData?.data

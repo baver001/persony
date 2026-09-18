@@ -23,8 +23,8 @@ export function OwnerShell({ section, onSectionChange, onBack, title, children }
   const sectionLabel = (id: OwnerSectionId) => t(`owner:sections.${id}`);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 pb-20 lg:pb-0">
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 flex flex-col lg:flex-row gap-6">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+      <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 xl:px-10 flex flex-col lg:flex-row gap-4 lg:gap-6">
         {/* Desktop sidebar */}
         <aside className="hidden lg:block lg:w-56 shrink-0 space-y-4">
           <button

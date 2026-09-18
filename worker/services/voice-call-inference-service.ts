@@ -1,8 +1,11 @@
+import { defaultCostEngine } from '../billing/cost-engine';
 import { resolveCostConfidence } from '../billing/cost-confidence';
 import { computeDurationCost } from '../billing/pricing-catalog';
 import { loadMergedPricingCatalog } from '../repositories/pricing-catalog-repository';
 import { loadRetailPricingConfig } from '../billing/retail-pricing';
 import { GEMINI_LIVE_MODEL } from '../lib/models';
+import type { ProviderUsageMetrics } from '../providers/provider-result';
+import type { PricingComputationLine } from '../billing/pricing-types';
 import {
   createInferenceRunWithId,
   markInferenceRunCompleted,
@@ -65,25 +68,78 @@ export async function beginVoiceCallInference(
   return { runId: input.runId, reservedUnits: reservation.reservedUnits };
 }
 
+function hasReportedUsage(usage?: ProviderUsageMetrics): boolean {
+  if (!usage) return false;
+  return (
+    usage.inputTokens != null ||
+    usage.outputTokens != null ||
+    usage.totalTokens != null
+  );
+}
+
 export async function completeVoiceCallInference(
   db: D1Database,
   userId: string,
   runId: string,
-  durationMs: number
+  durationMs: number,
+  reportedUsage?: ProviderUsageMetrics
 ): Promise<void> {
   const provider = 'google';
   const model = GEMINI_LIVE_MODEL;
   const pricingCatalogState = await loadMergedPricingCatalog(db);
-  const pricing = computeDurationCost({
-    provider,
-    model,
-    durationMs,
-    catalog: pricingCatalogState.entries,
-    catalogVersion: pricingCatalogState.catalogVersion,
-  });
-  const usageEstimated = true;
-  const priced = pricing.priced && pricing.totalMicrousd > 0;
-  const providerCostMicrousd = priced ? pricing.totalMicrousd : null;
+
+  let providerCostMicrousd: number | null = null;
+  let usageEstimated = true;
+  let costLines: PricingComputationLine[] = [];
+  let pricingVersion = pricingCatalogState.catalogVersion;
+  let pricingEntryId: string | null = null;
+  let estimateSource = 'session_duration';
+  let inputTokens: number | null = null;
+  let outputTokens: number | null = null;
+
+  if (hasReportedUsage(reportedUsage)) {
+    const tokenCost = defaultCostEngine.computeProviderCost({
+      provider,
+      model,
+      usage: reportedUsage!,
+      usageEstimated: false,
+      catalog: pricingCatalogState.entries,
+      catalogVersion: pricingCatalogState.catalogVersion,
+    });
+    inputTokens = reportedUsage!.inputTokens ?? null;
+    outputTokens = reportedUsage!.outputTokens ?? null;
+
+    if (tokenCost.priced && tokenCost.providerCostMicrousd != null) {
+      providerCostMicrousd = tokenCost.providerCostMicrousd;
+      usageEstimated = false;
+      costLines = tokenCost.costLines;
+      pricingVersion = tokenCost.pricingVersion;
+      pricingEntryId = tokenCost.pricingEntryId;
+      estimateSource = 'provider_usage';
+    }
+  }
+
+  if (providerCostMicrousd == null && durationMs > 0) {
+    const durationPricing = computeDurationCost({
+      provider,
+      model,
+      durationMs,
+      catalog: pricingCatalogState.entries,
+      catalogVersion: pricingCatalogState.catalogVersion,
+    });
+    if (durationPricing.priced && durationPricing.totalMicrousd > 0) {
+      providerCostMicrousd = durationPricing.totalMicrousd;
+      costLines = durationPricing.lines;
+      pricingVersion = durationPricing.catalogVersion;
+      pricingEntryId = durationPricing.pricingEntryIds.join(',') || null;
+      estimateSource = hasReportedUsage(reportedUsage)
+        ? 'session_duration_fallback'
+        : 'session_duration';
+      usageEstimated = true;
+    }
+  }
+
+  const priced = providerCostMicrousd != null && providerCostMicrousd > 0;
   const costConfidence = resolveCostConfidence({
     providerCostMicrousd,
     usageEstimated,
@@ -92,29 +148,36 @@ export async function completeVoiceCallInference(
 
   const batteryConfig = await loadBatteryConfig(db);
   const retailPricing = await loadRetailPricingConfig(db);
+  const tokenHint =
+    inputTokens != null || outputTokens != null
+      ? { input: inputTokens ?? undefined, output: outputTokens ?? undefined }
+      : undefined;
   const energyCharged = actualEnergyUnitsForUsage(
     'voice_call',
     batteryConfig,
-    undefined,
+    tokenHint,
     providerCostMicrousd ?? undefined,
     retailPricing
   );
 
   const costCalculatedAt = new Date().toISOString();
   await updateInferenceRunEconomics(db, runId, {
+    inputTokens,
+    outputTokens,
     usageEstimated,
     providerCostMicrousd,
     costConfidence,
-    pricingVersion: pricing.catalogVersion,
-    pricingEntryId: pricing.pricingEntryIds.join(',') || null,
+    pricingVersion,
+    pricingEntryId,
     costCalculatedAt,
     costBreakdownJson: JSON.stringify({
-      lines: pricing.lines,
+      lines: costLines,
       totalMicrousd: providerCostMicrousd,
-      pricingEntryIds: pricing.pricingEntryIds,
-      pricingVersion: pricing.catalogVersion,
+      pricingEntryIds: pricingEntryId?.split(',').filter(Boolean) ?? [],
+      pricingVersion,
       durationMs,
-      estimateSource: 'session_duration',
+      estimateSource,
+      reportedUsage: hasReportedUsage(reportedUsage) ? reportedUsage : null,
     }),
     energyCharged,
     latencyMs: durationMs,
@@ -126,7 +189,7 @@ export async function completeVoiceCallInference(
     userId,
     runId,
     'voice_call',
-    undefined,
+    tokenHint,
     providerCostMicrousd ?? undefined
   );
 }
