@@ -80,6 +80,11 @@ jobs:
             exit 1
           fi
 
+      - name: Build
+        run: npm run build
+        env:
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
+
       - name: Apply D1 migrations
         run: npm run db:migrate:remote
         env:
@@ -91,7 +96,6 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy
 
       - name: Post-deploy health check
         run: |

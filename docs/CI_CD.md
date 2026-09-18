@@ -4,8 +4,8 @@
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
-| [CI](.github/workflows/ci.yml) | PR → `main`, push → `main` | validate i18n, typecheck, tests, build |
-| [Deploy](.github/workflows/deploy.yml) | push → `main`, manual | verify + D1 migrate + Workers deploy + health check |
+| [CI](.github/workflows/ci.yml) | PR → `main`, manual | validate i18n, typecheck, tests, build |
+| [Deploy](.github/workflows/deploy.yml) | push → `main`, manual | verify → build → D1 migrate → Workers deploy → health check |
 
 Deploy **does not** run on pull requests — only after merge to `main`.
 
