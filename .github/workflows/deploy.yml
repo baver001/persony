@@ -42,6 +42,7 @@ jobs:
         run: npm run build
         env:
           VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
+          GITHUB_SHA: ${{ github.sha }}
 
   deploy:
     name: Deploy
@@ -84,6 +85,7 @@ jobs:
         run: npm run build
         env:
           VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
+          GITHUB_SHA: ${{ github.sha }}
 
       - name: Apply D1 migrations
         run: npm run db:migrate:remote
@@ -98,11 +100,23 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Post-deploy health check
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
         run: |
           for attempt in 1 2 3 4 5; do
+            body=$(curl -s https://beta.persony.org/api/health)
             status=$(curl -s -o /dev/null -w "%{http_code}" https://beta.persony.org/api/health)
             if [ "$status" = "200" ]; then
-              echo "Health check passed (HTTP $status)"
+              echo "$body"
+              git_sha=$(echo "$body" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).gitSha||'')}catch{console.log('')}})")
+              expected_prefix=$(echo "$EXPECTED_SHA" | cut -c1-12)
+              if [ -z "$git_sha" ] || [ "$git_sha" = "dev" ]; then
+                echo "::warning::Health OK but gitSha missing or dev ($git_sha)"
+              elif [ "$git_sha" != "$expected_prefix" ]; then
+                echo "::warning::gitSha=$git_sha does not match deploy commit prefix $expected_prefix (CDN/propagation lag?)"
+              else
+                echo "Health check passed with gitSha=$git_sha"
+              fi
               exit 0
             fi
             echo "Health check attempt $attempt failed (HTTP $status), retrying..."

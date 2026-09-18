@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { BUILD_TIMESTAMP, GIT_SHA } from '../lib/build-info';
 import { APP_VERSION } from '../lib/version';
 import type { PersonyEnv } from '../types/env';
 import { isDbReady } from '../repositories/persona-repository';
@@ -11,6 +12,8 @@ healthRoutes.get('/health', async (c) => {
     status: 'ok',
     service: 'persony',
     version: APP_VERSION,
+    gitSha: GIT_SHA,
+    builtAt: BUILD_TIMESTAMP,
     deployment: c.env.ENVIRONMENT || 'development',
     database: dbReady ? 'ready' : c.env.DB ? 'pending_migration' : 'not_configured',
     timestamp: Date.now(),

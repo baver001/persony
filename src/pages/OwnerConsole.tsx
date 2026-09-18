@@ -78,6 +78,7 @@ export function OwnerConsole({ onBack }: Props) {
   const [inferenceLoading, setInferenceLoading] = useState(false);
   const [inferenceCostFilter, setInferenceCostFilter] = useState('');
   const [inferenceStatusFilter, setInferenceStatusFilter] = useState('');
+  const [inferenceOperationFilter, setInferenceOperationFilter] = useState('');
   const [error, setError] = useState<'AUTH_REQUIRED' | 'FORBIDDEN' | 'INTERNAL_ERROR' | null>(
     null
   );
@@ -112,9 +113,10 @@ export function OwnerConsole({ onBack }: Props) {
   }, []);
 
   const loadInference = useCallback(
-    async (filters?: { costConfidence?: string; status?: string }) => {
+    async (filters?: { costConfidence?: string; status?: string; operation?: string }) => {
       const costConfidence = filters?.costConfidence ?? inferenceCostFilter;
       const status = filters?.status ?? inferenceStatusFilter;
+      const operation = filters?.operation ?? inferenceOperationFilter;
       setInferenceLoading(true);
       setInferenceError(false);
       try {
@@ -122,6 +124,7 @@ export function OwnerConsole({ onBack }: Props) {
           limit: 50,
           costConfidence: costConfidence || undefined,
           status: status || undefined,
+          operation: operation || undefined,
         });
         setInferenceItems(data.items);
         setInferenceTotal(data.total);
@@ -133,7 +136,7 @@ export function OwnerConsole({ onBack }: Props) {
         setInferenceLoading(false);
       }
     },
-    [inferenceCostFilter, inferenceStatusFilter]
+    [inferenceCostFilter, inferenceStatusFilter, inferenceOperationFilter]
   );
 
   const loadUsers = useCallback(async () => {
@@ -329,13 +332,30 @@ export function OwnerConsole({ onBack }: Props) {
           error={inferenceError}
           costConfidenceFilter={inferenceCostFilter}
           statusFilter={inferenceStatusFilter}
+          operationFilter={inferenceOperationFilter}
           onCostConfidenceFilterChange={(value) => {
             setInferenceCostFilter(value);
-            void loadInference({ costConfidence: value, status: inferenceStatusFilter });
+            void loadInference({
+              costConfidence: value,
+              status: inferenceStatusFilter,
+              operation: inferenceOperationFilter,
+            });
           }}
           onStatusFilterChange={(value) => {
             setInferenceStatusFilter(value);
-            void loadInference({ costConfidence: inferenceCostFilter, status: value });
+            void loadInference({
+              costConfidence: inferenceCostFilter,
+              status: value,
+              operation: inferenceOperationFilter,
+            });
+          }}
+          onOperationFilterChange={(value) => {
+            setInferenceOperationFilter(value);
+            void loadInference({
+              costConfidence: inferenceCostFilter,
+              status: inferenceStatusFilter,
+              operation: value,
+            });
           }}
           onSelect={(id) => void loadInferenceDetail(id)}
           onRetry={() => void loadInference()}

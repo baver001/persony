@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/embed-git-sha.mjs && vite build",
     "deploy": "wrangler deploy",
     "preview": "vite preview",
     "dev:legacy": "tsx server.ts",
