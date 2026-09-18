@@ -40,3 +40,13 @@ export function applyLocaleToPersona(persona: Persona, language: string): Person
 export function applyLocaleToPersonas(personas: Persona[], language: string): Persona[] {
   return personas.map((persona) => applyLocaleToPersona(persona, language));
 }
+
+export function formatPersonaBadge(
+  persona: Persona,
+  t: (key: string) => string
+): string | null {
+  if (!persona.badge) return null;
+  if (persona.badge === 'AI Persona') return t('common:aiLabel');
+  if (persona.badge === 'Custom') return t('common:customBadge');
+  return persona.badge;
+}

@@ -1,7 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Persona } from '../types';
 import { fetchAvailablePersonas, installPersona } from '../lib/api/personas';
+import {
+  applyLocaleToPersonas,
+  formatPersonaBadge,
+} from '../utils/personaPresentation';
 import { PersonyLogo } from '../components/PersonyLogo';
 
 type Props = {
@@ -10,8 +14,12 @@ type Props = {
 };
 
 export function MeetPersonasPage({ theme, onStartChat }: Props) {
-  const { t } = useTranslation(['personas', 'common']);
-  const [personas, setPersonas] = useState<Persona[]>([]);
+  const { t, i18n } = useTranslation(['personas', 'common']);
+  const [rawPersonas, setRawPersonas] = useState<Persona[]>([]);
+  const personas = useMemo(
+    () => applyLocaleToPersonas(rawPersonas, i18n.language),
+    [rawPersonas, i18n.language]
+  );
   const [loading, setLoading] = useState(true);
   const [startingId, setStartingId] = useState<string | null>(null);
   const isDark = theme === 'dark';
@@ -19,7 +27,7 @@ export function MeetPersonasPage({ theme, onStartChat }: Props) {
   useEffect(() => {
     void (async () => {
       try {
-        setPersonas(await fetchAvailablePersonas());
+        setRawPersonas(await fetchAvailablePersonas());
       } finally {
         setLoading(false);
       }
@@ -53,7 +61,9 @@ export function MeetPersonasPage({ theme, onStartChat }: Props) {
           <p className="text-center text-sm text-py-text-muted">{t('common:loading')}</p>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
-            {personas.map((persona) => (
+            {personas.map((persona) => {
+              const badge = formatPersonaBadge(persona, t);
+              return (
               <article
                 key={persona.id}
                 className="py-surface-card p-4 flex gap-4 transition-colors hover:border-py-text-muted"
@@ -70,9 +80,9 @@ export function MeetPersonasPage({ theme, onStartChat }: Props) {
                       <h2 className="font-semibold truncate">{persona.name}</h2>
                       <p className="text-xs text-py-text-secondary truncate">{persona.tagline}</p>
                     </div>
-                    {persona.badge && (
+                    {badge && (
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-py-accent/15 text-py-accent shrink-0">
-                        {persona.badge}
+                        {badge}
                       </span>
                     )}
                   </div>
@@ -92,7 +102,8 @@ export function MeetPersonasPage({ theme, onStartChat }: Props) {
                   </button>
                 </div>
               </article>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
