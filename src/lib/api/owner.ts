@@ -1,7 +1,15 @@
 import { getApiHeaders } from './headers';
 
-async function ownerFetch<T>(path: string): Promise<T> {
-  const res = await fetch(`/api${path}`, { headers: await getApiHeaders() });
+async function ownerFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = await getApiHeaders();
+  const res = await fetch(`/api${path}`, {
+    ...init,
+    headers: {
+      ...headers,
+      ...(init?.headers ?? {}),
+      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+    },
+  });
   if (res.status === 401) throw new Error('AUTH_REQUIRED');
   if (res.status === 403) throw new Error('FORBIDDEN');
   if (!res.ok) throw new Error('INTERNAL_ERROR');
@@ -229,6 +237,22 @@ export type OwnerPricingEntry = {
   sourceReference: string;
   verifiedAt: string;
   freshness: 'verified' | 'stale' | 'unknown';
+  source?: 'code' | 'db';
+};
+
+export type CreateOwnerPricingEntryInput = {
+  provider: 'google' | 'deepseek';
+  model: string;
+  dimension: string;
+  priceMicrousdPerUnit: number;
+  unit: 'per_million_tokens' | 'per_image' | 'per_minute' | 'per_gib_hour';
+  effectiveFrom: string;
+  effectiveTo?: string | null;
+  pricingTier?: 'default' | 'cache_hit' | 'cache_miss';
+  timeRule?: 'any' | 'peak' | 'off_peak';
+  sourceReference: string;
+  verifiedAt: string;
+  reason: string;
 };
 
 export async function fetchOwnerPricing(): Promise<{
@@ -236,6 +260,15 @@ export async function fetchOwnerPricing(): Promise<{
   entries: OwnerPricingEntry[];
 }> {
   return ownerFetch('/owner/pricing');
+}
+
+export async function createOwnerPricingEntry(
+  input: CreateOwnerPricingEntryInput
+): Promise<{ entry: OwnerPricingEntry }> {
+  return ownerFetch('/owner/pricing/entries', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 export async function fetchOwnerAudit(): Promise<{

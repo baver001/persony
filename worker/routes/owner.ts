@@ -4,11 +4,12 @@ import { toSqlCount } from '../lib/sql-count';
 import { AuthRequiredError } from '../middleware/auth';
 import { RoleRequiredError, requireOwnerAccess } from '../middleware/roles';
 import { DEFAULT_BATTERY_CONFIG } from '../billing/battery-config';
+import { listCatalogEntries, pricingFreshness } from '../billing/pricing-catalog';
+import type { PricingDimension, PricingTier, PricingUnit, TimeRule } from '../billing/pricing-types';
 import {
-  listCatalogEntries,
-  PRICING_CATALOG_VERSION,
-  pricingFreshness,
-} from '../billing/pricing-catalog';
+  createDbPricingEntry,
+  loadMergedPricingCatalog,
+} from '../repositories/pricing-catalog-repository';
 import { getSystemSetting, setSystemSetting } from '../repositories/settings-repository';
 import { writeAuditLog } from '../services/audit-service';
 import type { CostConfidence } from '../billing/cost-confidence';
@@ -199,12 +200,48 @@ ownerRoutes.get('/owner/inference/:id', async (c) => {
   }
 });
 
+const pricingDimensionSchema = z.enum([
+  'text_input',
+  'text_output',
+  'cached_input',
+  'audio_input',
+  'audio_output',
+  'image_input',
+  'image_output',
+  'video_input',
+  'per_image',
+  'per_minute',
+  'context_cache_storage',
+  'provider_surcharge',
+]);
+
+const createPricingEntrySchema = z.object({
+  id: z.string().min(1).max(128).optional(),
+  provider: z.enum(['google', 'deepseek']),
+  model: z.string().min(1).max(128),
+  dimension: pricingDimensionSchema,
+  priceMicrousdPerUnit: z.number().int().positive(),
+  unit: z.enum(['per_million_tokens', 'per_image', 'per_minute', 'per_gib_hour']),
+  effectiveFrom: z.string().min(10).max(40),
+  effectiveTo: z.string().min(10).max(40).nullable().optional(),
+  pricingTier: z.enum(['default', 'cache_hit', 'cache_miss']).optional(),
+  timeRule: z.enum(['any', 'peak', 'off_peak']).optional(),
+  sourceReference: z.string().min(1).max(512),
+  verifiedAt: z.string().min(10).max(40),
+  reason: z.string().min(1).max(500),
+});
+
 ownerRoutes.get('/owner/pricing', async (c) => {
   try {
     await requireOwnerAccess(c);
+    if (!c.env.DB) return c.json({ error_code: 'DB_NOT_CONFIGURED' }, 503);
+
     const provider = c.req.query('provider');
     const model = c.req.query('model');
-    const entries = listCatalogEntries({ provider, model }).map((e) => ({
+    const { entries: catalog, catalogVersion, dbEntryIds } = await loadMergedPricingCatalog(
+      c.env.DB
+    );
+    const entries = listCatalogEntries({ provider, model }, catalog).map((e) => ({
       id: e.id,
       provider: e.provider,
       model: e.model,
@@ -219,11 +256,54 @@ ownerRoutes.get('/owner/pricing', async (c) => {
       sourceReference: e.sourceReference,
       verifiedAt: e.verifiedAt,
       freshness: pricingFreshness(e.verifiedAt),
+      source: dbEntryIds.has(e.id) ? 'db' : 'code',
     }));
     return c.json({
-      catalogVersion: PRICING_CATALOG_VERSION,
+      catalogVersion,
       entries,
     });
+  } catch (err) {
+    return ownerErrorResponse(c, err);
+  }
+});
+
+ownerRoutes.post('/owner/pricing/entries', async (c) => {
+  try {
+    const { userId } = await requireOwnerAccess(c);
+    if (!c.env.DB) return c.json({ error_code: 'DB_NOT_CONFIGURED' }, 503);
+
+    const body = await c.req.json();
+    const parsed = createPricingEntrySchema.safeParse(body);
+    if (!parsed.success) return c.json({ error_code: 'INVALID_PAYLOAD' }, 400);
+
+    try {
+      const created = await createDbPricingEntry(c.env.DB, userId, {
+        id: parsed.data.id,
+        provider: parsed.data.provider,
+        model: parsed.data.model,
+        dimension: parsed.data.dimension as PricingDimension,
+        priceMicrousdPerUnit: parsed.data.priceMicrousdPerUnit,
+        unit: parsed.data.unit as PricingUnit,
+        effectiveFrom: parsed.data.effectiveFrom,
+        effectiveTo: parsed.data.effectiveTo ?? null,
+        pricingTier: parsed.data.pricingTier as PricingTier | undefined,
+        timeRule: parsed.data.timeRule as TimeRule | undefined,
+        sourceReference: parsed.data.sourceReference,
+        verifiedAt: parsed.data.verifiedAt,
+        reason: parsed.data.reason,
+      });
+      return c.json({ entry: created }, 201);
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.message === 'PRICING_ENTRY_EXISTS') {
+          return c.json({ error_code: 'PRICING_ENTRY_EXISTS' }, 409);
+        }
+        if (err.message === 'PRICING_ENTRY_ID_RESERVED') {
+          return c.json({ error_code: 'PRICING_ENTRY_ID_RESERVED' }, 409);
+        }
+      }
+      throw err;
+    }
   } catch (err) {
     return ownerErrorResponse(c, err);
   }

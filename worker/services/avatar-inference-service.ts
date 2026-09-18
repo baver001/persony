@@ -1,5 +1,6 @@
 import { resolveCostConfidence } from '../billing/cost-confidence';
 import { computePerImageCost } from '../billing/pricing-catalog';
+import { loadMergedPricingCatalog } from '../repositories/pricing-catalog-repository';
 import { loadRetailPricingConfig } from '../billing/retail-pricing';
 import { GEMINI_AVATAR_IMAGE_MODELS } from '../lib/models';
 import { handleGenerateAvatar } from '../lib/gemini';
@@ -58,6 +59,7 @@ export async function runAvatarWithInference(
       operationType: 'avatar_generation',
     }));
 
+  const pricingCatalogState = await loadMergedPricingCatalog(db);
   const reservation = await reserveEnergyForInference(db, userId, run.id, 'avatar_generation');
   await updateInferenceRunEconomics(db, run.id, {
     energyReserved: reservation.reservedUnits,
@@ -70,7 +72,13 @@ export async function runAvatarWithInference(
   try {
     const result = await handleGenerateAvatar(apiKey, input.prompt, input.personaName);
     const model = result.model ?? GEMINI_AVATAR_IMAGE_MODELS[0];
-    const pricing = computePerImageCost({ provider, model, imageCount: 1 });
+    const pricing = computePerImageCost({
+      provider,
+      model,
+      imageCount: 1,
+      catalog: pricingCatalogState.entries,
+      catalogVersion: pricingCatalogState.catalogVersion,
+    });
     const priced = pricing.priced && pricing.totalMicrousd > 0;
     const usageEstimated = priced ? false : Boolean(result.usageEstimated);
     const providerCostMicrousd = priced ? pricing.totalMicrousd : null;

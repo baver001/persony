@@ -1,5 +1,6 @@
 import { resolveCostConfidence } from '../billing/cost-confidence';
 import { computeDurationCost } from '../billing/pricing-catalog';
+import { loadMergedPricingCatalog } from '../repositories/pricing-catalog-repository';
 import { loadRetailPricingConfig } from '../billing/retail-pricing';
 import { GEMINI_LIVE_MODEL } from '../lib/models';
 import {
@@ -72,7 +73,14 @@ export async function completeVoiceCallInference(
 ): Promise<void> {
   const provider = 'google';
   const model = GEMINI_LIVE_MODEL;
-  const pricing = computeDurationCost({ provider, model, durationMs });
+  const pricingCatalogState = await loadMergedPricingCatalog(db);
+  const pricing = computeDurationCost({
+    provider,
+    model,
+    durationMs,
+    catalog: pricingCatalogState.entries,
+    catalogVersion: pricingCatalogState.catalogVersion,
+  });
   const usageEstimated = true;
   const priced = pricing.priced && pricing.totalMicrousd > 0;
   const providerCostMicrousd = priced ? pricing.totalMicrousd : null;

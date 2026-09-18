@@ -55,8 +55,8 @@ Chat providers emit `usage` on the terminal SSE `done` event when the upstream A
 
 ## Open gaps
 
-- [ ] DB-backed pricing (catalog is code-defined today)
-- [ ] Owner UI for adding pricing versions
+- [x] DB-backed pricing (code bootstrap + append-only `pricing_entries` table)
+- [x] Owner UI for adding pricing versions (`POST /owner/pricing/entries`)
 - [ ] Voice Call / avatar / transcription pricing dimensions populated
 - [x] Inference detail cost breakdown API — `GET /api/owner/inference/:id`
 - [ ] Production E2E economics verification

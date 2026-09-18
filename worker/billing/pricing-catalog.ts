@@ -12,6 +12,29 @@ import type {
 
 export const PRICING_CATALOG_VERSION = '2026-09-18-v2';
 
+export function mergePricingCatalog(dbEntries: PricingEntry[]): PricingEntry[] {
+  if (dbEntries.length === 0) return PRICING_CATALOG;
+  const byId = new Map<string, PricingEntry>();
+  for (const entry of PRICING_CATALOG) byId.set(entry.id, entry);
+  for (const entry of dbEntries) byId.set(entry.id, entry);
+  return [...byId.values()];
+}
+
+export function resolveCatalogVersion(
+  dbEntryCount: number,
+  latestCreatedAt?: string | null
+): string {
+  if (dbEntryCount <= 0) return PRICING_CATALOG_VERSION;
+  if (latestCreatedAt) {
+    return `${PRICING_CATALOG_VERSION}+db@${latestCreatedAt.slice(0, 10)}`;
+  }
+  return `${PRICING_CATALOG_VERSION}+db(${dbEntryCount})`;
+}
+
+function activeCatalog(catalog?: PricingEntry[]): PricingEntry[] {
+  return catalog ?? PRICING_CATALOG;
+}
+
 const VERIFIED_AT = '2026-09-18';
 const GEMINI_PRICING = 'https://ai.google.dev/gemini-api/docs/pricing';
 const DEEPSEEK_PRICING = 'https://api-docs.deepseek.com/quick_start/pricing';
@@ -173,12 +196,13 @@ export function findPricingEntries(
   model: string,
   dimension: PricingDimension,
   atIso: string,
-  opts?: { pricingTier?: PricingTier; timeRule?: TimeRule }
+  opts?: { pricingTier?: PricingTier; timeRule?: TimeRule; catalog?: PricingEntry[] }
 ): PricingEntry[] {
   const atMs = Date.parse(atIso);
   const timeRule = opts?.timeRule ?? resolveTimeRuleForProvider(provider, atIso);
+  const catalog = activeCatalog(opts?.catalog);
 
-  return PRICING_CATALOG.filter((e) => {
+  return catalog.filter((e) => {
     if (e.provider !== provider || e.model !== model || e.dimension !== dimension) {
       return false;
     }
@@ -194,9 +218,13 @@ export function findBestPricingEntry(
   model: string,
   dimension: PricingDimension,
   atIso: string,
-  pricingTier: PricingTier
+  pricingTier: PricingTier,
+  catalog?: PricingEntry[]
 ): PricingEntry | null {
-  const matches = findPricingEntries(provider, model, dimension, atIso, { pricingTier });
+  const matches = findPricingEntries(provider, model, dimension, atIso, {
+    pricingTier,
+    catalog,
+  });
   return matches[0] ?? null;
 }
 
@@ -230,22 +258,26 @@ export function computePerImageCost(input: {
   model: string;
   imageCount: number;
   atIso?: string;
+  catalog?: PricingEntry[];
+  catalogVersion?: string;
 }): PricingComputationResult {
   const atIso = input.atIso ?? new Date().toISOString();
   const count = Math.max(0, input.imageCount);
+  const catalogVersion = input.catalogVersion ?? PRICING_CATALOG_VERSION;
   const imageEntry = findBestPricingEntry(
     input.provider,
     input.model,
     'per_image',
     atIso,
-    'default'
+    'default',
+    input.catalog
   );
   if (!imageEntry || count <= 0) {
     return {
       lines: [],
       totalMicrousd: 0,
       pricingEntryIds: [],
-      catalogVersion: PRICING_CATALOG_VERSION,
+      catalogVersion,
       priced: false,
     };
   }
@@ -254,7 +286,7 @@ export function computePerImageCost(input: {
     lines: [line],
     totalMicrousd: line.costMicrousd,
     pricingEntryIds: [line.pricingEntryId],
-    catalogVersion: PRICING_CATALOG_VERSION,
+    catalogVersion,
     priced: line.costMicrousd > 0,
   };
 }
@@ -265,22 +297,26 @@ export function computeDurationCost(input: {
   model: string;
   durationMs: number;
   atIso?: string;
+  catalog?: PricingEntry[];
+  catalogVersion?: string;
 }): PricingComputationResult {
   const atIso = input.atIso ?? new Date().toISOString();
+  const catalogVersion = input.catalogVersion ?? PRICING_CATALOG_VERSION;
   const minutes = Math.max(0, input.durationMs) / 60_000;
   const minuteEntry = findBestPricingEntry(
     input.provider,
     input.model,
     'per_minute',
     atIso,
-    'default'
+    'default',
+    input.catalog
   );
   if (!minuteEntry || minutes <= 0) {
     return {
       lines: [],
       totalMicrousd: 0,
       pricingEntryIds: [],
-      catalogVersion: PRICING_CATALOG_VERSION,
+      catalogVersion,
       priced: false,
     };
   }
@@ -289,7 +325,7 @@ export function computeDurationCost(input: {
     lines: [line],
     totalMicrousd: line.costMicrousd,
     pricingEntryIds: [line.pricingEntryId],
-    catalogVersion: PRICING_CATALOG_VERSION,
+    catalogVersion,
     priced: line.costMicrousd > 0,
   };
 }
@@ -299,8 +335,12 @@ export function computeUsageCost(input: {
   model: string;
   usage: ProviderUsageMetrics;
   atIso?: string;
+  catalog?: PricingEntry[];
+  catalogVersion?: string;
 }): PricingComputationResult {
   const atIso = input.atIso ?? new Date().toISOString();
+  const catalog = input.catalog;
+  const catalogVersion = input.catalogVersion ?? PRICING_CATALOG_VERSION;
   const lines: PricingComputationLine[] = [];
 
   const inputTokens = input.usage.inputTokens ?? 0;
@@ -316,7 +356,8 @@ export function computeUsageCost(input: {
         input.model,
         'text_input',
         atIso,
-        'cache_miss'
+        'cache_miss',
+        catalog
       );
       if (miss) lines.push(lineFromEntry(miss, nonCachedInput));
     }
@@ -326,7 +367,8 @@ export function computeUsageCost(input: {
         input.model,
         'cached_input',
         atIso,
-        'cache_hit'
+        'cache_hit',
+        catalog
       );
       if (hit) lines.push(lineFromEntry(hit, cachedTokens));
     }
@@ -336,7 +378,8 @@ export function computeUsageCost(input: {
       input.model,
       'text_input',
       atIso,
-      'default'
+      'default',
+      catalog
     );
     if (textIn) lines.push(lineFromEntry(textIn, nonCachedInput));
     if (cachedTokens > 0) {
@@ -345,7 +388,8 @@ export function computeUsageCost(input: {
         input.model,
         'cached_input',
         atIso,
-        'default'
+        'default',
+        catalog
       );
       if (cached) lines.push(lineFromEntry(cached, cachedTokens));
     }
@@ -357,7 +401,8 @@ export function computeUsageCost(input: {
       input.model,
       'text_output',
       atIso,
-      input.provider === 'deepseek' ? 'default' : 'default'
+      input.provider === 'deepseek' ? 'default' : 'default',
+      catalog
     );
     if (textOut) lines.push(lineFromEntry(textOut, outputTokens));
   }
@@ -369,7 +414,7 @@ export function computeUsageCost(input: {
     lines,
     totalMicrousd,
     pricingEntryIds: lines.map((l) => l.pricingEntryId),
-    catalogVersion: PRICING_CATALOG_VERSION,
+    catalogVersion,
     priced,
   };
 }
@@ -382,11 +427,14 @@ export function pricingFreshness(verifiedAt: string, now = new Date()): PricingF
   return 'stale';
 }
 
-export function listCatalogEntries(filters?: {
-  provider?: string;
-  model?: string;
-}): PricingEntry[] {
-  return PRICING_CATALOG.filter((e) => {
+export function listCatalogEntries(
+  filters?: {
+    provider?: string;
+    model?: string;
+  },
+  catalog?: PricingEntry[]
+): PricingEntry[] {
+  return activeCatalog(catalog).filter((e) => {
     if (filters?.provider && e.provider !== filters.provider) return false;
     if (filters?.model && e.model !== filters.model) return false;
     return true;

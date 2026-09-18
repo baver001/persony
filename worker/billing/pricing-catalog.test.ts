@@ -5,8 +5,11 @@ import {
   computeUsageCost,
   findBestPricingEntry,
   findPricingEntries,
+  mergePricingCatalog,
   pricingFreshness,
+  resolveCatalogVersion,
 } from './pricing-catalog';
+import type { PricingEntry } from './pricing-types';
 import { resolveDeepSeekTimeRule } from './pricing-time';
 
 describe('pricing-catalog', () => {
@@ -93,6 +96,28 @@ describe('pricing-catalog', () => {
     expect(pricingFreshness('2026-09-18')).toBe('verified');
     expect(pricingFreshness('2020-01-01')).toBe('stale');
     expect(pricingFreshness('invalid')).toBe('unknown');
+  });
+
+  it('merges DB overrides by id', () => {
+    const override: PricingEntry = {
+      id: 'gemini-3.8-flash:text_input:default',
+      provider: 'google',
+      model: 'gemini-3.8-flash',
+      dimension: 'text_input',
+      effectiveFrom: '2026-09-18T00:00:00.000Z',
+      effectiveTo: null,
+      priceMicrousdPerUnit: 888_000,
+      unit: 'per_million_tokens',
+      currency: 'USD',
+      pricingTier: 'default',
+      timeRule: 'any',
+      sourceReference: 'https://example.com',
+      verifiedAt: '2026-09-18',
+    };
+    const merged = mergePricingCatalog([override]);
+    const entry = merged.find((e) => e.id === override.id);
+    expect(entry?.priceMicrousdPerUnit).toBe(888_000);
+    expect(resolveCatalogVersion(1, '2026-09-18T12:00:00.000Z')).toContain('+db@2026-09-18');
   });
 });
 

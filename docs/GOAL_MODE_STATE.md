@@ -31,7 +31,7 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 | Call summary / persona gen inference rows | deployed | `text-generation-inference-service.ts` |
 | Owner Console | **partial** | economy, inference, pricing, users/personas detail, settings, errors |
 | Economics E2E (Milestone 1) | **open** | [`docs/PRODUCTION_ECONOMICS_SMOKE.md`](./PRODUCTION_ECONOMICS_SMOKE.md) |
-| DB-backed pricing admin | open | read-only catalog today |
+| DB-backed pricing admin | deployed | migration `0014`, POST `/owner/pricing/entries`, audit log |
 | Mobile/desktop layout gates | open | manual 390px / 1440px |
 
 ## Manual verification gates

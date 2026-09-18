@@ -1,5 +1,6 @@
 import type { InferenceOperation } from '../ai/operations';
 import { defaultCostEngine } from '../billing/cost-engine';
+import { loadMergedPricingCatalog } from '../repositories/pricing-catalog-repository';
 import { loadRetailPricingConfig } from '../billing/retail-pricing';
 import {
   handleGenerateCharacter,
@@ -83,6 +84,7 @@ async function runTokenInference<TPayload extends TextGenerationResult>(
       operationType,
     }));
 
+  const pricingCatalogState = await loadMergedPricingCatalog(db);
   const reservation = await reserveEnergyForInference(db, userId, run.id, operationType);
   await updateInferenceRunEconomics(db, run.id, {
     energyReserved: reservation.reservedUnits,
@@ -102,6 +104,8 @@ async function runTokenInference<TPayload extends TextGenerationResult>(
       model,
       usage: merged.usage,
       usageEstimated: merged.usageEstimated || result.usageEstimated,
+      catalog: pricingCatalogState.entries,
+      catalogVersion: pricingCatalogState.catalogVersion,
     });
 
     const batteryConfig = await loadBatteryConfig(db);

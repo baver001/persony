@@ -1,6 +1,7 @@
 import type { CostConfidence } from '../billing/cost-confidence';
 import { computeUsageCost, PRICING_CATALOG } from '../billing/pricing-catalog';
-import type { PricingComputationLine } from '../billing/pricing-types';
+import type { PricingComputationLine, PricingEntry } from '../billing/pricing-types';
+import { loadMergedPricingCatalog } from '../repositories/pricing-catalog-repository';
 import {
   findInferenceRunById,
   listInferenceRuns,
@@ -87,12 +88,19 @@ function toListItem(run: InferenceRunRecord): OwnerInferenceListItem {
   };
 }
 
-function lookupPricingEntries(ids: string[]) {
-  const map = new Map(PRICING_CATALOG.map((e) => [e.id, e]));
+function lookupPricingEntries(ids: string[], catalog?: PricingEntry[]) {
+  const map = new Map(activeCatalog(catalog).map((e) => [e.id, e]));
   return ids.map((id) => map.get(id)).filter(Boolean);
 }
 
-export function buildCostExplanation(run: InferenceRunRecord): InferenceCostExplanation {
+function activeCatalog(catalog?: PricingEntry[]): PricingEntry[] {
+  return catalog ?? PRICING_CATALOG;
+}
+
+export function buildCostExplanation(
+  run: InferenceRunRecord,
+  catalog?: PricingEntry[]
+): InferenceCostExplanation {
   if (run.costBreakdownJson) {
     try {
       const parsed = JSON.parse(run.costBreakdownJson) as {
@@ -140,6 +148,7 @@ export function buildCostExplanation(run: InferenceRunRecord): InferenceCostExpl
       cachedInputTokens: run.cachedInputTokens ?? 0,
     },
     atIso,
+    catalog,
   });
 
   return {
@@ -242,7 +251,8 @@ export async function getOwnerInferenceDetail(
   const run = await findInferenceRunById(db, runId);
   if (!run) return null;
 
-  const costExplanation = buildCostExplanation(run);
+  const pricingCatalogState = await loadMergedPricingCatalog(db);
+  const costExplanation = buildCostExplanation(run, pricingCatalogState.entries);
 
   return {
     ...toListItem(run),

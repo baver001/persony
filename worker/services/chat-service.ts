@@ -1,4 +1,5 @@
 import { defaultCostEngine } from '../billing/cost-engine';
+import { loadMergedPricingCatalog } from '../repositories/pricing-catalog-repository';
 import { loadRetailPricingConfig } from '../billing/retail-pricing';
 import { resolveChatRoute, streamChatWithRouter } from './model-router';
 import { formatCleanErrorMessage } from '../lib/errors';
@@ -132,6 +133,7 @@ async function executeInferenceStream(
 ): Promise<ReadableStream<Uint8Array>> {
   const db = env.DB!;
   await markInferenceRunStreaming(db, run.id, userMessageId);
+  const pricingCatalogState = await loadMergedPricingCatalog(db);
 
   const startedAt = Date.now();
   const inputContext = history.map((m) => m.text).join('\n') + userMessageText;
@@ -184,6 +186,8 @@ async function executeInferenceStream(
             model: resolvedModel,
             usage,
             usageEstimated,
+            catalog: pricingCatalogState.entries,
+            catalogVersion: pricingCatalogState.catalogVersion,
           });
 
           const personaMessage = await insertPersonaMessage(

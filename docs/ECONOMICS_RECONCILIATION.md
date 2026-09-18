@@ -56,7 +56,7 @@ Status labels:
 | Stream usage Gemini/DeepSeek chat | ✓ | ✓ | MANUAL open |
 | Unknown cost ≠ $0 in Owner UI | ✓ `formatMicrousd(null)` | — | MANUAL open |
 | Retail margin formula (not 2.5× hardcode) | ✓ `retail-pricing.ts` | ✓ | NOT VERIFIED |
-| DB-backed pricing admin | ✗ code catalog only | — | — |
+| DB-backed pricing admin | ✓ append-only DB + code bootstrap | `0014_pricing_catalog_db.sql` | NOT VERIFIED |
 
 ---
 

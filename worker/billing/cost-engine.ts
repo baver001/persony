@@ -2,7 +2,7 @@ import type { ProviderUsageMetrics } from '../providers/provider-result';
 import type { CostConfidence } from './cost-confidence';
 import { resolveCostConfidence } from './cost-confidence';
 import { computeUsageCost, PRICING_CATALOG_VERSION } from './pricing-catalog';
-import type { PricingComputationLine } from './pricing-types';
+import type { PricingComputationLine, PricingEntry } from './pricing-types';
 
 export type CostComputationInput = {
   provider: string;
@@ -10,6 +10,8 @@ export type CostComputationInput = {
   usage: ProviderUsageMetrics;
   usageEstimated: boolean;
   atIso?: string;
+  catalog?: PricingEntry[];
+  catalogVersion?: string;
 };
 
 export type CostComputationResult = {
@@ -31,6 +33,8 @@ export class CostEngine {
       model: input.model,
       usage: input.usage,
       atIso: input.atIso,
+      catalog: input.catalog,
+      catalogVersion: input.catalogVersion,
     });
 
     if (!pricing.priced) {

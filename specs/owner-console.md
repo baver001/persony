@@ -86,7 +86,7 @@ Client: `src/lib/api/owner.ts` — typed fetch helpers (no `Record<string, unkno
 - [x] Users detail (inference history per user)
 - [x] Feature flags section (maintenance_mode, battery_enabled, battery_mode)
 - [x] Errors / failed inference dedicated view
-- [ ] DB-backed pricing admin (edit + audit)
+- [x] DB-backed pricing admin (append-only add + audit log)
 - [ ] Production E2E verification checklist
 
 ## Verification gates

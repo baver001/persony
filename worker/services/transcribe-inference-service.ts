@@ -1,4 +1,5 @@
 import { defaultCostEngine } from '../billing/cost-engine';
+import { loadMergedPricingCatalog } from '../repositories/pricing-catalog-repository';
 import { loadRetailPricingConfig } from '../billing/retail-pricing';
 import { GEMINI_TRANSCRIBE_MODELS } from '../lib/models';
 import { handleTranscribe } from '../lib/gemini';
@@ -60,6 +61,7 @@ export async function runTranscribeWithInference(
       operationType: 'voice_transcription',
     }));
 
+  const pricingCatalogState = await loadMergedPricingCatalog(db);
   const reservation = await reserveEnergyForInference(db, userId, run.id, 'voice_transcription');
   await updateInferenceRunEconomics(db, run.id, {
     energyReserved: reservation.reservedUnits,
@@ -78,6 +80,8 @@ export async function runTranscribeWithInference(
       model,
       usage: merged.usage,
       usageEstimated: merged.usageEstimated,
+      catalog: pricingCatalogState.entries,
+      catalogVersion: pricingCatalogState.catalogVersion,
     });
 
     const batteryConfig = await loadBatteryConfig(db);
