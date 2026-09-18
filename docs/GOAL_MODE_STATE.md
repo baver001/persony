@@ -10,10 +10,11 @@
 
 | Field | Value |
 |-------|--------|
-| **Current production SHA** | `4b00e0c` — pricing admin, Live usage, text-gen inference economics |
+| **Current production SHA** | `919f463` — full Owner mobile card layouts + economics stack |
 | **Production health** | `GET https://beta.persony.org/api/health` → ok, database ready |
 | **Last migration (remote D1)** | `0014_pricing_catalog_db.sql` |
-| **CI** | Green on `4b00e0c` deploy |
+| **CI** | Green (see latest `main` deploy) |
+| **Public smoke** | `npm run smoke:economics:public` passes when reachable |
 | **Production smoke (economics)** | **NOT RUN** — owner login required |
 | **Tests (local)** | 121/121 |
 
@@ -32,7 +33,7 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 | Owner Console | **partial** | economy, inference, pricing, users/personas detail, settings, errors |
 | Economics E2E (Milestone 1) | **open** | [`docs/PRODUCTION_ECONOMICS_SMOKE.md`](./PRODUCTION_ECONOMICS_SMOKE.md) |
 | DB-backed pricing admin | deployed | migration `0014`, POST `/owner/pricing/entries`, audit log |
-| Mobile/desktop layout gates | **partial** | mobile inference cards + bottom nav; manual 390/1440 gate open |
+| Mobile/desktop layout gates | **partial** | card lists on all main sections `<md`; manual 390/1440 sign-off open |
 
 ## Manual verification gates
 

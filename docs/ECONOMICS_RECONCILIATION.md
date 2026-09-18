@@ -64,7 +64,7 @@ Status labels:
 
 | Item | IMPLEMENTED | TESTED | MANUAL layout |
 |------|:-----------:|:------:|:-------------:|
-| OwnerShell desktop + mobile nav | ✓ | — | **open** 390/1440 |
+| OwnerShell desktop + mobile nav | ✓ | card lists `<md` on analytics sections | **open** 390/1440 sign-off |
 | Economy dashboard (coverage, unpriced) | ✓ | — | MANUAL open |
 | Inference Explorer + filters + detail | ✓ | ✓ | MANUAL open |
 | Pricing catalog (read-only) | ✓ | — | — |
@@ -82,7 +82,7 @@ Status labels:
 |-----------|--------|---------|
 | **M1 — Economics Truth** | **NO** | Owner manual smoke not recorded (`PRODUCTION_ECONOMICS_SMOKE.md`) |
 | **M2 — Owner Console Desktop** | **PARTIAL** | Implemented; layout + E2E not verified |
-| **M3 — Mobile** | **PARTIAL** | Shell exists; 390px gate open |
+| **M3 — Mobile** | **PARTIAL** | Card layouts shipped; manual 390/1440 sign-off open |
 | **M4 — Production Verified** | **NO** | M1 + layout gates |
 
 ---

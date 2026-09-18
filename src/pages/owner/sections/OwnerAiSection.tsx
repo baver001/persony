@@ -93,7 +93,25 @@ export function OwnerAiSection({
             <section className="space-y-2">
               <h3 className="text-sm font-medium">{t('aiRoutingMatrix')}</h3>
               <p className="text-xs text-zinc-500">{t('aiRoutingMatrixHint')}</p>
-              <div className="rounded-xl border border-white/10 overflow-x-auto">
+              <ul className="md:hidden space-y-2 max-h-[50vh] overflow-y-auto">
+                {overview.routingMatrix.map((row) => (
+                  <li
+                    key={`${row.provider}:${row.modelId}`}
+                    className="rounded-xl border border-white/10 bg-white/[0.02] p-3 space-y-1"
+                  >
+                    <div className="font-mono text-xs">{row.provider}/{row.modelId}</div>
+                    <div className="text-[11px] text-zinc-500">{row.displayName}</div>
+                    <div className="text-[11px] text-zinc-400">
+                      {row.enabled ? row.status : 'disabled'} · usage:{' '}
+                      {row.supportsUsage ? t('yes') : t('no')}
+                    </div>
+                    <div className="text-[11px] font-mono text-zinc-500 break-words">
+                      {row.operations.join(', ')}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <div className="hidden md:block rounded-xl border border-white/10 overflow-x-auto">
                 <table className="w-full text-sm min-w-[720px]">
                   <thead className="bg-white/5 text-zinc-400 text-left">
                     <tr>
