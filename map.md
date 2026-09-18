@@ -45,7 +45,7 @@ flowchart TD
 - Чат со streaming, голосовые заметки, Gemini Live, транскрипты звонков в истории
 - Mobile voice stability (`specs/04-mobile-voice-stability.md`)
 - Иконка P + paper plane, центрирование touch-target кнопок
-- CF Workers + GitHub Actions deploy
+- CF Workers + GitHub Actions CI/CD (`docs/CI_CD.md`)
 - Дизайн-токены Persony
 
 ### Готово — Phase 1.0 (cloud foundation)
