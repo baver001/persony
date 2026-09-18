@@ -66,6 +66,9 @@ export const updatePersonaSchema = createPersonaSchema;
 export const transcribeRequestSchema = z.object({
   audioBase64: z.string().min(1).max(MAX_TRANSCRIBE_BASE64_CHARS),
   mimeType: z.string().max(64).optional(),
+  personaId: z.string().min(1).max(64).optional(),
+  clientRequestId: z.string().min(1).max(128).optional(),
+  conversationId: z.string().min(1).max(128).optional(),
 });
 
 export const generateCharacterSchema = z.object({

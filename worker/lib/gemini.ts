@@ -130,12 +130,21 @@ export async function handleChat(
   });
 }
 
+export type TranscribeResult = {
+  transcript: string;
+  model?: string;
+  usage?: ProviderUsageMetrics;
+  usageEstimated: boolean;
+  latencyMs: number;
+};
+
 export async function handleTranscribe(
   apiKey: string,
   audioBase64: string,
   mimeType?: string
-): Promise<{ transcript: string }> {
+): Promise<TranscribeResult> {
   const ai = getAIClient(apiKey);
+  const started = Date.now();
 
   let cleanMime = 'audio/wav';
   if (typeof mimeType === 'string' && mimeType.trim()) {
@@ -164,14 +173,23 @@ export async function handleTranscribe(
         },
       });
       const transcript = response.text?.trim() || '';
-      if (transcript) return { transcript };
+      const usage = mapGeminiUsageMetadata(response.usageMetadata);
+      if (transcript) {
+        return {
+          transcript,
+          model,
+          usage,
+          usageEstimated: !usage,
+          latencyMs: Date.now() - started,
+        };
+      }
     } catch (err) {
       const kind = classifyProviderError(err);
       if (!shouldFallbackToNextModel(kind, false)) break;
     }
   }
 
-  return { transcript: '' };
+  return { transcript: '', usageEstimated: true, latencyMs: Date.now() - started };
 }
 
 export async function handleGenerateCharacter(apiKey: string, prompt: string): Promise<Record<string, unknown>> {

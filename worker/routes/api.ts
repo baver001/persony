@@ -18,6 +18,8 @@ import { requireAIEntitlement } from '../middleware/entitlement';
 import { mapApiError } from '../lib/api-errors';
 import { clientIp, rateLimitMiddleware } from '../middleware/rate-limit';
 import { withEnergyReservation } from '../services/energy-service';
+import { runTranscribeWithInference } from '../services/transcribe-inference-service';
+import { runTranscribeWithInference } from '../services/transcribe-inference-service';
 import type { PersonyEnv } from '../types/env';
 import { conversationRoutes } from './conversations';
 import { healthRoutes } from './health';
@@ -71,6 +73,22 @@ apiRoutes.post('/transcribe', aiUserRateLimit, async (c) => {
     if (!parsed.success) {
       return c.json({ error: 'Invalid transcribe payload' }, 400);
     }
+    if (c.env.DB && parsed.data.personaId && parsed.data.clientRequestId) {
+      const tracked = await runTranscribeWithInference(
+        c.env.DB,
+        userId,
+        c.env.GEMINI_API_KEY,
+        {
+          audioBase64: parsed.data.audioBase64,
+          mimeType: parsed.data.mimeType,
+          personaId: parsed.data.personaId,
+          clientRequestId: `${parsed.data.clientRequestId}:transcribe`,
+          conversationId: parsed.data.conversationId,
+        }
+      );
+      return c.json({ transcript: tracked.transcript });
+    }
+
     const result = await withEnergyReservation(
       c.env.DB,
       userId,
@@ -82,7 +100,7 @@ apiRoutes.post('/transcribe', aiUserRateLimit, async (c) => {
           parsed.data.mimeType
         )
     );
-    return c.json(result);
+    return c.json({ transcript: result.transcript });
   } catch (err) {
     const mapped = mapApiError(err, formatCleanErrorMessage(err));
     return c.json(mapped.body, mapped.status as 401 | 402 | 429 | 500);

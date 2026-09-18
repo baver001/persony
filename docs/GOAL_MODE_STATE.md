@@ -29,7 +29,7 @@ Full item-by-item audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONC
 | Central Model Registry | deployed | `worker/ai/model-registry.ts` | prod model smoke per operation |
 | Versioned Pricing Catalog 2.0 | deployed | `pricing-catalog.ts`, `GET /owner/pricing` | DB-backed catalog admin |
 | Cost confidence | deployed | migration 0010, CostEngine | controlled inference E2E |
-| Provider usage from API | **partial** | Gemini/DeepSeek stream usage | voice/transcribe/avatar estimated |
+| Provider usage from API | **partial** | Gemini/DeepSeek stream usage; transcribe `usageMetadata` | voice/avatar still estimated |
 | Voice Call economics | deployed | `voice-call-inference-service.ts` | duration estimate, not provider usage |
 | Owner Shell + sections | **partial** | economy/inference/pricing/users/personas/errors/settings | users detail, voice section |
 | Inference Explorer | deployed + local | filters, operation column, detail meta | prod E2E smoke |
