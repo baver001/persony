@@ -201,6 +201,8 @@ export async function updateInferenceRunEconomics(
   db: D1Database,
   runId: string,
   input: {
+    requestedProvider?: string;
+    requestedModel?: string;
     actualProvider?: string;
     actualModel?: string;
     inputTokens?: number;
@@ -224,6 +226,12 @@ export async function updateInferenceRunEconomics(
     values.push(value);
   };
 
+  if (input.requestedProvider !== undefined) {
+    set('requested_provider', input.requestedProvider);
+  }
+  if (input.requestedModel !== undefined) {
+    set('requested_model', input.requestedModel);
+  }
   if (input.actualProvider !== undefined) {
     set('actual_provider', input.actualProvider);
     set('provider', input.actualProvider);
