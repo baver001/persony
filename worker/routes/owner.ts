@@ -17,6 +17,10 @@ import {
   getOwnerInferenceDetail,
   getOwnerInferenceList,
 } from '../services/inference-explorer-service';
+import {
+  getOwnerPersonasAnalytics,
+  getOwnerUsersAnalytics,
+} from '../services/owner-analytics-service';
 import { ownerAdjustBattery } from '../services/energy-service';
 import type { PersonyEnv } from '../types/env';
 
@@ -283,24 +287,20 @@ ownerRoutes.get('/owner/users', async (c) => {
     await requireOwnerAccess(c);
     if (!c.env.DB) return c.json({ error_code: 'DB_NOT_CONFIGURED' }, 503);
 
-    const { results } = await c.env.DB.prepare(
-      `SELECT id, auth_provider_id, preferred_locale, created_at
-       FROM users ORDER BY created_at DESC LIMIT 25`
-    ).all<{
-      id: string;
-      auth_provider_id: string | null;
-      preferred_locale: string | null;
-      created_at: string;
-    }>();
+    const users = await getOwnerUsersAnalytics(c.env.DB);
+    return c.json({ users });
+  } catch (err) {
+    return ownerErrorResponse(c, err);
+  }
+});
 
-    return c.json({
-      users: (results ?? []).map((row) => ({
-        id: row.id,
-        authProviderId: row.auth_provider_id,
-        preferredLocale: row.preferred_locale,
-        createdAt: row.created_at,
-      })),
-    });
+ownerRoutes.get('/owner/personas/overview', async (c) => {
+  try {
+    await requireOwnerAccess(c);
+    if (!c.env.DB) return c.json({ error_code: 'DB_NOT_CONFIGURED' }, 503);
+
+    const personas = await getOwnerPersonasAnalytics(c.env.DB);
+    return c.json({ personas });
   } catch (err) {
     return ownerErrorResponse(c, err);
   }

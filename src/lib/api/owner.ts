@@ -20,15 +20,31 @@ export async function fetchOwnerAiOverview(): Promise<{
   return ownerFetch('/owner/ai/overview');
 }
 
-export async function fetchOwnerUsers(): Promise<{
-  users: Array<{
-    id: string;
-    authProviderId: string | null;
-    preferredLocale: string | null;
-    createdAt: string;
-  }>;
-}> {
+export type OwnerUserRow = {
+  id: string;
+  authProviderId: string | null;
+  preferredLocale: string | null;
+  createdAt: string;
+  inferenceCount7d: number;
+  knownCostMicrousd7d: number;
+};
+
+export type OwnerPersonaRow = {
+  id: string;
+  name: string;
+  slug: string | null;
+  status: string;
+  inferenceCount30d: number;
+  knownCostMicrousd30d: number;
+  unpricedCount30d: number;
+};
+
+export async function fetchOwnerUsers(): Promise<{ users: OwnerUserRow[] }> {
   return ownerFetch('/owner/users');
+}
+
+export async function fetchOwnerPersonasOverview(): Promise<{ personas: OwnerPersonaRow[] }> {
+  return ownerFetch('/owner/personas/overview');
 }
 
 export async function fetchOwnerMemoryStats(): Promise<{

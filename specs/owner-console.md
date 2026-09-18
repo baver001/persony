@@ -19,7 +19,7 @@ Implementation: `src/pages/owner/`, orchestrator `src/pages/OwnerConsole.tsx`.
 | Root | Overview | Implemented |
 | AI | AI routing overview, Pricing catalog, Inference Explorer | Partial — routing CRUD limited to `chat_text_provider` setting |
 | Economy | Economics dashboard, Battery | Economics implemented; battery overview API exists |
-| People | Users, Personas | Users list only; personas analytics open |
+| People | Users, Personas | Users + Personas analytics (inference + known COGS) |
 | Usage | Memory stats | Basic stats API |
 | System | Settings, Audit | Settings + audit log |
 
@@ -40,7 +40,8 @@ Client: `src/lib/api/owner.ts` — typed fetch helpers (no `Record<string, unkno
 | `GET /api/owner/inference` | Paginated inference list + filters |
 | `GET /api/owner/inference/:id` | Detail + cost breakdown + timeline |
 | `GET /api/owner/ai/overview` | Provider configuration |
-| `GET /api/owner/users` | User list |
+| `GET /api/owner/users` | User list + 7d inference / known COGS |
+| `GET /api/owner/personas/overview` | Persona analytics (30d) |
 | `GET /api/owner/memory/stats` | Memory counters |
 | `GET /api/owner/battery/overview` | Battery aggregates |
 | `PUT /api/owner/system/settings` | System settings (audited) |

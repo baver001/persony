@@ -10,13 +10,13 @@
 
 | Field | Value |
 |-------|--------|
-| **Current production SHA** | `761ea49` — retail pricing + economics + Owner Shell |
+| **Current production SHA** | `967c870` — provider usage + operation_type normalize + docs |
 | **Last successful deploy** | GitHub Actions — 2026-09-18 — economics stack green |
 | **Last migration applied (remote D1)** | `0012_cost_breakdown.sql` (0001–0012 all applied) |
 | **CI status (last `main` push)** | Green — verify + deploy succeeded |
 | **Production health** | `GET https://beta.persony.org/api/health` → ok, database ready |
 | **Production smoke (economics)** | **NOT RUN** — controlled inference E2E + Inference Detail verification open |
-| **Local uncommitted WIP** | ProviderUsage, operation_type normalize (0013), docs, UI/dev-mode fixes — pending commit/deploy |
+| **Local uncommitted WIP** | UI/dev-mode fixes (ChatArea, battery, icons) — separate from deployed economics |
 
 Full item-by-item audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 

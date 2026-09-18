@@ -4,24 +4,29 @@ import { usePersonyAuth } from '../components/PersonyAuthProvider';
 import { fetchMeProfile, fetchOwnerOverview } from '../lib/api/me';
 import {
   fetchOwnerAiOverview,
-  updateOwnerSystemSetting,
   fetchOwnerAudit,
   fetchOwnerEconomics,
   fetchOwnerBatteryOverview,
   fetchOwnerMemoryStats,
   fetchOwnerUsers,
+  fetchOwnerPersonasOverview,
   fetchOwnerInferenceList,
   fetchOwnerInferenceDetail,
   fetchOwnerPricing,
   type OwnerInferenceListItem,
   type OwnerInferenceDetail,
   type OwnerPricingEntry,
+  type OwnerUserRow,
+  type OwnerPersonaRow,
 } from '../lib/api/owner';
 import { OwnerShell } from './owner/OwnerShell';
 import { OwnerOverviewSection } from './owner/sections/OwnerOverviewSection';
 import { OwnerEconomySection } from './owner/sections/OwnerEconomySection';
 import { OwnerInferenceSection } from './owner/sections/OwnerInferenceSection';
 import { OwnerPricingSection } from './owner/sections/OwnerPricingSection';
+import { OwnerAiSection } from './owner/sections/OwnerAiSection';
+import { OwnerUsersSection } from './owner/sections/OwnerUsersSection';
+import { OwnerPersonasSection } from './owner/sections/OwnerPersonasSection';
 import type { OwnerSectionId } from './owner/types';
 import { useOwnerNoIndex } from './owner/utils';
 
@@ -37,10 +42,19 @@ export function OwnerConsole({ onBack }: Props) {
   const [section, setSection] = useState<OwnerSectionId>('overview');
   const [overview, setOverview] = useState<Record<string, unknown> | null>(null);
   const [battery, setBattery] = useState<Record<string, unknown> | null>(null);
-  const [users, setUsers] = useState<Array<Record<string, string | null>>>([]);
+  const [users, setUsers] = useState<OwnerUserRow[]>([]);
+  const [usersError, setUsersError] = useState(false);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [personas, setPersonas] = useState<OwnerPersonaRow[]>([]);
+  const [personasError, setPersonasError] = useState(false);
+  const [personasLoading, setPersonasLoading] = useState(false);
   const [memoryStats, setMemoryStats] = useState<Record<string, number> | null>(null);
   const [audit, setAudit] = useState<Array<Record<string, string>>>([]);
-  const [aiOverview, setAiOverview] = useState<Record<string, unknown> | null>(null);
+  const [aiOverview, setAiOverview] = useState<Awaited<
+    ReturnType<typeof fetchOwnerAiOverview>
+  > | null>(null);
+  const [aiError, setAiError] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
   const [economics, setEconomics] = useState<EconomicsData | null>(null);
   const [economyError, setEconomyError] = useState(false);
   const [economyLoading, setEconomyLoading] = useState(false);
@@ -53,6 +67,8 @@ export function OwnerConsole({ onBack }: Props) {
   const [inferenceDetail, setInferenceDetail] = useState<OwnerInferenceDetail | null>(null);
   const [inferenceError, setInferenceError] = useState(false);
   const [inferenceLoading, setInferenceLoading] = useState(false);
+  const [inferenceCostFilter, setInferenceCostFilter] = useState('');
+  const [inferenceStatusFilter, setInferenceStatusFilter] = useState('');
   const [error, setError] = useState<'AUTH_REQUIRED' | 'FORBIDDEN' | 'INTERNAL_ERROR' | null>(
     null
   );
@@ -86,19 +102,69 @@ export function OwnerConsole({ onBack }: Props) {
     }
   }, []);
 
-  const loadInference = useCallback(async () => {
-    setInferenceLoading(true);
-    setInferenceError(false);
+  const loadInference = useCallback(
+    async (filters?: { costConfidence?: string; status?: string }) => {
+      const costConfidence = filters?.costConfidence ?? inferenceCostFilter;
+      const status = filters?.status ?? inferenceStatusFilter;
+      setInferenceLoading(true);
+      setInferenceError(false);
+      try {
+        const data = await fetchOwnerInferenceList({
+          limit: 50,
+          costConfidence: costConfidence || undefined,
+          status: status || undefined,
+        });
+        setInferenceItems(data.items);
+        setInferenceTotal(data.total);
+        setInferenceDetail(null);
+      } catch {
+        setInferenceError(true);
+        setInferenceItems([]);
+      } finally {
+        setInferenceLoading(false);
+      }
+    },
+    [inferenceCostFilter, inferenceStatusFilter]
+  );
+
+  const loadUsers = useCallback(async () => {
+    setUsersLoading(true);
+    setUsersError(false);
     try {
-      const data = await fetchOwnerInferenceList({ limit: 50 });
-      setInferenceItems(data.items);
-      setInferenceTotal(data.total);
-      setInferenceDetail(null);
+      const data = await fetchOwnerUsers();
+      setUsers(data.users);
     } catch {
-      setInferenceError(true);
-      setInferenceItems([]);
+      setUsersError(true);
+      setUsers([]);
     } finally {
-      setInferenceLoading(false);
+      setUsersLoading(false);
+    }
+  }, []);
+
+  const loadPersonas = useCallback(async () => {
+    setPersonasLoading(true);
+    setPersonasError(false);
+    try {
+      const data = await fetchOwnerPersonasOverview();
+      setPersonas(data.personas);
+    } catch {
+      setPersonasError(true);
+      setPersonas([]);
+    } finally {
+      setPersonasLoading(false);
+    }
+  }, []);
+
+  const loadAi = useCallback(async () => {
+    setAiLoading(true);
+    setAiError(false);
+    try {
+      setAiOverview(await fetchOwnerAiOverview());
+    } catch {
+      setAiError(true);
+      setAiOverview(null);
+    } finally {
+      setAiLoading(false);
     }
   }, []);
 
@@ -136,8 +202,9 @@ export function OwnerConsole({ onBack }: Props) {
         if (section === 'battery') {
           setBattery(await fetchOwnerBatteryOverview());
         } else if (section === 'users') {
-          const data = await fetchOwnerUsers();
-          setUsers(data.users);
+          await loadUsers();
+        } else if (section === 'personas') {
+          await loadPersonas();
         } else if (section === 'memory') {
           const data = await fetchOwnerMemoryStats();
           setMemoryStats(data.stats);
@@ -145,7 +212,7 @@ export function OwnerConsole({ onBack }: Props) {
           const data = await fetchOwnerAudit();
           setAudit(data.entries);
         } else if (section === 'ai') {
-          setAiOverview(await fetchOwnerAiOverview());
+          await loadAi();
         } else if (section === 'economy') {
           await loadEconomy();
         } else if (section === 'pricing') {
@@ -157,7 +224,7 @@ export function OwnerConsole({ onBack }: Props) {
         // section-level errors handled per section
       }
     })();
-  }, [section, error, overview, loadEconomy, loadPricing, loadInference]);
+  }, [section, error, overview, loadEconomy, loadPricing, loadInference, loadUsers, loadPersonas, loadAi]);
 
   const loadInferenceDetail = async (id: string) => {
     try {
@@ -236,38 +303,37 @@ export function OwnerConsole({ onBack }: Props) {
           detail={inferenceDetail}
           loading={inferenceLoading}
           error={inferenceError}
+          costConfidenceFilter={inferenceCostFilter}
+          statusFilter={inferenceStatusFilter}
+          onCostConfidenceFilterChange={(value) => {
+            setInferenceCostFilter(value);
+            void loadInference({ costConfidence: value, status: inferenceStatusFilter });
+          }}
+          onStatusFilterChange={(value) => {
+            setInferenceStatusFilter(value);
+            void loadInference({ costConfidence: inferenceCostFilter, status: value });
+          }}
           onSelect={(id) => void loadInferenceDetail(id)}
           onRetry={() => void loadInference()}
         />
       )}
 
       {section === 'users' && (
-        <div className="rounded-xl border border-white/10 overflow-x-auto">
-          <table className="w-full text-sm min-w-[480px]">
-            <thead className="bg-white/5 text-zinc-400 text-left">
-              <tr>
-                <th className="px-3 py-2">ID</th>
-                <th className="px-3 py-2">Locale</th>
-                <th className="px-3 py-2">Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((user) => (
-                <tr key={String(user.id)} className="border-t border-white/5">
-                  <td className="px-3 py-2 font-mono text-xs">{user.id}</td>
-                  <td className="px-3 py-2">{user.preferredLocale || '—'}</td>
-                  <td className="px-3 py-2 text-zinc-400">{user.createdAt}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <OwnerUsersSection
+          users={users}
+          loading={usersLoading}
+          error={usersError}
+          onRetry={() => void loadUsers()}
+        />
       )}
 
       {section === 'personas' && (
-        <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-zinc-300">
-          <p>{t('owner:personasHint', { count: String(metrics.activePersonas ?? 0) })}</p>
-        </div>
+        <OwnerPersonasSection
+          personas={personas}
+          loading={personasLoading}
+          error={personasError}
+          onRetry={() => void loadPersonas()}
+        />
       )}
 
       {section === 'memory' && memoryStats && (
@@ -297,34 +363,16 @@ export function OwnerConsole({ onBack }: Props) {
       )}
 
       {section === 'ai' && (
-        <div className="space-y-4 text-sm">
-          <p className="text-zinc-300">
-            {t('owner:aiHint', { count: String(metrics.failedInferenceRuns ?? 0) })}
-          </p>
-          {aiOverview && (
-            <label className="block space-y-2">
-              <span className="text-xs text-zinc-400 uppercase tracking-wide">
-                {t('owner:chatProvider')}
-              </span>
-              <select
-                className="w-full max-w-xs bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-sm min-h-[44px]"
-                value={String(aiOverview.chatTextProvider ?? 'google')}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  void updateOwnerSystemSetting('chat_text_provider', value, 'owner_console').then(
-                    (ok) => {
-                      if (ok) setAiOverview({ ...aiOverview, chatTextProvider: value });
-                    }
-                  );
-                }}
-              >
-                <option value="google">google</option>
-                <option value="deepseek">deepseek</option>
-                <option value="auto">auto</option>
-              </select>
-            </label>
-          )}
-        </div>
+        <OwnerAiSection
+          overview={aiOverview}
+          failedInferenceRuns={Number(metrics.failedInferenceRuns ?? 0)}
+          loading={aiLoading}
+          error={aiError}
+          onRetry={() => void loadAi()}
+          onProviderChange={(provider) => {
+            if (aiOverview) setAiOverview({ ...aiOverview, chatTextProvider: provider });
+          }}
+        />
       )}
 
       {section === 'settings' && (

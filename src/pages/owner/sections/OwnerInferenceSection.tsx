@@ -9,6 +9,10 @@ type Props = {
   detail: OwnerInferenceDetail | null;
   loading: boolean;
   error: boolean;
+  costConfidenceFilter: string;
+  statusFilter: string;
+  onCostConfidenceFilterChange: (value: string) => void;
+  onStatusFilterChange: (value: string) => void;
   onSelect: (id: string) => void;
   onRetry: () => void;
 };
@@ -19,6 +23,10 @@ export function OwnerInferenceSection({
   detail,
   loading,
   error,
+  costConfidenceFilter,
+  statusFilter,
+  onCostConfidenceFilterChange,
+  onStatusFilterChange,
   onSelect,
   onRetry,
 }: Props) {
@@ -26,7 +34,37 @@ export function OwnerInferenceSection({
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-zinc-400">{t('inferenceTitle')} · {total}</p>
+      <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:justify-between">
+        <p className="text-sm text-zinc-400">{t('inferenceTitle')} · {total}</p>
+        <div className="flex flex-wrap gap-2">
+          <label className="text-xs text-zinc-500 flex flex-col gap-1">
+            {t('inferenceFilterConfidence')}
+            <select
+              className="bg-zinc-900 border border-white/10 rounded-lg px-2 py-1.5 text-sm min-h-[40px]"
+              value={costConfidenceFilter}
+              onChange={(e) => onCostConfidenceFilterChange(e.target.value)}
+            >
+              <option value="">{t('inferenceFilterAll')}</option>
+              <option value="actual">actual</option>
+              <option value="estimated">estimated</option>
+              <option value="unpriced">unpriced</option>
+            </select>
+          </label>
+          <label className="text-xs text-zinc-500 flex flex-col gap-1">
+            {t('inferenceFilterStatus')}
+            <select
+              className="bg-zinc-900 border border-white/10 rounded-lg px-2 py-1.5 text-sm min-h-[40px]"
+              value={statusFilter}
+              onChange={(e) => onStatusFilterChange(e.target.value)}
+            >
+              <option value="">{t('inferenceFilterAll')}</option>
+              <option value="completed">completed</option>
+              <option value="failed">failed</option>
+              <option value="streaming">streaming</option>
+            </select>
+          </label>
+        </div>
+      </div>
       <OwnerSectionState
         loading={loading && items.length === 0}
         error={error && items.length === 0}

@@ -132,7 +132,9 @@ flowchart TD
 
 - Reconciliation: [`docs/ECONOMICS_RECONCILIATION.md`](docs/ECONOMICS_RECONCILIATION.md)
 - Goal state: [`docs/GOAL_MODE_STATE.md`](docs/GOAL_MODE_STATE.md)
-- Production SHA: `840608f` (2026-09-18 deploy)
+- Metrics: [`docs/METRICS.md`](docs/METRICS.md) · Owner spec: [`specs/owner-console.md`](specs/owner-console.md)
+- Production SHA: `967c870` (2026-09-18) — economics + ProviderUsage + migration 0013
+- Milestone 1 E2E: [`docs/PRODUCTION_ECONOMICS_SMOKE.md`](docs/PRODUCTION_ECONOMICS_SMOKE.md) — manual owner smoke open
 
 ### Проверить
 
