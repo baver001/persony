@@ -3,7 +3,7 @@
 **Stage:** Verified Economics & Owner Control Center (Milestone 1 in progress)  
 **Audited:** 2026-09-18  
 **Production URL:** https://beta.persony.org  
-**Production SHA (deployed):** `9ce13b5` — owner economics smoke helper (see `/api/health` `gitSha`)  
+**Production SHA (deployed):** `30cf678` — public smoke incl. owner auth gate (see `/api/health` `gitSha`)  
 **D1 migrations (remote):** `0001`–`0014` applied  
 **Production health:** `GET /api/health` → `status: ok`, `database: ready`, `gitSha` present  
 **Automated tests:** 123/123 (`npm test`)  
@@ -28,7 +28,7 @@ Status labels:
 | Deploy + gitSha in health | ✓ | — | ✓ | ✓ `gitSha` on `/api/health` |
 | D1 migrations 0008–0014 (economy, confidence, pricing_entry, breakdown, operation normalize, pricing_entries DB) | ✓ | partial | ✓ migrate job | ✓ |
 | Clerk auth | ✓ | partial | ✓ | ✓ |
-| Owner routes require auth (401 without JWT) | ✓ | — | ✓ | ✓ public smoke |
+| Owner routes require auth (401 without JWT) | ✓ | — | ✓ post-deploy smoke | ✓ |
 | Paddle live | ✗ `BILLING_ENABLED=false` | — | — | N/A |
 
 ---

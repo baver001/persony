@@ -133,8 +133,10 @@ flowchart TD
 - Reconciliation: [`docs/ECONOMICS_RECONCILIATION.md`](docs/ECONOMICS_RECONCILIATION.md)
 - Goal state: [`docs/GOAL_MODE_STATE.md`](docs/GOAL_MODE_STATE.md)
 - Metrics: [`docs/METRICS.md`](docs/METRICS.md) · Owner spec: [`specs/owner-console.md`](specs/owner-console.md)
-- Production SHA: `967c870` (2026-09-18) — economics + ProviderUsage + migration 0013
-- Milestone 1 E2E: [`docs/PRODUCTION_ECONOMICS_SMOKE.md`](docs/PRODUCTION_ECONOMICS_SMOKE.md) — manual owner smoke open
+- Production SHA: `30cf678` (2026-09-18) — Owner Console mobile, DB pricing `0014`, economics smoke scripts
+- Public smoke: `npm run smoke:economics:public` (CI post-deploy + local)
+- Owner API smoke: `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner`
+- Milestone 1 E2E: [`docs/PRODUCTION_ECONOMICS_SMOKE.md`](docs/PRODUCTION_ECONOMICS_SMOKE.md) — **manual owner smoke open**
 
 ### Проверить
 

@@ -124,3 +124,8 @@ jobs:
           done
           echo "::error::Production health check failed after deploy"
           exit 1
+
+      - name: Post-deploy economics smoke (public)
+        env:
+          SMOKE_BASE_URL: https://beta.persony.org
+        run: npm run smoke:economics:public
