@@ -134,7 +134,7 @@ flowchart TD
 - Goal state: [`docs/GOAL_MODE_STATE.md`](docs/GOAL_MODE_STATE.md)
 - Metrics: [`docs/METRICS.md`](docs/METRICS.md) · Owner spec: [`specs/owner-console.md`](specs/owner-console.md)
 - Production SHA: `dcad14f` (2026-09-18) — immutable costs, Owner Console mobile, DB pricing `0014`, CI economics smoke
-- Public smoke: `npm run smoke:economics:public` (CI post-deploy + local)
+- Operator smoke: `npm run smoke:economics` (public + D1; CI post-deploy + local)
 - Owner API smoke: `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner`
 - Milestone 1 E2E: [`docs/PRODUCTION_ECONOMICS_SMOKE.md`](docs/PRODUCTION_ECONOMICS_SMOKE.md) — **manual owner smoke open**
 

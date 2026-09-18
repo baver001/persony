@@ -25,6 +25,13 @@ function formatLatency(ms: number | null): string {
   return `${(ms / 1000).toFixed(1)} s`;
 }
 
+function isLegacyEconomicsRow(item: OwnerInferenceListItem): boolean {
+  return (
+    (item.costConfidence === 'actual' || item.costConfidence === 'estimated') &&
+    !item.costCalculatedAt
+  );
+}
+
 export function OwnerInferenceSection({
   items,
   total,
@@ -118,6 +125,12 @@ export function OwnerInferenceSection({
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-zinc-400">
                   <span>{item.costConfidence}</span>
+                  {isLegacyEconomicsRow(item) && (
+                    <span className="text-amber-300/90">{t('inferenceLegacyBadge')}</span>
+                  )}
+                  {item.costCalculatedAt && (
+                    <span className="text-emerald-300/80">{t('inferenceImmutableBadge')}</span>
+                  )}
                   <span>·</span>
                   <span>{item.status}</span>
                   <span>·</span>
@@ -158,7 +171,15 @@ export function OwnerInferenceSection({
                   <td className="px-3 py-2 font-mono text-xs">
                     {formatMicrousd(item.providerCostMicrousd)}
                   </td>
-                  <td className="px-3 py-2">{item.costConfidence}</td>
+                  <td className="px-3 py-2">
+                    <span>{item.costConfidence}</span>
+                    {isLegacyEconomicsRow(item) && (
+                      <span className="ml-1 text-[10px] text-amber-300/90">{t('inferenceLegacyBadge')}</span>
+                    )}
+                    {item.costCalculatedAt && (
+                      <span className="ml-1 text-[10px] text-emerald-300/80">{t('inferenceImmutableBadge')}</span>
+                    )}
+                  </td>
                   <td className="px-3 py-2">{item.status}</td>
                 </tr>
               ))}
@@ -186,6 +207,14 @@ export function OwnerInferenceSection({
             <div>
               <dt className="text-zinc-500 text-xs">{t('inferenceMetaEnergy')}</dt>
               <dd>{detail.energyCharged}</dd>
+            </div>
+            <div>
+              <dt className="text-zinc-500 text-xs">{t('inferenceMetaCostSettled')}</dt>
+              <dd>
+                {detail.costCalculatedAt
+                  ? new Date(detail.costCalculatedAt).toLocaleString()
+                  : t('inferenceMetaCostUnsettled')}
+              </dd>
             </div>
             {detail.errorCode && (
               <div className="sm:col-span-2">
@@ -217,6 +246,9 @@ export function OwnerInferenceSection({
             </ul>
           ) : (
             <p className="text-amber-300/90 text-sm">{t('inferenceUnpriced')}</p>
+          )}
+          {isLegacyEconomicsRow(detail) && (
+            <p className="text-xs text-amber-300/90">{t('inferenceLegacyHint')}</p>
           )}
           {detail.costExplanation.recomputed && (
             <p className="text-xs text-zinc-500">{t('inferenceRecomputed')}</p>

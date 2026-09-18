@@ -10,14 +10,14 @@
 
 | Field | Value |
 |-------|--------|
-| **Current production SHA** | `82c1ecf` — chat_text CostEngine 2.0 integration test (deploy verified) |
+| **Current production SHA** | `fd21da3` — docs sync + economics smoke (deploy verified 2026-09-18) |
 | **Production health** | `GET https://beta.persony.org/api/health` → ok, database ready |
 | **Last migration (remote D1)** | `0014_pricing_catalog_db.sql` |
 | **CI** | Green (see latest `main` deploy) |
 | **Public smoke** | `npm run smoke:economics:public` |
 | **Owner API smoke** | `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner` |
 | **D1 operator smoke** | `npm run smoke:economics:d1` (wrangler remote) |
-| **Production smoke (economics)** | **PARTIAL** — D1: 0 runs with `cost_calculated_at` in 7d; need fresh chat post-`dcad14f` |
+| **Production smoke (economics)** | **PARTIAL** — public ✅, D1: `with_breakdown=0` (7d); need fresh owner chat post-`dcad14f` |
 | **Tests (local)** | 125/125 (incl. chat_text CostEngine 2.0 integration) |
 
 Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
@@ -48,7 +48,8 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 | Voice note → `voice_transcription` inference row | **open** | — | — |
 | Avatar Studio → `avatar_generation` inference row | **open** | — | — |
 | Owner Console 390px / 1440px | **open** | — | — |
-| Owner API smoke (`smoke:economics:owner`) | **open** | — | — |
+| Owner auth gate (unauthenticated) | **pass** | `/owner` → «Sign in required»; API → 401 | 2026-09-18 |
+| Owner API smoke (`smoke:economics:owner`) | **open** | needs `SMOKE_OWNER_BEARER` | — |
 
 ## Next actions
 

@@ -3,13 +3,13 @@
 **Stage:** Verified Economics & Owner Control Center (Milestone 1 in progress)  
 **Audited:** 2026-09-18  
 **Production URL:** https://beta.persony.org  
-**Production SHA (deployed):** `dcad14f` — immutable costs + CI post-deploy smoke (see `/api/health` `gitSha`)  
+**Production SHA (deployed):** `fd21da3` (see `/api/health` `gitSha`)  
 **D1 migrations (remote):** `0001`–`0014` applied  
 **Production health:** `GET /api/health` → `status: ok`, `database: ready`, `gitSha` present  
-**Automated tests:** 124/124 (`npm test`, incl. settled cost immutability)  
-**Public smoke:** `npm run smoke:economics:public` (health + owner auth gate)  
-**Owner API smoke:** `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner`  
-**D1 operator smoke:** `npm run smoke:economics:d1` (2026-09-18: 0/8 runs with `cost_calculated_at` — need fresh chat post-deploy)
+**Automated tests:** 125/125 (`npm test`, incl. chat_text CostEngine 2.0 integration)  
+**Operator smoke (no auth):** `npm run smoke:economics` → public + D1  
+**Owner API smoke:** `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner` (Milestone 1 chat_text + breakdown)  
+**D1 snapshot (2026-09-18):** 0/8 runs with `cost_calculated_at` in 7d — need fresh owner chat post-`dcad14f`
 
 Status labels:
 

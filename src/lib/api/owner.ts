@@ -158,6 +158,7 @@ export type OwnerInferenceListItem = {
   fallbackCount: number;
   status: string;
   usageEstimated: boolean;
+  costCalculatedAt: string | null;
   errorCode: string | null;
 };
 
@@ -170,7 +171,6 @@ export type OwnerInferenceDetail = OwnerInferenceListItem & {
   providerRequestId: string | null;
   pricingEntryId: string | null;
   pricingVersion: string | null;
-  costCalculatedAt: string | null;
   costExplanation: {
     lines: Array<{
       pricingEntryId: string;

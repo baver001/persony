@@ -29,6 +29,7 @@ export type OwnerInferenceListItem = {
   fallbackCount: number;
   status: string;
   usageEstimated: boolean;
+  costCalculatedAt: string | null;
   errorCode: string | null;
 };
 
@@ -57,8 +58,6 @@ export type OwnerInferenceDetail = OwnerInferenceListItem & {
   providerRequestId: string | null;
   pricingEntryId: string | null;
   pricingVersion: string | null;
-  costCalculatedAt: string | null;
-  errorCode: string | null;
   costExplanation: InferenceCostExplanation;
   timeline: InferenceTimelineEvent[];
 };
@@ -84,6 +83,7 @@ function toListItem(run: InferenceRunRecord): OwnerInferenceListItem {
     fallbackCount: run.fallbackCount,
     status: run.status,
     usageEstimated: run.usageEstimated,
+    costCalculatedAt: run.costCalculatedAt,
     errorCode: run.errorCode,
   };
 }

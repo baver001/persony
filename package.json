@@ -14,7 +14,7 @@
     "lint": "node ./node_modules/typescript/lib/tsc.js --noEmit",
     "validate:i18n": "node scripts/validate-i18n.mjs",
     "ci": "npm run validate:i18n && npm run lint && npm test && npm run build",
-    "smoke:economics": "npm run smoke:economics:public",
+    "smoke:economics": "npm run smoke:economics:public && npm run smoke:economics:d1",
     "smoke:economics:public": "node scripts/economics-smoke-public.mjs",
     "smoke:economics:owner": "node scripts/economics-smoke-owner.mjs",
     "smoke:economics:d1": "node scripts/economics-smoke-d1.mjs",

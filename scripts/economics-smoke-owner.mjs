@@ -65,27 +65,33 @@ async function main() {
     `OK pricing catalog=${pricingRes.body.catalogVersion} entries=${pricingRes.body.entries.length}`
   );
 
-  const inferenceRes = await ownerFetch('/owner/inference?limit=10');
+  const inferenceRes = await ownerFetch('/owner/inference?limit=25&operation=chat_text&status=completed');
   if (inferenceRes.status !== 200) fail(`owner inference HTTP ${inferenceRes.status}`);
   const items = inferenceRes.body?.items ?? [];
-  console.log(`OK inference list total=${inferenceRes.body?.total ?? 0} sample=${items.length}`);
+  console.log(
+    `OK inference chat_text completed total=${inferenceRes.body?.total ?? 0} sample=${items.length}`
+  );
 
   if (items.length === 0) {
-    console.log('\nWARN no inference runs yet — send a chat message on beta, then re-run.');
+    console.log('\nWARN no completed chat_text runs — send a chat message on beta, then re-run.');
     console.log('Manual checklist: docs/PRODUCTION_ECONOMICS_SMOKE.md');
     process.exit(0);
   }
 
-  const latest = items[0];
+  const target =
+    items.find((row) => row.costCalculatedAt) ??
+    items.find((row) => row.costConfidence === 'actual' || row.costConfidence === 'estimated') ??
+    items[0];
+
   const required = ['id', 'operationType', 'costConfidence', 'status'];
   for (const key of required) {
-    if (latest[key] == null) fail(`latest inference missing ${key}`);
+    if (target[key] == null) fail(`target inference missing ${key}`);
   }
   console.log(
-    `OK latest inference id=${latest.id} op=${latest.operationType} confidence=${latest.costConfidence} cogs=${latest.providerCostMicrousd}`
+    `OK target id=${target.id} op=${target.operationType} confidence=${target.costConfidence} breakdown=${target.costCalculatedAt ? 'yes' : 'no'}`
   );
 
-  const detailRes = await ownerFetch(`/owner/inference/${latest.id}`);
+  const detailRes = await ownerFetch(`/owner/inference/${target.id}`);
   if (detailRes.status !== 200) fail(`inference detail HTTP ${detailRes.status}`);
   const detail = detailRes.body?.inference;
   if (!detail?.costExplanation) fail('inference detail missing costExplanation');
@@ -93,15 +99,39 @@ async function main() {
   if (detail.costConfidence === 'unpriced' && detail.providerCostMicrousd != null) {
     fail('unpriced run has non-null providerCostMicrousd — economics truth violated');
   }
-  if (detail.costExplanation.explainable && !detail.costExplanation.lines?.length) {
-    fail('explainable cost without breakdown lines');
+
+  const knownCost =
+    detail.costConfidence === 'actual' || detail.costConfidence === 'estimated';
+
+  if (knownCost && !detail.costCalculatedAt) {
+    console.log(
+      `\nWARN ${target.id} is ${detail.costConfidence} but missing costCalculatedAt (pre–CostEngine 2.0).`
+    );
+    console.log('Send a fresh chat on beta after economics deploy, then re-run.');
+    process.exit(0);
   }
+
+  if (knownCost) {
+    if (!detail.costExplanation.explainable) {
+      fail(`known-cost chat_text ${target.id} is not explainable`);
+    }
+    if (!detail.costExplanation.lines?.length) {
+      fail(`known-cost chat_text ${target.id} missing cost breakdown lines`);
+    }
+    const hasPositiveLine = detail.costExplanation.lines.some(
+      (line) => typeof line.costMicrousd === 'number' && line.costMicrousd > 0
+    );
+    if (!hasPositiveLine) {
+      fail(`known-cost chat_text ${target.id} has no positive COGS line items`);
+    }
+  }
+
   console.log(
-    `OK detail explainable=${detail.costExplanation.explainable} lines=${detail.costExplanation.lines?.length ?? 0}`
+    `OK detail explainable=${detail.costExplanation.explainable} lines=${detail.costExplanation.lines?.length ?? 0} calculatedAt=${detail.costCalculatedAt ?? '—'}`
   );
 
-  console.log('\nOwner economics smoke passed (API layer).');
-  console.log(`Record inference id in docs/GOAL_MODE_STATE.md: ${latest.id}`);
+  console.log('\nOwner economics smoke passed (Milestone 1 API layer).');
+  console.log(`Record inference id in docs/GOAL_MODE_STATE.md: ${target.id}`);
 }
 
 main().catch((err) => {
