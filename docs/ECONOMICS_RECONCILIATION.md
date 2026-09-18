@@ -1,115 +1,78 @@
 # Economics & Owner — reconciliation baseline
 
-**Stage:** Verified Economics & Owner Control Center  
+**Stage:** Verified Economics & Owner Control Center (Milestone 1 in progress)  
 **Audited:** 2026-09-18  
 **Production URL:** https://beta.persony.org  
-**Production SHA (deployed):** `761ea49` — economics + Owner Shell + retail pricing  
-**Repo `main` (remote):** `761ea49` at last verified push  
-**Last successful deploy:** GitHub Actions — 2026-09-18 — economics stack  
-**D1 migrations (remote):** `0001`–`0012` applied  
-**Production health:** `GET /api/health` → `status: ok`, `database: ready`
+**Production SHA (deployed):** `8761878`+ (see `/api/health` `gitSha`; `12ff21e` persona detail deploying)  
+**D1 migrations (remote):** `0001`–`0013` applied  
+**Production health:** `GET /api/health` → `status: ok`, `database: ready`, `gitSha` present  
+**Automated tests:** 115/115 (`npm test`)  
+**Public smoke:** `npm run smoke:economics:public`
 
-Status labels (do not mix):
+Status labels:
 
-- **DOCUMENTED** — written in README / map / specs / goal docs
-- **IMPLEMENTED** — code exists on `main` or production branch
-- **TESTED** — automated tests cover behavior
-- **CI VERIFIED** — green on last `main` push pipeline
-- **PRODUCTION VERIFIED** — confirmed on beta.persony.org with evidence
-- **MANUAL VERIFIED** — human-run checklist with recorded outcome
+- **IMPLEMENTED** — on `main` / deployed
+- **TESTED** — automated tests
+- **CI VERIFIED** — green deploy pipeline
+- **PRODUCTION VERIFIED** — confirmed on beta with evidence (not owner-auth APIs)
+- **MANUAL VERIFIED** — owner login checklist with recorded run ids
 
 ---
 
 ## Platform & deploy
 
-| Item | DOCUMENTED | IMPLEMENTED | TESTED | CI VERIFIED | PRODUCTION VERIFIED | MANUAL VERIFIED |
-|------|:----------:|:-----------:|:------:|:-----------:|:-------------------:|:---------------:|
-| CI verify (i18n, lint, test, build) | ✓ `docs/CI_CD.md` | ✓ `.github/workflows/ci.yml` | — | ✓ run `35327168946` | — | — |
-| Deploy pipeline (verify→build→migrate→deploy→health) | ✓ | ✓ `.github/workflows/deploy.yml` | — | ✓ | ✓ health 200 | — |
-| D1 migrations 0008 economy + 0009 rate limits | ✓ migration files | ✓ | partial integration tests | ✓ deploy job | ✓ `wrangler d1 migrations list --remote` | — |
-| Clerk auth on production | ✓ `docs/USER_TASKS.md` | ✓ | partial | ✓ | ✓ `/api/config` authRequired | — |
-| Paddle live billing | ✓ specs | ✗ disabled | — | — | ✗ `BILLING_ENABLED=false` | N/A |
+| Item | IMPLEMENTED | TESTED | CI | PRODUCTION |
+|------|:-----------:|:------:|:--:|:----------:|
+| CI verify (i18n, lint, test, build) | ✓ | ✓ | ✓ | — |
+| Deploy + gitSha in health | ✓ | — | ✓ | ✓ `gitSha` on `/api/health` |
+| D1 migrations 0008–0013 (economy, confidence, pricing_entry, breakdown, operation normalize) | ✓ | partial | ✓ migrate job | ✓ |
+| Clerk auth | ✓ | partial | ✓ | ✓ |
+| Paddle live | ✗ `BILLING_ENABLED=false` | — | — | N/A |
 
 ---
 
-## AI models (current code — not yet unified registry)
+## Model registry & operations
 
-| Operation | Model IDs in code | DOCUMENTED | IMPLEMENTED | TESTED | PRODUCTION VERIFIED |
-|-----------|-------------------|:----------:|:-----------:|:------:|:-------------------:|
-| Chat text | `gemini-3.8-flash`, `gemini-3.5-flash-lite`, `deepseek-chat`, `deepseek-reasoner` | partial `specs/07` | ✓ `models.ts`, providers | ✓ router tests | **NOT VERIFIED** against live provider API |
-| Memory extract | same as chat stack | — | ✓ `structured-memory-extractor.ts` | partial | NOT VERIFIED |
-| Persona generation | `GEMINI_GENERATOR_MODELS` | — | ✓ | — | NOT VERIFIED |
-| Avatar image | `gemini-2.0-flash-preview-image-generation`, `gemini-2.0-flash-exp-image-generation` | — | ✓ `models.ts` | — | NOT VERIFIED — **preview models** |
-| Transcription | `gemini-3.5-transcribe`, lite fallback | — | ✓ | — | NOT VERIFIED |
-| Voice Call Live | `gemini-3.8-live` | partial | ✓ `worker/index.ts` WS | — | NOT VERIFIED |
-| Call summary | generator models | — | ✓ | — | NOT VERIFIED |
-
-**Gap:** Model IDs scattered (`worker/lib/models.ts`, `deepseek-chat-provider.ts`, legacy `server.ts`). No central `AIModelDefinition` registry. No `lastVerifiedAt` / official source audit on record.
+| Area | IMPLEMENTED | TESTED | PRODUCTION E2E |
+|------|:-----------:|:------:|:--------------:|
+| Central `model-registry.ts` + `listOwnerRoutingMatrix` | ✓ | ✓ | NOT VERIFIED |
+| Chat text (Gemini + DeepSeek stream usage) | ✓ | ✓ | **MANUAL open** |
+| Voice call (`voice_call`, duration COGS) | ✓ | ✓ | **MANUAL open** |
+| Transcribe (`voice_transcription`, usageMetadata) | ✓ | ✓ | **MANUAL open** |
+| Avatar (`avatar_generation`, per_image COGS) | ✓ | ✓ | **MANUAL open** |
+| Call summary / persona gen inference rows | partial (energy only) | — | NOT VERIFIED |
 
 ---
 
 ## Provider usage & cost
 
-| Item | DOCUMENTED | IMPLEMENTED | TESTED | PRODUCTION VERIFIED |
-|------|:----------:|:-----------:|:------:|:-------------------:|
-| `ProviderResult` + route metadata | partial goal docs | ✓ | ✓ | NOT VERIFIED |
-| Provider-reported usage from stream API | goal brief | **partial** — Gemini/DeepSeek emit `usage` on done SSE; fallback to estimate | `provider-result.test.ts` | NOT VERIFIED prod |
-| `usage_estimated` on `inference_runs` | — | ✓ migration 0008 | partial | NOT VERIFIED |
-| `provider_cost_microusd` persisted | — | ✓ | ✓ cost-engine tests | NOT VERIFIED end-to-end |
-| `cost_confidence` (actual/estimated/unpriced) | goal brief | **✓ local** — `cost-confidence.ts`, migration `0010`, CostEngine returns `null` when unpriced | tests pass | deploy + prod E2E pending |
-| `pricing_entry_id` / version on inference | goal brief | **✓** migration 0011 | partial | deploy pending sample |
-| Immutable historical cost (no repricing on catalog change) | goal brief | **✓** — `pricing_entry_id` + `cost_breakdown_json` at settle | partial | prod E2E |
-| Versioned multidimensional pricing | goal brief | **✓** `pricing-catalog.ts` | ✓ catalog tests | — |
-| DeepSeek peak/off-peak / cache tiers | goal brief | **✓** catalog dimensions | ✓ tests | — |
-| Audio/image/live pricing dimensions | goal brief | **✗** | — | — |
-| Hardcoded markup `2.5` | — | **replaced** — `retail-pricing.ts` margin formula | ✓ tests | NOT VERIFIED prod |
-| Cost coverage % / unpriced count in owner UI | goal brief | **partial local** — `costCoverageTodayPercent`, `unpricedCallsToday` | — | deploy pending |
-| Voice Call cost breakdown (live/transcribe/summary) | goal brief | **✗** | — | — |
+| Item | IMPLEMENTED | TESTED | PRODUCTION E2E |
+|------|:-----------:|:------:|:--------------:|
+| Cost confidence actual/estimated/unpriced | ✓ m0010 | ✓ | MANUAL open |
+| `pricing_entry_id` + `cost_breakdown_json` immutable | ✓ m0011–0012 | ✓ | MANUAL open |
+| Token pricing (text, cache, peak/off-peak) | ✓ catalog | ✓ | — |
+| `per_minute` (Gemini Live) | ✓ | ✓ | MANUAL open |
+| `per_image` (avatar models) | ✓ | ✓ | MANUAL open |
+| Stream usage Gemini/DeepSeek chat | ✓ | ✓ | MANUAL open |
+| Unknown cost ≠ $0 in Owner UI | ✓ `formatMicrousd(null)` | — | MANUAL open |
+| Retail margin formula (not 2.5× hardcode) | ✓ `retail-pricing.ts` | ✓ | NOT VERIFIED |
+| DB-backed pricing admin | ✗ code catalog only | — | — |
 
 ---
 
-## Energy
+## Owner Control Center
 
-| Item | DOCUMENTED | IMPLEMENTED | TESTED | PRODUCTION VERIFIED |
-|------|:----------:|:-----------:|:------:|:-------------------:|
-| Reserve → settle → release | ✓ specs/battery-beta | ✓ | ✓ concurrency test | NOT VERIFIED |
-| Chat + avatar + utility APIs on reservation | — | ✓ | partial | NOT VERIFIED |
-| Voice Call WS reservation | — | ✓ `worker/index.ts` | — | NOT VERIFIED |
-| Battery UI (signed-in) | map.md | ✓ | — | MANUAL local only |
-| Retail pricing config (margin target) | goal brief | **✗** | — | — |
-
----
-
-## Owner Console & API
-
-| Item | DOCUMENTED | IMPLEMENTED | TESTED | PRODUCTION VERIFIED |
-|------|:----------:|:-----------:|:------:|:-------------------:|
-| `/owner/overview` | — | ✓ | — | NOT VERIFIED |
-| `/owner/economics` | — | ✓ `economics-service.ts` | — | NOT VERIFIED |
-| `/owner/ai/overview` | — | ✓ | — | NOT VERIFIED |
-| `/owner/users` (basic list) | — | ✓ | — | NOT VERIFIED |
-| `/owner/audit` | — | ✓ | — | NOT VERIFIED |
-| Inference explorer API | goal brief | **✓** `GET /owner/inference` | ✓ service tests | NOT VERIFIED prod |
-| Routing CRUD without deploy | goal brief | **partial** — `chat_text_provider` setting only | — | — |
-| Pricing catalog UI | goal brief | **✗** | — | — |
-| Typed API contracts (no `Record<string, unknown>`) | goal brief | **partial** — economics/inference/pricing typed | — | — |
-| Responsive Owner Shell (desktop + mobile) | goal brief | **partial** — `OwnerShell` + mobile nav | — | NOT VERIFIED |
-| Section error + retry UX | goal brief | **partial** — top-level error only | — | — |
-
----
-
-## Documentation accuracy
-
-| Doc | Accurate for production? | Notes |
-|-----|--------------------------|-------|
-| `docs/GOAL_MODE_STATE.md` | **NO** — outdated phase, SHA, migration/CI gates | **Replace in Phase A** |
-| `map.md` | **PARTIAL** — economy phase incomplete | Update in Phase L |
-| `README.md` | **PARTIAL** | Audit in Phase L |
-| `docs/CI_CD.md` | **YES** | Matches workflows |
-| `specs/economics.md` | **YES** (partial gaps) | Updated 2026-09-18 |
-| `specs/owner-console.md` | **YES** (partial IA) | Created Phase L |
-| `specs/ai-model-registry.md` | **YES** | Phase B registry in code |
-| `docs/METRICS.md` | **YES** | Created Phase L |
+| Item | IMPLEMENTED | TESTED | MANUAL layout |
+|------|:-----------:|:------:|:-------------:|
+| OwnerShell desktop + mobile nav | ✓ | — | **open** 390/1440 |
+| Economy dashboard (coverage, unpriced) | ✓ | — | MANUAL open |
+| Inference Explorer + filters + detail | ✓ | ✓ | MANUAL open |
+| Pricing catalog (read-only) | ✓ | — | — |
+| Users + Personas detail → inference list | ✓ | partial | MANUAL open |
+| AI routing matrix + `chat_text_provider` | ✓ | — | — |
+| Settings / feature flags | ✓ | — | — |
+| Errors summary | ✓ | — | — |
+| DB pricing edit UI | ✗ | — | — |
 
 ---
 
@@ -117,21 +80,29 @@ Status labels (do not mix):
 
 | Milestone | Ready? | Blocker |
 |-----------|--------|---------|
-| **M1 — Economics Truth** (one inference fully explainable) | **NO** | cost_confidence, pricing entry link, provider usage, inference detail API/UI |
-| **M2 — Owner Control Center Desktop** | **NO** | architecture + APIs + typed contracts |
-| **M3 — Owner Control Center Mobile** | **NO** | depends M2 |
-| **M4 — Production Verified** | **NO** | controlled inference + voice E2E not run |
+| **M1 — Economics Truth** | **NO** | Owner manual smoke not recorded (`PRODUCTION_ECONOMICS_SMOKE.md`) |
+| **M2 — Owner Console Desktop** | **PARTIAL** | Implemented; layout + E2E not verified |
+| **M3 — Mobile** | **PARTIAL** | Shell exists; 390px gate open |
+| **M4 — Production Verified** | **NO** | M1 + layout gates |
 
 ---
 
-## Phase A complete when
+## Documentation
 
-- [x] This reconciliation file exists with production SHA / deploy / migrations
-- [x] `GOAL_MODE_STATE.md` updated to new stage and accurate gates
-- [ ] `map.md` header/status points to this stage (minimal pointer — full update Phase L)
+| Doc | Accurate? |
+|-----|-----------|
+| `docs/GOAL_MODE_STATE.md` | ✓ updated 2026-09-18 |
+| `docs/PRODUCTION_ECONOMICS_SMOKE.md` | ✓ incl. transcribe/avatar optional |
+| `docs/METRICS.md` | ✓ |
+| `specs/owner-console.md` | ✓ partial gaps (DB pricing admin) |
+| `specs/economics.md` | partial — catalog still code-defined |
+| This file | ✓ refresh on each deploy milestone |
 
-## Next work (Phase B — start immediately after A)
+---
 
-1. Full model ID grep audit + official provider doc verification
-2. ~~Introduce `worker/ai/model-registry.ts` as single source of truth~~ — **done local**
-3. ~~Fix CostEngine unpriced → **never return 0 as cost**; add `cost_confidence` column migration~~ — **done local** (migration 0010 pending deploy)
+## Next work
+
+1. **Owner:** run Milestone 1 smoke; record inference ids in `GOAL_MODE_STATE.md`.
+2. **Code:** DB-backed pricing catalog + audit trail.
+3. **Code:** Gemini Live provider-reported usage (replace duration-only COGS).
+4. **Manual:** Owner Console 390px / 1440px verification.
