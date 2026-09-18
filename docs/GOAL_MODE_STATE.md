@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Current production SHA** | `9553647` — formatMicrousd(null) test + doc sync (deploy verified) |
+| **Current production SHA** | `9ce13b5` — owner economics smoke helper (deploy verified) |
 | **Production health** | `GET https://beta.persony.org/api/health` → ok, database ready |
 | **Last migration (remote D1)** | `0014_pricing_catalog_db.sql` |
 | **CI** | Green (see latest `main` deploy) |
@@ -38,13 +38,14 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 
 ## Manual verification gates
 
-| Check | Status |
-|-------|--------|
-| Text chat → Inference detail with line-item COGS | **open** |
-| Economy coverage % after real inference | **open** |
-| Voice note → `voice_transcription` inference row | **open** |
-| Avatar Studio → `avatar_generation` inference row | **open** |
-| Owner Console 390px / 1440px | **open** |
+| Check | Status | Inference run id | Date |
+|-------|--------|------------------|------|
+| Text chat → Inference detail with line-item COGS | **open** | — | — |
+| Economy coverage % after real inference | **open** | — | — |
+| Voice note → `voice_transcription` inference row | **open** | — | — |
+| Avatar Studio → `avatar_generation` inference row | **open** | — | — |
+| Owner Console 390px / 1440px | **open** | — | — |
+| Owner API smoke (`smoke:economics:owner`) | **open** | — | — |
 
 ## Next actions
 

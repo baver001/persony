@@ -29,6 +29,16 @@ async function main() {
     console.error('Owner economics E2E: docs/PRODUCTION_ECONOMICS_SMOKE.md');
     process.exit(1);
   }
+
+  const ownerGateUrl = `${BASE.replace(/\/$/, '')}/api/owner/economics`;
+  const gateRes = await fetch(ownerGateUrl);
+  const gateOk = gateRes.status === 401;
+  console.log(`${gateOk ? 'OK' : 'FAIL'} owner_auth_gate: HTTP ${gateRes.status} (expect 401)`);
+  if (!gateOk) {
+    console.error('Owner economics route must reject unauthenticated requests.');
+    process.exit(1);
+  }
+
   console.log('\nPublic economics smoke passed.');
   console.log('Next: owner login → PRODUCTION_ECONOMICS_SMOKE.md (Milestone 1).');
 }

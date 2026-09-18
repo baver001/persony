@@ -37,6 +37,7 @@ Client: `src/lib/api/owner.ts` — typed fetch helpers (no `Record<string, unkno
 | `GET /api/owner/overview` | Platform counts |
 | `GET /api/owner/economics` | COGS, coverage, simulated retail |
 | `GET /api/owner/pricing` | Versioned pricing catalog + freshness |
+| `POST /api/owner/pricing/entries` | Append-only pricing row + audit log |
 | `GET /api/owner/inference` | Paginated inference list + filters |
 | `GET /api/owner/inference/:id` | Detail + cost breakdown + timeline |
 | `GET /api/owner/ai/overview` | Provider configuration |
@@ -68,7 +69,8 @@ Client: `src/lib/api/owner.ts` — typed fetch helpers (no `Record<string, unkno
 
 ### Pricing
 
-- Read-only catalog table from `GET /owner/pricing`
+- Catalog table from `GET /owner/pricing` (code bootstrap + DB merge)
+- Append-only add form → `POST /owner/pricing/entries` (reason required, audited)
 - Stale entry indicator from freshness metadata
 
 ## UX standards

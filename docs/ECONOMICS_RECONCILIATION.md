@@ -3,18 +3,19 @@
 **Stage:** Verified Economics & Owner Control Center (Milestone 1 in progress)  
 **Audited:** 2026-09-18  
 **Production URL:** https://beta.persony.org  
-**Production SHA (deployed):** `8761878`+ (see `/api/health` `gitSha`; `12ff21e` persona detail deploying)  
-**D1 migrations (remote):** `0001`–`0013` applied  
+**Production SHA (deployed):** `9ce13b5` — owner economics smoke helper (see `/api/health` `gitSha`)  
+**D1 migrations (remote):** `0001`–`0014` applied  
 **Production health:** `GET /api/health` → `status: ok`, `database: ready`, `gitSha` present  
-**Automated tests:** 115/115 (`npm test`)  
-**Public smoke:** `npm run smoke:economics:public`
+**Automated tests:** 123/123 (`npm test`)  
+**Public smoke:** `npm run smoke:economics:public` (health + owner auth gate)  
+**Owner API smoke:** `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner`
 
 Status labels:
 
 - **IMPLEMENTED** — on `main` / deployed
 - **TESTED** — automated tests
 - **CI VERIFIED** — green deploy pipeline
-- **PRODUCTION VERIFIED** — confirmed on beta with evidence (not owner-auth APIs)
+- **PRODUCTION VERIFIED** — confirmed on beta without owner JWT
 - **MANUAL VERIFIED** — owner login checklist with recorded run ids
 
 ---
@@ -25,8 +26,9 @@ Status labels:
 |------|:-----------:|:------:|:--:|:----------:|
 | CI verify (i18n, lint, test, build) | ✓ | ✓ | ✓ | — |
 | Deploy + gitSha in health | ✓ | — | ✓ | ✓ `gitSha` on `/api/health` |
-| D1 migrations 0008–0013 (economy, confidence, pricing_entry, breakdown, operation normalize) | ✓ | partial | ✓ migrate job | ✓ |
+| D1 migrations 0008–0014 (economy, confidence, pricing_entry, breakdown, operation normalize, pricing_entries DB) | ✓ | partial | ✓ migrate job | ✓ |
 | Clerk auth | ✓ | partial | ✓ | ✓ |
+| Owner routes require auth (401 without JWT) | ✓ | — | ✓ | ✓ public smoke |
 | Paddle live | ✗ `BILLING_ENABLED=false` | — | — | N/A |
 
 ---
@@ -40,7 +42,7 @@ Status labels:
 | Voice call (`voice_call`, Live usageMetadata + duration fallback) | ✓ | ✓ | **MANUAL open** |
 | Transcribe (`voice_transcription`, usageMetadata) | ✓ | ✓ | **MANUAL open** |
 | Avatar (`avatar_generation`, per_image COGS) | ✓ | ✓ | **MANUAL open** |
-| Call summary / persona gen inference rows | deployed | `text-generation-inference-service.ts` | NOT VERIFIED |
+| Call summary / persona gen inference rows | ✓ | ✓ | **MANUAL open** |
 
 ---
 
@@ -54,9 +56,9 @@ Status labels:
 | `per_minute` (Gemini Live) | ✓ | ✓ | MANUAL open |
 | `per_image` (avatar models) | ✓ | ✓ | MANUAL open |
 | Stream usage Gemini/DeepSeek chat | ✓ | ✓ | MANUAL open |
-| Unknown cost ≠ $0 in Owner UI | ✓ `formatMicrousd(null)` | — | MANUAL open |
+| Unknown cost ≠ $0 in Owner UI | ✓ `formatMicrousd(null)` → `—` | ✓ unit test | MANUAL open |
 | Retail margin formula (not 2.5× hardcode) | ✓ `retail-pricing.ts` | ✓ | NOT VERIFIED |
-| DB-backed pricing admin | ✓ append-only DB + code bootstrap | `0014_pricing_catalog_db.sql` | NOT VERIFIED |
+| DB-backed pricing admin (append-only + audit) | ✓ m0014 + POST `/owner/pricing/entries` | ✓ | NOT VERIFIED |
 
 ---
 
@@ -67,12 +69,11 @@ Status labels:
 | OwnerShell desktop + mobile nav | ✓ | card lists `<md` on analytics sections | **open** 390/1440 sign-off |
 | Economy dashboard (coverage, unpriced) | ✓ | — | MANUAL open |
 | Inference Explorer + filters + detail | ✓ | ✓ | MANUAL open |
-| Pricing catalog (read-only) | ✓ | — | — |
+| Pricing catalog + add-entry form | ✓ | partial | — |
 | Users + Personas detail → inference list | ✓ | partial | MANUAL open |
 | AI routing matrix + `chat_text_provider` | ✓ | — | — |
 | Settings / feature flags | ✓ | — | — |
 | Errors summary | ✓ | — | — |
-| DB pricing edit UI | ✗ | — | — |
 
 ---
 
@@ -92,10 +93,10 @@ Status labels:
 | Doc | Accurate? |
 |-----|-----------|
 | `docs/GOAL_MODE_STATE.md` | ✓ updated 2026-09-18 |
-| `docs/PRODUCTION_ECONOMICS_SMOKE.md` | ✓ incl. transcribe/avatar optional |
+| `docs/PRODUCTION_ECONOMICS_SMOKE.md` | ✓ incl. owner API smoke helper |
 | `docs/METRICS.md` | ✓ |
-| `specs/owner-console.md` | ✓ partial gaps (DB pricing admin) |
-| `specs/economics.md` | ✓ synced — DB pricing + Milestone 1 manual open |
+| `specs/owner-console.md` | ✓ synced |
+| `specs/economics.md` | ✓ synced |
 | This file | ✓ refresh on each deploy milestone |
 
 ---
@@ -103,6 +104,5 @@ Status labels:
 ## Next work
 
 1. **Owner:** run Milestone 1 smoke; record inference ids in `GOAL_MODE_STATE.md`.
-2. **Code:** DB-backed pricing catalog + audit trail.
-3. **Verify:** voice_call on beta shows `provider_usage` when Live sends `usageMetadata`.
-4. **Manual:** Owner Console 390px / 1440px verification.
+2. **Owner:** `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner` after a real chat inference.
+3. **Manual:** Owner Console 390px / 1440px verification on beta.
