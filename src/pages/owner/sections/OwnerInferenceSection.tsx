@@ -99,7 +99,37 @@ export function OwnerInferenceSection({
         onRetry={onRetry}
       />
       {items.length > 0 && (
-        <div className="rounded-xl border border-white/10 overflow-x-auto">
+        <ul className="md:hidden space-y-2">
+          {items.map((item) => (
+            <li key={item.id}>
+              <button
+                type="button"
+                onClick={() => onSelect(item.id)}
+                className="w-full rounded-xl border border-white/10 bg-white/[0.02] p-3 text-left hover:bg-white/5 min-h-[44px]"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-xs font-mono text-zinc-300">{item.operationType}</span>
+                  <span className="text-xs font-mono shrink-0">
+                    {formatMicrousd(item.providerCostMicrousd)}
+                  </span>
+                </div>
+                <div className="mt-1 text-[11px] text-zinc-500 truncate">
+                  {item.actualProvider}/{item.actualModel}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-zinc-400">
+                  <span>{item.costConfidence}</span>
+                  <span>·</span>
+                  <span>{item.status}</span>
+                  <span>·</span>
+                  <span>{new Date(item.startedAt).toLocaleString()}</span>
+                </div>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {items.length > 0 && (
+        <div className="hidden md:block rounded-xl border border-white/10 overflow-x-auto">
           <table className="w-full text-sm min-w-[720px]">
             <thead className="bg-white/5 text-zinc-400 text-left">
               <tr>

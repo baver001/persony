@@ -122,7 +122,8 @@ export function OwnerShell({ section, onSectionChange, onBack, title, children }
               key={id}
               type="button"
               onClick={() => onSectionChange(id)}
-              className={`py-3 text-[11px] min-h-[52px] ${
+              title={sectionLabel(id)}
+              className={`py-2.5 px-0.5 text-[10px] leading-tight min-h-[52px] truncate ${
                 section === id ? 'text-white' : 'text-zinc-500'
               }`}
             >
@@ -132,7 +133,8 @@ export function OwnerShell({ section, onSectionChange, onBack, title, children }
           <button
             type="button"
             onClick={() => setMoreOpen(true)}
-            className={`py-3 text-[11px] min-h-[52px] ${
+            title={t('owner:nav.more')}
+            className={`py-2.5 px-0.5 text-[10px] leading-tight min-h-[52px] truncate ${
               MOBILE_MORE_SECTIONS.includes(section) ? 'text-white' : 'text-zinc-500'
             }`}
           >
