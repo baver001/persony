@@ -1,5 +1,8 @@
+import { defaultCostEngine } from '../billing/cost-engine';
 import { resolveChatRoute, streamChatWithRouter } from './model-router';
 import { formatCleanErrorMessage } from '../lib/errors';
+import { logEvent } from '../lib/structured-log';
+import { mergeProviderUsage } from '../providers/provider-result';
 import {
   createInferenceRun,
   findInferenceRunByClientRequest,
@@ -7,6 +10,7 @@ import {
   markInferenceRunFailed,
   markInferenceRunStreaming,
   resetInferenceRunForRetry,
+  updateInferenceRunEconomics,
   type InferenceRunRecord,
 } from '../repositories/inference-run-repository';
 import {
@@ -17,8 +21,16 @@ import {
 } from '../repositories/message-repository';
 import { getConversationForUser, touchConversation } from '../repositories/conversation-repository';
 import { getPersonaVersion } from '../repositories/persona-repository';
-import { chargeBatteryForInference } from './energy-service';
-import { buildMemoryContextBlocks, extractAndPersistMemories } from './memory-service';
+import {
+  actualEnergyUnitsForUsage,
+  BatteryEmptyError,
+  releaseEnergyForInference,
+  reserveEnergyForInference,
+  settleEnergyForInference,
+} from './energy-service';
+import { loadBatteryConfig } from '../billing/battery-config';
+import { buildMemoryContextBlocks } from './memory-service';
+import { scheduleMemoryExtraction } from './memory-job-service';
 import { touchPersonaRelationship } from './persona-relationship-service';
 import { resolveCompiledInstructions } from './persona-compiler';
 import { PersonaNotFoundError } from './persona-service';
@@ -108,12 +120,15 @@ async function executeInferenceStream(
   userMessageText: string,
   systemPrompt: string,
   history: Array<{ sender: string; text: string }>,
-  personaId: string
+  personaId: string,
+  executionCtx?: Pick<ExecutionContext, 'waitUntil'>
 ): Promise<ReadableStream<Uint8Array>> {
   const db = env.DB!;
   await markInferenceRunStreaming(db, run.id, userMessageId);
 
-  const { stream: upstream } = await streamChatWithRouter(env, {
+  const startedAt = Date.now();
+  const inputContext = history.map((m) => m.text).join('\n') + userMessageText;
+  const { stream: upstream, meta } = await streamChatWithRouter(env, {
     systemPrompt,
     messages: history,
   });
@@ -149,6 +164,18 @@ async function executeInferenceStream(
         }
 
         if (accumulated.trim()) {
+          const latencyMs = Date.now() - startedAt;
+          const { usage, usageEstimated } = mergeProviderUsage(
+            inputContext,
+            accumulated
+          );
+          const cost = defaultCostEngine.computeProviderCost({
+            provider: meta.actualProvider,
+            model: meta.actualModel,
+            usage,
+            usageEstimated,
+          });
+
           const personaMessage = await insertPersonaMessage(
             db,
             run.conversationId,
@@ -158,19 +185,60 @@ async function executeInferenceStream(
           );
           await markInferenceRunCompleted(db, run.id, personaMessage.id);
           await touchConversation(db, run.conversationId);
-          await chargeBatteryForInference(db, run.userId, run.id, 'text_chat').catch(
-            () => undefined
+
+          const batteryConfig = await loadBatteryConfig(db);
+          const energyCharged = actualEnergyUnitsForUsage(
+            'text_chat',
+            batteryConfig,
+            { input: usage.inputTokens, output: usage.outputTokens },
+            cost.providerCostMicrousd
           );
-          void extractAndPersistMemories(
-            env,
+
+          await settleEnergyForInference(
             db,
             run.userId,
+            run.id,
+            'text_chat',
+            { input: usage.inputTokens, output: usage.outputTokens },
+            cost.providerCostMicrousd
+          );
+
+          await updateInferenceRunEconomics(db, run.id, {
+            actualProvider: meta.actualProvider,
+            actualModel: meta.actualModel,
+            inputTokens: usage.inputTokens,
+            outputTokens: usage.outputTokens,
+            usageEstimated,
+            providerCostMicrousd: cost.providerCostMicrousd,
+            energyCharged,
+            latencyMs,
+            fallbackCount: meta.fallbackCount,
+            fallbackReason: meta.fallbackReason,
+          });
+
+          scheduleMemoryExtraction(env, db, executionCtx, {
+            userId: run.userId,
             personaId,
-            run.conversationId,
+            conversationId: run.conversationId,
             userMessageId,
-            userMessageText,
-            accumulated.trim()
-          ).catch(() => undefined);
+            userText: userMessageText,
+            assistantText: accumulated.trim(),
+          });
+
+          logEvent('inference.completed', {
+            inferenceRunId: run.id,
+            provider: meta.actualProvider,
+            model: meta.actualModel,
+            requestedProvider: meta.requestedProvider,
+            requestedModel: meta.requestedModel,
+            latencyMs,
+            inputTokens: usage.inputTokens,
+            outputTokens: usage.outputTokens,
+            usageEstimated,
+            providerCostMicrousd: cost.providerCostMicrousd,
+            fallbackCount: meta.fallbackCount,
+          });
+
           controller.enqueue(
             sseEncode({
               done: true,
@@ -180,6 +248,7 @@ async function executeInferenceStream(
           );
         } else {
           await markInferenceRunFailed(db, run.id, 'empty_model_response');
+          await releaseEnergyForInference(db, run.userId, run.id, 'empty_model_response');
           controller.enqueue(sseEncode({ error: 'Пустой ответ модели' }));
         }
 
@@ -187,6 +256,11 @@ async function executeInferenceStream(
       } catch (err) {
         const clean = formatCleanErrorMessage(err);
         await markInferenceRunFailed(db, run.id, clean);
+        await releaseEnergyForInference(db, run.userId, run.id, clean);
+        logEvent('inference.failed', {
+          inferenceRunId: run.id,
+          errorCode: clean,
+        });
         controller.enqueue(sseEncode({ error: clean }));
         controller.close();
       }
@@ -200,7 +274,8 @@ export async function streamConversationReply(
   conversationId: string,
   text: string,
   clientRequestId?: string,
-  modelText?: string
+  modelText?: string,
+  executionCtx?: Pick<ExecutionContext, 'waitUntil'>
 ): Promise<ReadableStream<Uint8Array>> {
   if (!env.DB) throw new Error('Database not configured');
   if (!clientRequestId?.trim()) {
@@ -264,6 +339,20 @@ export async function streamConversationReply(
     run = (await findInferenceRunByClientRequest(env.DB, conversationId, clientRequestId))!;
   }
 
+  const tokenHint = { input: Math.ceil(text.length / 4) };
+  const reservation = await reserveEnergyForInference(
+    env.DB,
+    userId,
+    run.id,
+    'text_chat',
+    tokenHint
+  );
+  await updateInferenceRunEconomics(env.DB, run.id, {
+    energyReserved: reservation.reservedUnits,
+    requestedProvider: chatRoute.provider,
+    requestedModel: chatRoute.model,
+  });
+
   void touchPersonaRelationship(env.DB, userId, persona.id).catch(() => undefined);
 
   const memoryBlocks = await buildMemoryContextBlocks(
@@ -295,6 +384,9 @@ export async function streamConversationReply(
     text,
     compiledPrompt,
     history,
-    persona.id
+    persona.id,
+    executionCtx
   );
 }
+
+export { BatteryEmptyError };

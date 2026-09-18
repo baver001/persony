@@ -1,36 +1,34 @@
 # Goal mode state
 
-**Objective:** Closed beta platform — simulation battery, multi-provider AI, Paddle prepared, Rooms MVP.
+**Objective:** Production Economy & Reliability — измеримое AI-ядро, reserve/settle Energy, provider telemetry, memory lifecycle, без крупных новых фич.
 
 **Last updated:** 2026-09-18 UTC  
-**Current phase:** Phase 5–7 partial **complete (code)** — prod verify + D1 migrations
+**Current phase:** Production Economy & Reliability (P0 in progress)
 
-## Roadmap
+## Gate table
 
-| Phase | Status |
-|-------|--------|
-| 1.1–1.3 Closed beta core | **Complete** |
-| 2 Multi-provider AI | **Complete** |
-| 3 Energy simulation | **Complete** |
-| 4 Paddle prep | **Prepared** (not live) |
-| 5 Persona platform | **Partial** — visibility, share, `/p/:slug` |
-| 6 Memory | **Core done** — polish ongoing |
-| 7 Rooms | **MVP** — create/list, per-persona chat |
-| 8–10 Tools, voice, OSS | **Planned** |
+| Gate | Status | Evidence | Limitation / next proof |
+|------|--------|----------|-------------------------|
+| Provider adapters (google + deepseek) | implemented | `worker/providers/*`, router tests | production model IDs verify manually |
+| ProviderResult / route metadata | implemented | `provider-result.ts`, `model-router.ts` | streaming usage from API not wired yet |
+| CostEngine + pricing catalog | implemented | `cost-engine.test.ts` | prices need periodic vendor sync |
+| inference_runs economy columns | implemented | migration `0008` | apply on prod D1 |
+| Energy reserve → settle → release | implemented | `energy-service.ts`, concurrency test | live/voice endpoints still on legacy charge |
+| Memory waitUntil + job status | implemented | `memory-job-service.ts` | owner UI for failed jobs open |
+| Rate limits | open | — | P1 |
+| Community Discover | open | — | P1 |
+| Voice Call terminology | open | — | P1 |
+| Voice device/soak specs | open | — | manual only |
+| Paddle live | not applicable | `BILLING_ENABLED=false` | separate Payment Launch |
+| Commercial battery default | not applicable | mode exists, default simulation | enable later |
+| CI green | open | last deploy `0a2d13b` success | new commits pending |
+| Production verified | open | health check | post-migration smoke |
 
-## Latest (2026-09-18)
+## External tasks
 
-| Component | Status |
-|-----------|--------|
-| Vertical battery top-left sidebar + mobile chat header | ✅ |
-| Persona visibility (private/unlisted/public) in creator | ✅ |
-| Share link copy (`/p/:slug`) | ✅ |
-| Rooms API + `/rooms` UI | ✅ |
-| Owner: `chat_text_provider` selector | ✅ |
+1. **Current task:** после push — `npm run db:migrate:remote` на production (migration `0008`).
+2. **Waiting:** локально — остановить `npm run dev`, `Remove-Item node_modules`, `npm ci` если `tsc` не найден.
 
-## Operator next steps
+## Next independent task
 
-1. `npm run db:migrate:remote` (0006 + 0007)
-2. Smoke: battery UI, rooms create, public persona share
-3. Optional: `DEEPSEEK_API_KEY`
-4. Do **not** enable Paddle checkout until legal + catalog ready
+P1: rate limits middleware + owner economics API aggregate endpoints.

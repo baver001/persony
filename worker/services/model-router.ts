@@ -1,6 +1,7 @@
 import { getSystemSetting } from '../repositories/settings-repository';
 import { deepseekChatProvider } from '../providers/deepseek-chat-provider';
 import { geminiChatProvider } from '../providers/gemini-chat-provider';
+import type { ProviderRouteMeta } from '../providers/provider-result';
 import type { ChatProvider, ChatProviderId, ChatStreamRequest } from '../providers/chat-types';
 import { classifyProviderError, shouldFallbackToNextModel } from '../lib/provider-errors';
 import type { PersonyEnv } from '../types/env';
@@ -104,17 +105,32 @@ function isProviderStreamError(chunk: Uint8Array): string | null {
   return null;
 }
 
+export type RoutedChatStream = {
+  stream: ReadableStream<Uint8Array>;
+  route: ResolvedChatRoute;
+  meta: ProviderRouteMeta;
+};
+
 export async function streamChatWithRouter(
   env: PersonyEnv,
   request: ChatStreamRequest
-): Promise<{ stream: ReadableStream<Uint8Array>; route: ResolvedChatRoute }> {
+): Promise<RoutedChatStream> {
   const route = await resolveChatRoute(env);
   const candidates = [route.primary, ...route.fallbacks];
+  const requestedProvider = route.provider;
+  const requestedModel = route.model;
+  const attemptedProviders: ChatProviderId[] = [];
+  const attemptedModels: string[] = [];
 
   let lastError: unknown = null;
+  let fallbackCount = 0;
+  let fallbackReason: string | undefined;
 
   for (let i = 0; i < candidates.length; i++) {
     const provider = candidates[i];
+    attemptedProviders.push(provider.id);
+    attemptedModels.push(provider.defaultModel);
+
     try {
       const upstream = await streamWithProvider(env, provider, request);
       const resolvedRoute: ResolvedChatRoute = {
@@ -124,14 +140,25 @@ export async function streamChatWithRouter(
         model: provider.defaultModel,
       };
 
+      const meta: ProviderRouteMeta = {
+        requestedProvider,
+        requestedModel,
+        actualProvider: provider.id,
+        actualModel: provider.defaultModel,
+        fallbackCount,
+        fallbackReason,
+        attemptedProviders: [...attemptedProviders],
+        attemptedModels: [...attemptedModels],
+      };
+
       if (i === candidates.length - 1) {
-        return { stream: upstream, route: resolvedRoute };
+        return { stream: upstream, route: resolvedRoute, meta };
       }
 
       const reader = upstream.getReader();
       const first = await reader.read();
       if (first.done) {
-        return { stream: upstream, route: resolvedRoute };
+        return { stream: upstream, route: resolvedRoute, meta };
       }
 
       const errMsg = first.value ? isProviderStreamError(first.value) : null;
@@ -147,20 +174,25 @@ export async function streamChatWithRouter(
             controller.close();
           },
         });
-        return { stream: combined, route: resolvedRoute };
+        return { stream: combined, route: resolvedRoute, meta };
       }
 
       lastError = new Error(errMsg);
       const kind = classifyProviderError(lastError);
       if (!shouldFallbackToNextModel(kind, false)) {
-        return { stream: upstream, route: resolvedRoute };
+        return { stream: upstream, route: resolvedRoute, meta };
       }
+
+      fallbackCount += 1;
+      fallbackReason = errMsg;
     } catch (err) {
       lastError = err;
       const kind = classifyProviderError(err);
       if (!shouldFallbackToNextModel(kind, false) || i === candidates.length - 1) {
         throw err;
       }
+      fallbackCount += 1;
+      fallbackReason = err instanceof Error ? err.message : String(err);
     }
   }
 

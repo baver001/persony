@@ -6,11 +6,18 @@ import {
   percentageFromUnits,
   unitsForOperation,
 } from '../billing/battery-config';
+import { energyUnitsFromProviderCost } from '../billing/cost-engine';
+import { generateId } from '../lib/ids';
 import {
+  atomicReserveEnergyUnits,
+  findEnergyReservationByInferenceRun,
   findLedgerByInferenceRun,
+  finalizeEnergyReservation,
   getEnergyWallet,
   insertEnergyLedgerEntry,
+  insertEnergyReservation,
   insertEnergyWallet,
+  releaseEnergyReservation,
   updateEnergyWalletUnits,
 } from '../repositories/energy-repository';
 
@@ -169,7 +176,7 @@ export async function getBatterySnapshot(
   userId: string
 ): Promise<BatterySnapshot> {
   const config = await loadBatteryConfig(db);
-  if (!config.battery_enabled) {
+  if (!config.battery_enabled || config.battery_mode === 'disabled') {
     return {
       percentage: 100,
       status: 'full',
@@ -210,6 +217,144 @@ export async function assertBatteryAllowsAI(
     throw new BatteryEmptyError(snapshot);
   }
   return snapshot;
+}
+
+const RESERVE_BUFFER_RATIO = 1.25;
+
+export function estimateMaxEnergyUnits(
+  operation: string,
+  config: BatteryConfig,
+  tokenHint?: { input?: number; output?: number }
+): number {
+  const base = unitsForOperation(operation, config, tokenHint);
+  return Math.max(1, Math.ceil(base * RESERVE_BUFFER_RATIO));
+}
+
+export function actualEnergyUnitsForUsage(
+  operation: string,
+  config: BatteryConfig,
+  tokenHint?: { input?: number; output?: number },
+  providerCostMicrousd?: number
+): number {
+  if (providerCostMicrousd && providerCostMicrousd > 0) {
+    return energyUnitsFromProviderCost(providerCostMicrousd);
+  }
+  return unitsForOperation(operation, config, tokenHint);
+}
+
+export async function reserveEnergyForInference(
+  db: D1Database,
+  userId: string,
+  inferenceRunId: string,
+  operation = 'text_chat',
+  tokenHint?: { input?: number; output?: number }
+): Promise<{ reservedUnits: number; reservationId: string }> {
+  const config = await loadBatteryConfig(db);
+  if (!config.battery_enabled || config.battery_mode === 'disabled') {
+    return { reservedUnits: 0, reservationId: '' };
+  }
+
+  const existing = await findEnergyReservationByInferenceRun(db, inferenceRunId);
+  if (existing) {
+    return { reservedUnits: existing.reserved_units, reservationId: existing.id };
+  }
+
+  await materializeBatteryState(db, userId, config);
+  const reservedUnits = estimateMaxEnergyUnits(operation, config, tokenHint);
+  const now = new Date().toISOString();
+  const ok = await atomicReserveEnergyUnits(db, userId, reservedUnits, now);
+  if (!ok) {
+    const snapshot = await getBatterySnapshot(db, userId);
+    throw new BatteryEmptyError(snapshot);
+  }
+
+  const reservationId = generateId();
+  await insertEnergyReservation(db, {
+    id: reservationId,
+    userId,
+    inferenceRunId,
+    reservedUnits,
+    now,
+    metadata: { operation },
+  });
+
+  return { reservedUnits, reservationId };
+}
+
+export async function settleEnergyForInference(
+  db: D1Database,
+  userId: string,
+  inferenceRunId: string,
+  operation = 'text_chat',
+  tokenHint?: { input?: number; output?: number },
+  providerCostMicrousd?: number
+): Promise<BatterySnapshot> {
+  const config = await loadBatteryConfig(db);
+  if (!config.battery_enabled || config.battery_mode === 'disabled') {
+    return {
+      percentage: 100,
+      status: 'full',
+      mode: config.battery_mode,
+      isRecharging: false,
+      fullAt: null,
+      enabled: false,
+    };
+  }
+
+  const reservation = await findEnergyReservationByInferenceRun(db, inferenceRunId);
+  if (!reservation) {
+    return chargeBatteryForInference(
+      db,
+      userId,
+      inferenceRunId,
+      operation,
+      tokenHint
+    );
+  }
+
+  if (reservation.status === 'settled') {
+    return getBatterySnapshot(db, userId);
+  }
+
+  const actualUnits = actualEnergyUnitsForUsage(
+    operation,
+    config,
+    tokenHint,
+    providerCostMicrousd
+  );
+  const now = new Date().toISOString();
+
+  await finalizeEnergyReservation(db, {
+    reservationId: reservation.id,
+    userId,
+    reservedUnits: reservation.reserved_units,
+    actualUnits,
+    now,
+    inferenceRunId,
+    operation,
+  });
+
+  return getBatterySnapshot(db, userId);
+}
+
+export async function releaseEnergyForInference(
+  db: D1Database,
+  userId: string,
+  inferenceRunId: string,
+  reason = 'inference_failed'
+): Promise<void> {
+  const reservation = await findEnergyReservationByInferenceRun(db, inferenceRunId);
+  if (!reservation || reservation.status !== 'active') return;
+
+  const now = new Date().toISOString();
+  await releaseEnergyReservation(db, {
+    reservationId: reservation.id,
+    userId,
+    reservedUnits: reservation.reserved_units,
+    now,
+    inferenceRunId,
+    reason,
+  });
 }
 
 export async function chargeBatteryForInference(

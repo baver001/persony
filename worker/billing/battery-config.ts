@@ -1,10 +1,19 @@
 import { getSystemSetting } from '../repositories/settings-repository';
 
-export type BatteryMode = 'simulation' | 'beta_regen' | 'paid';
+export type BatteryMode =
+  | 'simulation'
+  | 'beta_regen'
+  | 'commercial'
+  | 'paid'
+  | 'disabled';
 
 /** Modes where charge drains on use and restores over idle time (no payments). */
 export function isSimulationBatteryMode(mode: BatteryMode): boolean {
   return mode === 'simulation' || mode === 'beta_regen';
+}
+
+export function isCommercialBatteryMode(mode: BatteryMode): boolean {
+  return mode === 'commercial' || mode === 'paid';
 }
 
 export type BatteryConfig = {
@@ -54,7 +63,13 @@ export async function loadBatteryConfig(db: D1Database): Promise<BatteryConfig> 
   }
 
   const mode = await getSystemSetting(db, 'battery_mode');
-  if (mode === 'paid' || mode === 'beta_regen' || mode === 'simulation') {
+  if (
+    mode === 'paid' ||
+    mode === 'beta_regen' ||
+    mode === 'simulation' ||
+    mode === 'commercial' ||
+    mode === 'disabled'
+  ) {
     merged.battery_mode = mode;
   }
 

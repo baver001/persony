@@ -15,7 +15,21 @@ export type EnergyLedgerType =
   | 'welcome_grant'
   | 'beta_regeneration'
   | 'owner_adjustment'
-  | 'purchase';
+  | 'purchase'
+  | 'reservation_settle'
+  | 'reservation_release';
+
+export type EnergyReservationRow = {
+  id: string;
+  user_id: string;
+  inference_run_id: string;
+  reserved_units: number;
+  settled_units: number | null;
+  status: string;
+  created_at: string;
+  settled_at: string | null;
+  metadata_json: string | null;
+};
 
 export async function getEnergyWallet(
   db: D1Database,
@@ -103,6 +117,176 @@ export async function findLedgerByInferenceRun(
     )
     .bind(inferenceRunId)
     .first<{ id: string }>();
+}
+
+export async function findEnergyReservationByInferenceRun(
+  db: D1Database,
+  inferenceRunId: string
+): Promise<EnergyReservationRow | null> {
+  return db
+    .prepare(`SELECT * FROM energy_reservations WHERE inference_run_id = ? LIMIT 1`)
+    .bind(inferenceRunId)
+    .first<EnergyReservationRow>();
+}
+
+/**
+ * Atomically move units from available → reserve. Fails when balance insufficient.
+ */
+export async function atomicReserveEnergyUnits(
+  db: D1Database,
+  userId: string,
+  units: number,
+  now: string
+): Promise<boolean> {
+  const result = await db
+    .prepare(
+      `UPDATE energy_wallets
+       SET available_units = available_units - ?,
+           reserve_units = reserve_units + ?,
+           updated_at = ?,
+           last_energy_update_at = ?
+       WHERE user_id = ? AND available_units >= ?`
+    )
+    .bind(units, units, now, now, userId, units)
+    .run();
+
+  return (result.meta?.changes ?? 0) > 0;
+}
+
+export async function insertEnergyReservation(
+  db: D1Database,
+  input: {
+    id: string;
+    userId: string;
+    inferenceRunId: string;
+    reservedUnits: number;
+    now: string;
+    metadata?: Record<string, unknown>;
+  }
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO energy_reservations (
+        id, user_id, inference_run_id, reserved_units, settled_units,
+        status, created_at, settled_at, metadata_json
+      ) VALUES (?, ?, ?, ?, NULL, 'active', ?, NULL, ?)`
+    )
+    .bind(
+      input.id,
+      input.userId,
+      input.inferenceRunId,
+      input.reservedUnits,
+      input.now,
+      input.metadata ? JSON.stringify(input.metadata) : null
+    )
+    .run();
+}
+
+export async function finalizeEnergyReservation(
+  db: D1Database,
+  input: {
+    reservationId: string;
+    userId: string;
+    reservedUnits: number;
+    actualUnits: number;
+    now: string;
+    inferenceRunId: string;
+    operation: string;
+  }
+): Promise<void> {
+  const extraCharge = Math.max(0, input.actualUnits - input.reservedUnits);
+
+  const walletUpdate = await db
+    .prepare(
+      `UPDATE energy_wallets
+       SET reserve_units = reserve_units - ?,
+           available_units = available_units + ? - ?,
+           updated_at = ?,
+           last_energy_update_at = ?,
+           last_billable_usage_at = ?
+       WHERE user_id = ? AND available_units >= ?`
+    )
+    .bind(
+      input.reservedUnits,
+      input.reservedUnits,
+      input.actualUnits,
+      input.now,
+      input.now,
+      input.now,
+      input.userId,
+      extraCharge
+    )
+    .run();
+
+  if ((walletUpdate.meta?.changes ?? 0) === 0 && extraCharge > 0) {
+    throw new Error('Insufficient energy to settle reservation');
+  }
+
+  await db
+    .prepare(
+      `UPDATE energy_reservations
+       SET status = 'settled', settled_units = ?, settled_at = ?
+       WHERE id = ?`
+    )
+    .bind(input.actualUnits, input.now, input.reservationId)
+    .run();
+
+  if (input.actualUnits > 0) {
+    await insertEnergyLedgerEntry(db, {
+      userId: input.userId,
+      type: 'reservation_settle',
+      energyDelta: -input.actualUnits,
+      inferenceRunId: input.inferenceRunId,
+      metadata: { operation: input.operation, reserved: input.reservedUnits },
+    });
+  }
+}
+
+export async function releaseEnergyReservation(
+  db: D1Database,
+  input: {
+    reservationId: string;
+    userId: string;
+    reservedUnits: number;
+    now: string;
+    inferenceRunId: string;
+    reason: string;
+  }
+): Promise<void> {
+  await db
+    .prepare(
+      `UPDATE energy_wallets
+       SET reserve_units = reserve_units - ?,
+           available_units = available_units + ?,
+           updated_at = ?,
+           last_energy_update_at = ?
+       WHERE user_id = ?`
+    )
+    .bind(
+      input.reservedUnits,
+      input.reservedUnits,
+      input.now,
+      input.now,
+      input.userId
+    )
+    .run();
+
+  await db
+    .prepare(
+      `UPDATE energy_reservations
+       SET status = 'released', settled_units = 0, settled_at = ?
+       WHERE id = ?`
+    )
+    .bind(input.now, input.reservationId)
+    .run();
+
+  await insertEnergyLedgerEntry(db, {
+    userId: input.userId,
+    type: 'reservation_release',
+    energyDelta: 0,
+    inferenceRunId: input.inferenceRunId,
+    metadata: { reason: input.reason },
+  });
 }
 
 export async function insertEnergyLedgerEntry(
