@@ -128,10 +128,17 @@ flowchart TD
 2. **Phase 8–10** — Tools, voice hardening, OSS/BYOK
 3. Paddle live (оператор) после legal + catalog
 
+### В работе — Verified Economics & Owner Control Center
+
+- Reconciliation: [`docs/ECONOMICS_RECONCILIATION.md`](docs/ECONOMICS_RECONCILIATION.md)
+- Goal state: [`docs/GOAL_MODE_STATE.md`](docs/GOAL_MODE_STATE.md)
+- Production SHA: `840608f` (2026-09-18 deploy)
+
 ### Проверить
 
 - Health endpoint не должен раскрывать `hasApiKey` в production (Phase 0 security)
 - Live voice regression на iOS/Android после каждого voice-изменения
+- Economics truth: cost_confidence, unpriced ≠ $0, inference detail E2E on production
 
 ## Решения
 
