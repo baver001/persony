@@ -14,12 +14,12 @@ describe('withEnergyReservation', () => {
     await ensureEnergyWallet(db, userId, DEFAULT_BATTERY_CONFIG);
     const before = (await getEnergyWallet(db, userId))!.available_units;
 
-    await withEnergyReservation(db, userId, 'text_chat', async () => 'ok');
+    await withEnergyReservation(db, userId, 'chat_text', async () => 'ok');
     const afterSuccess = (await getEnergyWallet(db, userId))!.available_units;
     expect(afterSuccess).toBeLessThan(before);
 
     await expect(
-      withEnergyReservation(db, userId, 'text_chat', async () => {
+      withEnergyReservation(db, userId, 'chat_text', async () => {
         throw new Error('boom');
       })
     ).rejects.toThrow('boom');

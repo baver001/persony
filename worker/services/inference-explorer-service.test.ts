@@ -15,7 +15,7 @@ function sampleRun(overrides: Partial<InferenceRunRecord> = {}): InferenceRunRec
     status: 'completed',
     provider: 'google',
     model: 'gemini-3.8-flash',
-    operationType: 'text_chat',
+    operationType: 'chat_text',
     requestedProvider: 'google',
     requestedModel: 'gemini-3.8-flash',
     actualProvider: 'google',

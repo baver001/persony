@@ -3,7 +3,8 @@ import { loadRetailPricingConfig } from '../billing/retail-pricing';
 import { resolveChatRoute, streamChatWithRouter } from './model-router';
 import { formatCleanErrorMessage } from '../lib/errors';
 import { logEvent } from '../lib/structured-log';
-import { mergeProviderUsage } from '../providers/provider-result';
+import { mergeProviderUsage, type ProviderUsageMetrics } from '../providers/provider-result';
+import { parseProviderSseBlock } from '../providers/stream-sse';
 import {
   createInferenceRun,
   findInferenceRunByClientRequest,
@@ -53,18 +54,23 @@ export class InferenceInProgressError extends Error {
   }
 }
 
-function extractTextFromSseChunk(chunk: string, onText: (text: string) => void): void {
+type ProviderStreamMeta = {
+  reportedUsage?: ProviderUsageMetrics;
+  actualModel?: string;
+};
+
+function consumeProviderSseChunk(
+  chunk: string,
+  onText: (text: string) => void,
+  meta: ProviderStreamMeta
+): void {
   const blocks = chunk.split('\n\n');
   for (const block of blocks) {
-    for (const line of block.split('\n')) {
-      if (!line.startsWith('data: ')) continue;
-      try {
-        const payload = JSON.parse(line.slice(6)) as { text?: string };
-        if (payload.text) onText(payload.text);
-      } catch {
-        // ignore malformed event
-      }
-    }
+    const payload = parseProviderSseBlock(block);
+    if (!payload) continue;
+    if (payload.text) onText(payload.text);
+    if (payload.model) meta.actualModel = payload.model;
+    if (payload.usage) meta.reportedUsage = payload.usage;
   }
 }
 
@@ -143,6 +149,7 @@ async function executeInferenceStream(
       const decoder = new TextDecoder();
       let sseBuffer = '';
       let accumulated = '';
+      const providerMeta: ProviderStreamMeta = {};
 
       try {
         while (true) {
@@ -157,22 +164,24 @@ async function executeInferenceStream(
           while (boundary !== -1) {
             const block = sseBuffer.slice(0, boundary);
             sseBuffer = sseBuffer.slice(boundary + 2);
-            extractTextFromSseChunk(`${block}\n\n`, (t) => {
+            consumeProviderSseChunk(`${block}\n\n`, (t) => {
               accumulated += t;
-            });
+            }, providerMeta);
             boundary = sseBuffer.indexOf('\n\n');
           }
         }
 
         if (accumulated.trim()) {
           const latencyMs = Date.now() - startedAt;
+          const resolvedModel = providerMeta.actualModel ?? meta.actualModel;
           const { usage, usageEstimated } = mergeProviderUsage(
             inputContext,
-            accumulated
+            accumulated,
+            providerMeta.reportedUsage
           );
           const cost = defaultCostEngine.computeProviderCost({
             provider: meta.actualProvider,
-            model: meta.actualModel,
+            model: resolvedModel,
             usage,
             usageEstimated,
           });
@@ -191,7 +200,7 @@ async function executeInferenceStream(
           const retailPricing = await loadRetailPricingConfig(db);
           const knownCostMicrousd = cost.providerCostMicrousd ?? undefined;
           const energyCharged = actualEnergyUnitsForUsage(
-            'text_chat',
+            'chat_text',
             batteryConfig,
             { input: usage.inputTokens, output: usage.outputTokens },
             knownCostMicrousd,
@@ -202,7 +211,7 @@ async function executeInferenceStream(
             db,
             run.userId,
             run.id,
-            'text_chat',
+            'chat_text',
             { input: usage.inputTokens, output: usage.outputTokens },
             knownCostMicrousd
           );
@@ -210,7 +219,7 @@ async function executeInferenceStream(
           const costCalculatedAt = new Date().toISOString();
           await updateInferenceRunEconomics(db, run.id, {
             actualProvider: meta.actualProvider,
-            actualModel: meta.actualModel,
+            actualModel: resolvedModel,
             inputTokens: usage.inputTokens,
             outputTokens: usage.outputTokens,
             usageEstimated,
@@ -348,6 +357,7 @@ export async function streamConversationReply(
       personaVersion: conversation.personaVersion,
       provider: chatRoute.provider,
       model: chatRoute.model,
+      operationType: 'chat_text',
     });
   } else if (existingRun?.status === 'failed') {
     await resetInferenceRunForRetry(env.DB, existingRun.id);
@@ -359,7 +369,7 @@ export async function streamConversationReply(
     env.DB,
     userId,
     run.id,
-    'text_chat',
+    'chat_text',
     tokenHint
   );
   await updateInferenceRunEconomics(env.DB, run.id, {

@@ -118,7 +118,7 @@ app.get(
                   c.env.DB,
                   auth.userId,
                   chargeKey,
-                  'live_voice'
+                  'voice_call'
                 );
                 liveChargeKey = chargeKey;
                 liveUserId = auth.userId;
@@ -216,7 +216,7 @@ app.get(
             c.env.DB,
             liveUserId,
             liveChargeKey,
-            'live_voice'
+            'voice_call'
           ).catch(() =>
             releaseEnergyForInference(c.env.DB!, liveUserId!, liveChargeKey!, 'live_voice_close')
           );

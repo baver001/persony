@@ -3,10 +3,10 @@
 **Stage:** Verified Economics & Owner Control Center  
 **Audited:** 2026-09-18  
 **Production URL:** https://beta.persony.org  
-**Production SHA (deployed):** `840608fed00c39ce731a00a95f6d8e2bbee03a2a`  
-**Repo `main` (remote):** `840608f` — matches production deploy  
-**Last successful deploy:** GitHub Actions run `35327168946` (2026-09-18)  
-**D1 migrations (remote):** `0001`–`0009` applied — no pending migrations  
+**Production SHA (deployed):** `761ea49` — economics + Owner Shell + retail pricing  
+**Repo `main` (remote):** `761ea49` at last verified push  
+**Last successful deploy:** GitHub Actions — 2026-09-18 — economics stack  
+**D1 migrations (remote):** `0001`–`0012` applied  
 **Production health:** `GET /api/health` → `status: ok`, `database: ready`
 
 Status labels (do not mix):
@@ -53,16 +53,16 @@ Status labels (do not mix):
 | Item | DOCUMENTED | IMPLEMENTED | TESTED | PRODUCTION VERIFIED |
 |------|:----------:|:-----------:|:------:|:-------------------:|
 | `ProviderResult` + route metadata | partial goal docs | ✓ | ✓ | NOT VERIFIED |
-| Provider-reported usage from stream API | goal brief | **partial** — chat uses `mergeProviderUsage`; often estimated | partial | NOT VERIFIED |
+| Provider-reported usage from stream API | goal brief | **partial** — Gemini/DeepSeek emit `usage` on done SSE; fallback to estimate | `provider-result.test.ts` | NOT VERIFIED prod |
 | `usage_estimated` on `inference_runs` | — | ✓ migration 0008 | partial | NOT VERIFIED |
 | `provider_cost_microusd` persisted | — | ✓ | ✓ cost-engine tests | NOT VERIFIED end-to-end |
 | `cost_confidence` (actual/estimated/unpriced) | goal brief | **✓ local** — `cost-confidence.ts`, migration `0010`, CostEngine returns `null` when unpriced | tests pass | deploy + prod E2E pending |
-| `pricing_entry_id` / version on inference | goal brief | **✗** | — | — |
-| Immutable historical cost (no repricing on catalog change) | goal brief | **partial** — cost written at settle time but no pricing entry link | — | — |
-| Versioned multidimensional pricing | goal brief | **✗** — flat `PROVIDER_PRICING_CATALOG` per million tokens | ✓ basic tests | — |
-| DeepSeek peak/off-peak / cache tiers | goal brief | **✗** | — | — |
+| `pricing_entry_id` / version on inference | goal brief | **✓** migration 0011 | partial | deploy pending sample |
+| Immutable historical cost (no repricing on catalog change) | goal brief | **✓** — `pricing_entry_id` + `cost_breakdown_json` at settle | partial | prod E2E |
+| Versioned multidimensional pricing | goal brief | **✓** `pricing-catalog.ts` | ✓ catalog tests | — |
+| DeepSeek peak/off-peak / cache tiers | goal brief | **✓** catalog dimensions | ✓ tests | — |
 | Audio/image/live pricing dimensions | goal brief | **✗** | — | — |
-| Hardcoded markup `2.5` | — | ✓ `energyUnitsFromProviderCost` | — | — |
+| Hardcoded markup `2.5` | — | **replaced** — `retail-pricing.ts` margin formula | ✓ tests | NOT VERIFIED prod |
 | Cost coverage % / unpriced count in owner UI | goal brief | **partial local** — `costCoverageTodayPercent`, `unpricedCallsToday` | — | deploy pending |
 | Voice Call cost breakdown (live/transcribe/summary) | goal brief | **✗** | — | — |
 
@@ -89,11 +89,11 @@ Status labels (do not mix):
 | `/owner/ai/overview` | — | ✓ | — | NOT VERIFIED |
 | `/owner/users` (basic list) | — | ✓ | — | NOT VERIFIED |
 | `/owner/audit` | — | ✓ | — | NOT VERIFIED |
-| Inference explorer API | goal brief | **✗** | — | — |
+| Inference explorer API | goal brief | **✓** `GET /owner/inference` | ✓ service tests | NOT VERIFIED prod |
 | Routing CRUD without deploy | goal brief | **partial** — `chat_text_provider` setting only | — | — |
 | Pricing catalog UI | goal brief | **✗** | — | — |
-| Typed API contracts (no `Record<string, unknown>`) | goal brief | **✗** — `OwnerConsole.tsx` | — | — |
-| Responsive Owner Shell (desktop + mobile) | goal brief | **✗** — single page, limited sections | — | — |
+| Typed API contracts (no `Record<string, unknown>`) | goal brief | **partial** — economics/inference/pricing typed | — | — |
+| Responsive Owner Shell (desktop + mobile) | goal brief | **partial** — `OwnerShell` + mobile nav | — | NOT VERIFIED |
 | Section error + retry UX | goal brief | **partial** — top-level error only | — | — |
 
 ---
@@ -106,10 +106,10 @@ Status labels (do not mix):
 | `map.md` | **PARTIAL** — economy phase incomplete | Update in Phase L |
 | `README.md` | **PARTIAL** | Audit in Phase L |
 | `docs/CI_CD.md` | **YES** | Matches workflows |
-| `specs/economics.md` | **MISSING** | Create Phase L |
-| `specs/owner-console.md` | **MISSING** | Create Phase L |
-| `specs/ai-model-registry.md` | **DOCUMENTED** (partial) | Phase B initial registry in code |
-| `docs/METRICS.md` | **MISSING** | Create Phase L |
+| `specs/economics.md` | **YES** (partial gaps) | Updated 2026-09-18 |
+| `specs/owner-console.md` | **YES** (partial IA) | Created Phase L |
+| `specs/ai-model-registry.md` | **YES** | Phase B registry in code |
+| `docs/METRICS.md` | **YES** | Created Phase L |
 
 ---
 

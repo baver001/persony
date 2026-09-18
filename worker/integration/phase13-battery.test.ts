@@ -27,15 +27,15 @@ describe('Phase 1.3 battery beta', () => {
   });
 
   it('decreases battery on usage', async () => {
-    await chargeBatteryForInference(db, userId, 'run_1', 'text_chat');
+    await chargeBatteryForInference(db, userId, 'run_1', 'chat_text');
     const after = await getBatterySnapshot(db, userId);
     expect(after.percentage).toBeLessThan(100);
   });
 
   it('does not double-charge the same inference run', async () => {
-    await chargeBatteryForInference(db, userId, 'run_dup', 'text_chat');
+    await chargeBatteryForInference(db, userId, 'run_dup', 'chat_text');
     const first = await getBatterySnapshot(db, userId);
-    await chargeBatteryForInference(db, userId, 'run_dup', 'text_chat');
+    await chargeBatteryForInference(db, userId, 'run_dup', 'chat_text');
     const second = await getBatterySnapshot(db, userId);
     expect(second.percentage).toBe(first.percentage);
     const ledger = await findLedgerByInferenceRun(db, 'run_dup');
@@ -43,7 +43,7 @@ describe('Phase 1.3 battery beta', () => {
   });
 
   it('owner can reset battery to 100%', async () => {
-    await chargeBatteryForInference(db, userId, 'run_owner', 'text_chat');
+    await chargeBatteryForInference(db, userId, 'run_owner', 'chat_text');
     const low = await getBatterySnapshot(db, userId);
     expect(low.percentage).toBeLessThan(100);
     const reset = await ownerAdjustBattery(db, userId, 100, 'owner_1', 'test reset');

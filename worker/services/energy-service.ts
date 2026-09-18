@@ -251,7 +251,7 @@ export async function reserveEnergyForInference(
   db: D1Database,
   userId: string,
   inferenceRunId: string,
-  operation = 'text_chat',
+  operation = 'chat_text',
   tokenHint?: { input?: number; output?: number }
 ): Promise<{ reservedUnits: number; reservationId: string }> {
   const config = await loadBatteryConfig(db);
@@ -290,7 +290,7 @@ export async function settleEnergyForInference(
   db: D1Database,
   userId: string,
   inferenceRunId: string,
-  operation = 'text_chat',
+  operation = 'chat_text',
   tokenHint?: { input?: number; output?: number },
   providerCostMicrousd?: number
 ): Promise<BatterySnapshot> {
@@ -388,7 +388,7 @@ export async function chargeBatteryForInference(
   db: D1Database,
   userId: string,
   inferenceRunId: string,
-  operation = 'text_chat',
+  operation = 'chat_text',
   tokenHint?: { input?: number; output?: number }
 ): Promise<BatterySnapshot> {
   const config = await loadBatteryConfig(db);

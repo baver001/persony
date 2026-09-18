@@ -4,19 +4,19 @@
 
 **Last updated:** 2026-09-18 UTC  
 **Current phase:** Milestone 1 — Economics Truth E2E verification  
-**Previous phase:** Production Economy & Reliability — **shipped** on production (see reconciliation)
+**Previous phase:** Production Economy & Reliability — **shipped** on production
 
 ## Production snapshot
 
 | Field | Value |
 |-------|--------|
-| **Current production SHA** | `6778bd5d07922e7b68658240acd188c4fbf677a8` |
-| **Last successful deploy** | GitHub Actions `35341016507` — 2026-09-18 — success |
+| **Current production SHA** | `761ea49` — retail pricing + economics + Owner Shell |
+| **Last successful deploy** | GitHub Actions — 2026-09-18 — economics stack green |
 | **Last migration applied (remote D1)** | `0012_cost_breakdown.sql` (0001–0012 all applied) |
 | **CI status (last `main` push)** | Green — verify + deploy succeeded |
 | **Production health** | `GET https://beta.persony.org/api/health` → ok, database ready |
 | **Production smoke (economics)** | **NOT RUN** — controlled inference E2E + Inference Detail verification open |
-| **Local uncommitted WIP** | UI/dev-mode fixes (ChatArea, battery, icons, dev auth) — separate from deployed economics |
+| **Local uncommitted WIP** | ProviderUsage, operation_type normalize (0013), docs, UI/dev-mode fixes — pending commit/deploy |
 
 Full item-by-item audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 
@@ -24,32 +24,22 @@ Full item-by-item audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONC
 
 | Gate | Status | Evidence | Limitation / next proof |
 |------|--------|----------|-------------------------|
-| Truth reconciliation doc | implemented | `docs/ECONOMICS_RECONCILIATION.md` | expand as phases complete |
+| Truth reconciliation doc | implemented | `docs/ECONOMICS_RECONCILIATION.md` | refresh after deploy |
 | GOAL_MODE_STATE accurate | implemented | this file | refresh after each deploy |
 | Central Model Registry | deployed | `worker/ai/model-registry.ts` | prod model smoke per operation |
 | Model IDs verified vs provider docs | partial | registry `lastVerifiedAt` 2026-09-18 | avatar still preview models |
 | Versioned Pricing Catalog 2.0 | deployed | `pricing-catalog.ts`, `GET /owner/pricing` | avatar/voice dimensions + DB-backed catalog |
-| pricing_entry_id on inference_runs | production-verified (schema) | migration 0011 applied remote | — |
+| pricing_entry_id on inference_runs | deployed | migration 0011 | prod inference sample |
 | Cost confidence (actual/estimated/unpriced) | deployed | migration 0010, CostEngine | controlled inference E2E |
-| Provider usage from API (not estimated) | open | `mergeProviderUsage` fallback common | Phase D |
-| Voice Call economics breakdown | open | single reservation path | Phase D/J |
-| Energy retail config (no hardcoded 2.5) | open | `energyUnitsFromProviderCost` | Phase E |
-| Owner Shell + section APIs | deployed (partial IA) | `OwnerShell`, mobile nav, economy/inference/pricing | full sections per spec |
-| Inference Explorer + detail | deployed | `GET /owner/inference`, Owner Console section | prod E2E smoke |
+| Provider usage from API (not estimated) | **in progress** | Gemini/DeepSeek stream `usage` on done event | voice/transcribe/avatar still estimated |
+| Voice Call economics breakdown | open | single reservation path | Phase J |
+| Energy retail config (no hardcoded 2.5) | deployed | `retail-pricing.ts`, migration settings | verify on prod inference |
+| Owner Shell + section APIs | deployed (partial IA) | `OwnerShell`, economy/inference/pricing | routing, voice, personas sections |
+| Inference Explorer + detail | deployed | `GET /owner/inference`, Owner Console | prod E2E smoke |
 | Cost coverage in dashboards | deployed | economics API + Owner Console | verify with real inference |
-| Economics vertical slice E2E | open | — | Phase M milestone 1 |
+| METRICS.md + owner-console.md | implemented (local) | `docs/METRICS.md`, `specs/owner-console.md` | commit + deploy |
+| Economics vertical slice E2E | open | — | Milestone 1 |
 | Paddle live | not applicable | `BILLING_ENABLED=false` | separate launch |
-
-### Carried forward from Production Economy (done on prod)
-
-| Gate | Status | Evidence |
-|------|--------|----------|
-| Energy reserve → settle → release | production-verified (code) | `energy-service.ts`, migration 0008 |
-| inference_runs economy columns | production-verified (schema) | migration 0008 applied remote |
-| Rate limits | production-verified (code) | migration 0009 applied remote |
-| Owner economics API (aggregate) | implemented | `GET /owner/economics` |
-| Community Discover | implemented | Discover UI + repository |
-| CI/CD deploy pipeline | ci-verified | run `35327168946` |
 
 ## Manual verification gates
 
@@ -64,26 +54,27 @@ Full item-by-item audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONC
 
 ## Next task
 
-**Milestone 1 (Economics Truth):** run controlled text-chat inference in production → verify Inference Explorer cost breakdown + economics coverage %.
+**Milestone 1 (Economics Truth):** run controlled text-chat inference in production → verify Inference Explorer cost breakdown + economics coverage % + `usage_estimated = false` when provider reports tokens.
 
-**Next:** ProviderUsage expansion, Energy retail config (remove hardcoded 2.5), remaining Owner Console sections.
+**Smoke checklist:** [`docs/PRODUCTION_ECONOMICS_SMOKE.md`](./PRODUCTION_ECONOMICS_SMOKE.md)
+
+**Next:** commit economics batch + deploy + run smoke; remaining Owner Console sections (routing, voice, personas).
 
 ## Execution order (from goal brief)
 
 ```text
-A Truth reconciliation     ← current
-B Model Registry
-C Pricing Catalog 2.0
-D ProviderUsage + CostEngine 2.0
-E Energy / retail / margin
-F Owner backend APIs
-G Owner Console desktop
-H Owner Console mobile
-I Inference Explorer
-J Voice / Users / Personas analytics
-K Tests
-L Documentation sync
-M Production deploy + verification
+A Truth reconciliation     ← done
+B Model Registry           ← done
+C Pricing Catalog 2.0      ← done
+D ProviderUsage + CostEngine 2.0  ← stream usage wired (local)
+E Energy / retail / margin ← deployed
+F Owner backend APIs       ← partial
+G/H Owner Console          ← partial
+I Inference Explorer       ← deployed
+J Voice / Users / Personas ← open
+K Tests                    ← ongoing
+L Documentation sync       ← METRICS + owner-console (local)
+M Production deploy + verification ← Milestone 1 open
 ```
 
-**Vertical slice first (Milestone 1):** real inference → usage → pricing → cost → energy → DB → Owner Inference Detail — before scaling full dashboard.
+**Vertical slice first (Milestone 1):** real inference → usage → pricing → cost → energy → DB → Owner Inference Detail.

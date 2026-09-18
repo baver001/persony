@@ -2,6 +2,8 @@ import { modelIdsTupleForOperation } from '../ai/model-registry';
 import { formatCleanErrorMessage } from '../lib/errors';
 import { classifyProviderError, shouldFallbackToNextModel } from '../lib/provider-errors';
 import type { ChatProvider, ChatStreamRequest } from './chat-types';
+import type { ProviderUsageMetrics } from './provider-result';
+import { encodeProviderSse, mapDeepSeekUsage } from './stream-sse';
 
 export const DEEPSEEK_CHAT_MODELS = modelIdsTupleForOperation(
   'deepseek',
@@ -31,7 +33,7 @@ async function streamDeepSeekModel(
   model: string,
   request: ChatStreamRequest,
   onChunk: (text: string) => void
-): Promise<void> {
+): Promise<ProviderUsageMetrics | undefined> {
   const response = await fetch(DEEPSEEK_API_URL, {
     method: 'POST',
     headers: {
@@ -59,6 +61,7 @@ async function streamDeepSeekModel(
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
+  let reportedUsage: ProviderUsageMetrics | undefined;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -76,9 +79,19 @@ async function streamDeepSeekModel(
         try {
           const parsed = JSON.parse(payload) as {
             choices?: Array<{ delta?: { content?: string } }>;
+            usage?: {
+              prompt_tokens?: number;
+              completion_tokens?: number;
+              total_tokens?: number;
+              prompt_cache_hit_tokens?: number;
+              prompt_cache_miss_tokens?: number;
+            };
           };
           const text = parsed.choices?.[0]?.delta?.content;
           if (text) onChunk(text);
+          if (parsed.usage) {
+            reportedUsage = mapDeepSeekUsage(parsed.usage);
+          }
         } catch {
           // ignore malformed chunk
         }
@@ -87,6 +100,8 @@ async function streamDeepSeekModel(
       lineBreak = buffer.indexOf('\n');
     }
   }
+
+  return reportedUsage;
 }
 
 export const deepseekChatProvider: ChatProvider = {
@@ -109,11 +124,11 @@ export const deepseekChatProvider: ChatProvider = {
         for (let i = 0; i < DEEPSEEK_CHAT_MODELS.length; i++) {
           const model = DEEPSEEK_CHAT_MODELS[i];
           try {
-            await streamDeepSeekModel(apiKey, model, request, (text) => {
+            const usage = await streamDeepSeekModel(apiKey, model, request, (text) => {
               streamedAny = true;
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));
+              controller.enqueue(encodeProviderSse({ text }));
             });
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
+            controller.enqueue(encodeProviderSse({ done: true, model, usage }));
             controller.close();
             return;
           } catch (err) {

@@ -1,3 +1,4 @@
+import { normalizeInferenceOperation } from '../ai/operations';
 import { getSystemSetting } from '../repositories/settings-repository';
 
 export type BatteryMode =
@@ -37,13 +38,13 @@ export const DEFAULT_BATTERY_CONFIG: BatteryConfig = {
 };
 
 const OPERATION_FALLBACK_UNITS: Record<string, number> = {
-  text_chat: 120,
+  chat_text: 120,
   voice_transcription: 80,
-  live_voice: 350,
-  tool_call: 60,
-  summarize_call: 90,
-  generate_avatar: 150,
-  generate_character: 200,
+  voice_call: 350,
+  call_summary: 90,
+  avatar_generation: 150,
+  persona_generation: 200,
+  memory_extract: 60,
 };
 
 export async function loadBatteryConfig(db: D1Database): Promise<BatteryConfig> {
@@ -88,10 +89,12 @@ export function unitsForOperation(
   config: BatteryConfig,
   tokenHint?: { input?: number; output?: number }
 ): number {
+  const normalized = normalizeInferenceOperation(operation);
   const input = tokenHint?.input ?? 0;
   const output = tokenHint?.output ?? 0;
   const tokenBased = Math.ceil(input / 80 + output / 40);
-  const fallback = OPERATION_FALLBACK_UNITS[operation] ?? OPERATION_FALLBACK_UNITS.text_chat;
+  const fallback =
+    OPERATION_FALLBACK_UNITS[normalized] ?? OPERATION_FALLBACK_UNITS.chat_text;
   const base = tokenBased > 0 ? Math.max(fallback, tokenBased) : fallback;
   return Math.max(1, Math.round(base * config.beta_usage_scale));
 }

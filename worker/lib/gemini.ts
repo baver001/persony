@@ -7,6 +7,8 @@ import {
   GEMINI_LIVE_MODEL,
   GEMINI_TRANSCRIBE_MODELS,
 } from './models';
+import { mapGeminiUsageMetadata } from '../providers/stream-sse';
+import type { ProviderUsageMetrics } from '../providers/provider-result';
 import { classifyProviderError, shouldFallbackToNextModel } from './provider-errors';
 
 export interface Env {
@@ -28,17 +30,23 @@ export function getAIClient(apiKey: string): GoogleGenAI {
   });
 }
 
+export type GeminiStreamResult = {
+  model: string;
+  usage?: ProviderUsageMetrics;
+};
+
 export async function streamGeminiWithFallback(
   ai: GoogleGenAI,
   contents: Array<{ role: string; parts: Array<{ text: string }> }>,
   config: Record<string, unknown>,
   onChunk: (text: string) => void
-): Promise<void> {
+): Promise<GeminiStreamResult> {
   let streamedAny = false;
   let lastError: unknown = null;
 
   for (let i = 0; i < GEMINI_CHAT_MODELS.length; i++) {
     const model = GEMINI_CHAT_MODELS[i];
+    let usage: ProviderUsageMetrics | undefined;
     try {
       const responseStream = await ai.models.generateContentStream({
         model,
@@ -52,8 +60,12 @@ export async function streamGeminiWithFallback(
           streamedAny = true;
           onChunk(text);
         }
+        const usageMeta = (chunk as { usageMetadata?: Record<string, unknown> })
+          .usageMetadata;
+        const mapped = mapGeminiUsageMetadata(usageMeta);
+        if (mapped) usage = mapped;
       }
-      return;
+      return { model, usage };
     } catch (err) {
       lastError = err;
       const kind = classifyProviderError(err);
@@ -67,6 +79,7 @@ export async function streamGeminiWithFallback(
   }
 
   if (lastError) throw lastError;
+  throw new Error('Gemini stream failed');
 }
 
 export async function handleChat(
@@ -97,10 +110,18 @@ export async function handleChat(
   return new ReadableStream({
     async start(controller) {
       try {
-        await streamGeminiWithFallback(ai, contents, streamConfig, (text) => {
+        const result = await streamGeminiWithFallback(ai, contents, streamConfig, (text) => {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));
         });
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
+        controller.enqueue(
+          encoder.encode(
+            `data: ${JSON.stringify({
+              done: true,
+              model: result.model,
+              usage: result.usage,
+            })}\n\n`
+          )
+        );
         controller.close();
       } catch (error) {
         const clean = formatCleanErrorMessage(error);

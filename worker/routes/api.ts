@@ -100,7 +100,7 @@ apiRoutes.post('/generate-character', aiHeavyRateLimit, async (c) => {
     const result = await withEnergyReservation(
       c.env.DB,
       userId,
-      'generate_character',
+      'persona_generation',
       () => handleGenerateCharacter(c.env.GEMINI_API_KEY, parsed.data.prompt)
     );
     return c.json(result);
@@ -121,7 +121,7 @@ apiRoutes.post('/summarize-call', aiUserRateLimit, async (c) => {
     const result = await withEnergyReservation(
       c.env.DB,
       userId,
-      'summarize_call',
+      'call_summary',
       () => handleSummarizeCall(c.env.GEMINI_API_KEY, parsed.data)
     );
     return c.json(result);
@@ -142,7 +142,7 @@ apiRoutes.post('/generate-avatar', aiHeavyRateLimit, async (c) => {
     const result = await withEnergyReservation(
       c.env.DB,
       userId,
-      'generate_avatar',
+      'avatar_generation',
       () =>
         handleGenerateAvatar(
           c.env.GEMINI_API_KEY,

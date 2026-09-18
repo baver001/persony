@@ -25,10 +25,10 @@ describe('phase15 energy concurrency', () => {
     const runA = generateId();
     const runB = generateId();
 
-    await reserveEnergyForInference(db, userId, runA, 'text_chat');
+    await reserveEnergyForInference(db, userId, runA, 'chat_text');
 
     await expect(
-      reserveEnergyForInference(db, userId, runB, 'text_chat')
+      reserveEnergyForInference(db, userId, runB, 'chat_text')
     ).rejects.toMatchObject({ code: 'BATTERY_EMPTY' });
   });
 });

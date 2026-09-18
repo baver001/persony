@@ -1,3 +1,8 @@
+import {
+  normalizeInferenceOperation,
+  operationTypeVariants,
+  type InferenceOperation,
+} from '../ai/operations';
 import type { CostConfidence } from '../billing/cost-confidence';
 import { isKnownCostConfidence } from '../billing/cost-confidence';
 import { generateId } from '../lib/ids';
@@ -108,7 +113,7 @@ function rowToRecord(row: InferenceRunRow): InferenceRunRecord {
     status: row.status as InferenceRunStatus,
     provider: row.provider,
     model: row.model,
-    operationType: row.operation_type ?? 'text_chat',
+    operationType: normalizeInferenceOperation(row.operation_type ?? 'chat_text'),
     requestedProvider: row.requested_provider ?? row.provider,
     requestedModel: row.requested_model ?? row.model,
     actualProvider: row.actual_provider ?? row.provider,
@@ -163,8 +168,9 @@ function buildListWhere(filters: InferenceListFilters): { sql: string; params: u
     params.push(filters.until);
   }
   if (filters.operation) {
-    clauses.push('operation_type = ?');
-    params.push(filters.operation);
+    const variants = operationTypeVariants(filters.operation);
+    clauses.push(`operation_type IN (${variants.map(() => '?').join(', ')})`);
+    params.push(...variants);
   }
   if (filters.provider) {
     clauses.push('COALESCE(actual_provider, provider) = ?');
@@ -253,6 +259,7 @@ export async function createInferenceRun(
     personaVersion: number;
     provider?: string;
     model?: string;
+    operationType?: InferenceOperation;
   }
 ): Promise<InferenceRunRecord> {
   const existing = await findInferenceRunByClientRequest(
@@ -264,14 +271,15 @@ export async function createInferenceRun(
 
   const id = generateId();
   const now = new Date().toISOString();
+  const operationType = input.operationType ?? 'chat_text';
 
   await db
     .prepare(
       `INSERT INTO inference_runs (
         id, user_id, conversation_id, client_request_id,
         user_message_id, persona_message_id, persona_id, persona_version,
-        status, provider, model, started_at, completed_at, error_code
-      ) VALUES (?, ?, ?, ?, NULL, NULL, ?, ?, 'pending', ?, ?, ?, NULL, NULL)`
+        status, provider, model, operation_type, started_at, completed_at, error_code
+      ) VALUES (?, ?, ?, ?, NULL, NULL, ?, ?, 'pending', ?, ?, ?, ?, NULL, NULL)`
     )
     .bind(
       id,
@@ -282,6 +290,7 @@ export async function createInferenceRun(
       input.personaVersion,
       input.provider || null,
       input.model || null,
+      operationType,
       now
     )
     .run();
@@ -298,7 +307,7 @@ export async function createInferenceRun(
     status: 'pending',
     provider: input.provider || null,
     model: input.model || null,
-    operationType: 'text_chat',
+    operationType,
     requestedProvider: input.provider || null,
     requestedModel: input.model || null,
     actualProvider: null,

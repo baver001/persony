@@ -1,6 +1,6 @@
 # Economics specification
 
-**Status:** Phase C in progress (local)  
+**Status:** Phase D–E deployed; Milestone 1 E2E pending  
 **Last updated:** 2026-09-18
 
 ## Pipeline
@@ -49,10 +49,15 @@ Inference stores `pricing_entry_id` (comma-separated when multiple dimensions) a
 - Config keys: `target_ai_gross_margin`, `retail_microusd_per_energy_unit`, `retail_pricing_version`
 - Default margin: `TARGET_AI_GROSS_MARGIN` (0.8) — **not** a hidden 2.5× markup
 
+## Provider usage
+
+Chat providers emit `usage` on the terminal SSE `done` event when the upstream API reports token counts (`worker/providers/stream-sse.ts`). `chat-service` passes reported usage to `mergeProviderUsage`; otherwise text-length estimation sets `usageEstimated: true`.
+
 ## Open gaps
 
 - [ ] DB-backed pricing (catalog is code-defined today)
 - [ ] Owner UI for adding pricing versions
 - [ ] Voice Call / avatar / transcription pricing dimensions populated
-- [ ] Inference detail cost breakdown API
+- [x] Inference detail cost breakdown API — `GET /api/owner/inference/:id`
 - [ ] Production E2E economics verification
+- [x] Normalize `operation_type` — `operations.ts` + migration `0013`
