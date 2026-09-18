@@ -59,6 +59,10 @@ export async function fetchOwnerEconomics(): Promise<{
     aiCostTodayMicrousd: number;
     aiCost7dMicrousd: number;
     aiCost30dMicrousd: number;
+    costCoverageTodayPercent: number;
+    costCoverage7dPercent: number;
+    unpricedCallsToday: number;
+    estimatedCostCallsToday: number;
     energyConsumedToday: number;
     callsToday: number;
     successfulCallsToday: number;
@@ -71,6 +75,108 @@ export async function fetchOwnerEconomics(): Promise<{
   };
 }> {
   return ownerFetch('/owner/economics');
+}
+
+export type OwnerInferenceListItem = {
+  id: string;
+  startedAt: string;
+  completedAt: string | null;
+  operationType: string;
+  userId: string;
+  personaId: string;
+  requestedProvider: string | null;
+  requestedModel: string | null;
+  actualProvider: string | null;
+  actualModel: string | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  providerCostMicrousd: number | null;
+  costConfidence: 'actual' | 'estimated' | 'unpriced';
+  energyCharged: number;
+  latencyMs: number | null;
+  fallbackCount: number;
+  status: string;
+  usageEstimated: boolean;
+};
+
+export type OwnerInferenceDetail = OwnerInferenceListItem & {
+  conversationId: string;
+  clientRequestId: string;
+  cachedInputTokens: number | null;
+  energyReserved: number;
+  fallbackReason: string | null;
+  providerRequestId: string | null;
+  pricingEntryId: string | null;
+  pricingVersion: string | null;
+  costCalculatedAt: string | null;
+  errorCode: string | null;
+  costExplanation: {
+    lines: Array<{
+      pricingEntryId: string;
+      dimension: string;
+      units: number;
+      priceMicrousdPerUnit: number;
+      costMicrousd: number;
+      pricingTier: string;
+      timeRule: string;
+    }>;
+    totalMicrousd: number | null;
+    pricingEntryIds: string[];
+    pricingVersion: string | null;
+    explainable: boolean;
+    recomputed: boolean;
+  };
+  timeline: Array<{ at: string; stage: string; detail?: string }>;
+};
+
+export async function fetchOwnerInferenceList(params?: {
+  limit?: number;
+  offset?: number;
+  status?: string;
+  costConfidence?: string;
+}): Promise<{
+  items: OwnerInferenceListItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}> {
+  const query = new URLSearchParams();
+  if (params?.limit) query.set('limit', String(params.limit));
+  if (params?.offset) query.set('offset', String(params.offset));
+  if (params?.status) query.set('status', params.status);
+  if (params?.costConfidence) query.set('costConfidence', params.costConfidence);
+  const qs = query.toString();
+  return ownerFetch(`/owner/inference${qs ? `?${qs}` : ''}`);
+}
+
+export async function fetchOwnerInferenceDetail(
+  id: string
+): Promise<{ inference: OwnerInferenceDetail }> {
+  return ownerFetch(`/owner/inference/${id}`);
+}
+
+export type OwnerPricingEntry = {
+  id: string;
+  provider: string;
+  model: string;
+  dimension: string;
+  priceMicrousdPerUnit: number;
+  unit: string;
+  currency: string;
+  pricingTier: string;
+  timeRule: string;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  sourceReference: string;
+  verifiedAt: string;
+  freshness: 'verified' | 'stale' | 'unknown';
+};
+
+export async function fetchOwnerPricing(): Promise<{
+  catalogVersion: string;
+  entries: OwnerPricingEntry[];
+}> {
+  return ownerFetch('/owner/pricing');
 }
 
 export async function fetchOwnerAudit(): Promise<{
