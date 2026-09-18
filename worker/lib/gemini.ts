@@ -60,9 +60,7 @@ export async function streamGeminiWithFallback(
           streamedAny = true;
           onChunk(text);
         }
-        const usageMeta = (chunk as { usageMetadata?: Record<string, unknown> })
-          .usageMetadata;
-        const mapped = mapGeminiUsageMetadata(usageMeta);
+        const mapped = mapGeminiUsageMetadata(chunk.usageMetadata);
         if (mapped) usage = mapped;
       }
       return { model, usage };

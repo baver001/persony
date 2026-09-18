@@ -25,36 +25,23 @@ export function parseProviderSseBlock(block: string): ProviderSsePayload | null 
   return null;
 }
 
-function readUsageCount(meta: Record<string, unknown>, ...keys: string[]): number | undefined {
-  for (const key of keys) {
-    const value = meta[key];
-    if (typeof value === 'number' && Number.isFinite(value)) return value;
-  }
-  return undefined;
-}
+export type GeminiUsageMetadataLike = {
+  promptTokenCount?: number;
+  candidatesTokenCount?: number;
+  responseTokenCount?: number;
+  cachedContentTokenCount?: number;
+  totalTokenCount?: number;
+};
 
 export function mapGeminiUsageMetadata(
-  meta: Record<string, unknown> | undefined
+  meta: GeminiUsageMetadataLike | undefined
 ): ProviderUsageMetrics | undefined {
   if (!meta) return undefined;
 
-  const inputTokens = readUsageCount(
-    meta,
-    'promptTokenCount',
-    'prompt_token_count'
-  );
-  const outputTokens = readUsageCount(
-    meta,
-    'candidatesTokenCount',
-    'responseTokenCount',
-    'candidates_token_count'
-  );
-  const cachedInputTokens = readUsageCount(
-    meta,
-    'cachedContentTokenCount',
-    'cached_content_token_count'
-  );
-  const totalTokens = readUsageCount(meta, 'totalTokenCount', 'total_token_count');
+  const inputTokens = meta.promptTokenCount;
+  const outputTokens = meta.candidatesTokenCount ?? meta.responseTokenCount;
+  const cachedInputTokens = meta.cachedContentTokenCount;
+  const totalTokens = meta.totalTokenCount;
 
   if (
     inputTokens == null &&
