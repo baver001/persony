@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Current production SHA** | `5ec4873` — D1 smoke in CI deploy (verified in run 35379803990) |
+| **Current production SHA** | `82c1ecf` — chat_text CostEngine 2.0 integration test (deploy verified) |
 | **Production health** | `GET https://beta.persony.org/api/health` → ok, database ready |
 | **Last migration (remote D1)** | `0014_pricing_catalog_db.sql` |
 | **CI** | Green (see latest `main` deploy) |
