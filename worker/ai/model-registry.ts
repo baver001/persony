@@ -222,3 +222,28 @@ export function assertModelSupportsOperation(
   const def = getModelDefinition(provider, modelId);
   return Boolean(def?.enabled && def.operations.includes(operation));
 }
+
+export type OwnerRoutingRow = {
+  provider: AIProviderId;
+  modelId: string;
+  displayName: string;
+  status: AIModelStatus;
+  operations: InferenceOperation[];
+  supportsUsage: boolean;
+  enabled: boolean;
+  lastVerifiedAt: string;
+};
+
+/** Read-only routing matrix for Owner Control Center. */
+export function listOwnerRoutingMatrix(): OwnerRoutingRow[] {
+  return AI_MODEL_REGISTRY.map((model) => ({
+    provider: model.provider,
+    modelId: model.modelId,
+    displayName: model.displayName,
+    status: model.status,
+    operations: model.operations,
+    supportsUsage: model.supportsUsage,
+    enabled: model.enabled,
+    lastVerifiedAt: model.lastVerifiedAt,
+  }));
+}

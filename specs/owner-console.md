@@ -17,7 +17,7 @@ Implementation: `src/pages/owner/`, orchestrator `src/pages/OwnerConsole.tsx`.
 | Group | Sections | Status |
 |-------|----------|--------|
 | Root | Overview | Implemented |
-| AI | AI routing overview, Pricing catalog, Inference Explorer | Partial — routing CRUD limited to `chat_text_provider` setting |
+| AI | AI routing overview, Pricing catalog, Inference Explorer | Partial — `chat_text_provider` + read-only routing matrix from Model Registry |
 | Economy | Economics dashboard, Battery | Economics implemented; battery overview API exists |
 | People | Users, Personas | Users + Personas analytics (inference + known COGS) |
 | Usage | Memory stats | Basic stats API |

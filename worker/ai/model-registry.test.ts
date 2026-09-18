@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   AI_MODEL_REGISTRY,
   assertModelSupportsOperation,
+  listOwnerRoutingMatrix,
   modelIdsForOperation,
 } from './model-registry';
 
@@ -26,5 +27,11 @@ describe('model-registry', () => {
     const avatar = AI_MODEL_REGISTRY.filter((m) => m.operations.includes('avatar_generation'));
     expect(avatar.length).toBeGreaterThan(0);
     expect(avatar.every((m) => m.status === 'preview')).toBe(true);
+  });
+
+  it('exports owner routing matrix aligned with registry', () => {
+    const matrix = listOwnerRoutingMatrix();
+    expect(matrix.length).toBe(AI_MODEL_REGISTRY.length);
+    expect(matrix.some((row) => row.operations.includes('voice_call'))).toBe(true);
   });
 });

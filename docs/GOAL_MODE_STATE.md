@@ -10,13 +10,14 @@
 
 | Field | Value |
 |-------|--------|
-| **Current production SHA** | `47a84de` — owner analytics; voice/errors pending deploy |
-| **Last successful deploy** | GitHub Actions — 2026-09-18 — economics stack green |
-| **Last migration applied (remote D1)** | `0012_cost_breakdown.sql` (0001–0012 all applied) |
-| **CI status (last `main` push)** | Green — verify + deploy succeeded |
-| **Production health** | `GET https://beta.persony.org/api/health` → ok, database ready |
-| **Production smoke (economics)** | **NOT RUN** — controlled inference E2E + Inference Detail verification open |
-| **Local uncommitted WIP** | UI/dev-mode fixes (ChatArea, battery, icons) — separate from deployed economics |
+| **Current production SHA** | `096f170` — voice inference + owner errors (health без gitSha) |
+| **Local ahead of origin** | `c64ac1f` — gitSha health + Inference Explorer filters; **unpushed** |
+| **Last successful deploy** | GitHub Actions — 2026-09-18 |
+| **Last migration applied (remote D1)** | `0013_operation_type_normalize.sql` (0001–0013) |
+| **CI status (last `main` push)** | Green |
+| **Production health** | `GET https://beta.persony.org/api/health` → ok, database ready (no `gitSha` until deploy) |
+| **Production smoke (economics)** | **NOT RUN** |
+| **Local uncommitted WIP** | UI/dev-mode fixes — separate from economics commits |
 
 Full item-by-item audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 
@@ -25,21 +26,17 @@ Full item-by-item audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONC
 | Gate | Status | Evidence | Limitation / next proof |
 |------|--------|----------|-------------------------|
 | Truth reconciliation doc | implemented | `docs/ECONOMICS_RECONCILIATION.md` | refresh after deploy |
-| GOAL_MODE_STATE accurate | implemented | this file | refresh after each deploy |
 | Central Model Registry | deployed | `worker/ai/model-registry.ts` | prod model smoke per operation |
-| Model IDs verified vs provider docs | partial | registry `lastVerifiedAt` 2026-09-18 | avatar still preview models |
-| Versioned Pricing Catalog 2.0 | deployed | `pricing-catalog.ts`, `GET /owner/pricing` | avatar/voice dimensions + DB-backed catalog |
-| pricing_entry_id on inference_runs | deployed | migration 0011 | prod inference sample |
-| Cost confidence (actual/estimated/unpriced) | deployed | migration 0010, CostEngine | controlled inference E2E |
-| Provider usage from API (not estimated) | **in progress** | Gemini/DeepSeek stream `usage` on done event | voice/transcribe/avatar still estimated |
-| Voice Call economics breakdown | open | single reservation path | Phase J |
-| Energy retail config (no hardcoded 2.5) | deployed | `retail-pricing.ts`, migration settings | verify on prod inference |
-| Owner Shell + section APIs | deployed (partial IA) | `OwnerShell`, economy/inference/pricing | routing, voice, personas sections |
-| Inference Explorer + detail | deployed | `GET /owner/inference`, Owner Console | prod E2E smoke |
-| Cost coverage in dashboards | deployed | economics API + Owner Console | verify with real inference |
-| METRICS.md + owner-console.md | implemented (local) | `docs/METRICS.md`, `specs/owner-console.md` | commit + deploy |
+| Versioned Pricing Catalog 2.0 | deployed | `pricing-catalog.ts`, `GET /owner/pricing` | DB-backed catalog admin |
+| Cost confidence | deployed | migration 0010, CostEngine | controlled inference E2E |
+| Provider usage from API | **partial** | Gemini/DeepSeek stream usage | voice/transcribe/avatar estimated |
+| Voice Call economics | deployed | `voice-call-inference-service.ts` | duration estimate, not provider usage |
+| Owner Shell + sections | **partial** | economy/inference/pricing/users/personas/errors/settings | users detail, voice section |
+| Inference Explorer | deployed + local | filters, operation column, detail meta | prod E2E smoke |
+| Routing matrix UI | **local** | `listOwnerRoutingMatrix`, Owner AI section | deploy + verify |
+| Feature flags UI | **local** | Owner Settings section | deploy + verify |
+| METRICS.md + owner-console.md | implemented | docs synced | — |
 | Economics vertical slice E2E | open | — | Milestone 1 |
-| Paddle live | not applicable | `BILLING_ENABLED=false` | separate launch |
 
 ## Manual verification gates
 
@@ -48,33 +45,10 @@ Full item-by-item audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONC
 | Controlled text chat inference → cost in DB → owner economics | **open** |
 | Inference detail explains cost line-by-line | **open** |
 | Voice Call short call → duration + cost breakdown | **open** |
-| Avatar generation → image model + cost | **open** |
 | Owner Console on 390px / 1440px | **open** |
-| Voice device/soak tests | **open** — `specs/voice-call-device-testing.md` |
 
 ## Next task
 
-**Milestone 1 (Economics Truth):** run controlled text-chat inference in production → verify Inference Explorer cost breakdown + economics coverage % + `usage_estimated = false` when provider reports tokens.
-
-**Smoke checklist:** [`docs/PRODUCTION_ECONOMICS_SMOKE.md`](./PRODUCTION_ECONOMICS_SMOKE.md)
-
-**Next:** commit economics batch + deploy + run smoke; remaining Owner Console sections (routing, voice, personas).
-
-## Execution order (from goal brief)
-
-```text
-A Truth reconciliation     ← done
-B Model Registry           ← done
-C Pricing Catalog 2.0      ← done
-D ProviderUsage + CostEngine 2.0  ← stream usage wired (local)
-E Energy / retail / margin ← deployed
-F Owner backend APIs       ← partial
-G/H Owner Console          ← partial
-I Inference Explorer       ← deployed
-J Voice / Users / Personas ← open
-K Tests                    ← ongoing
-L Documentation sync       ← METRICS + owner-console (local)
-M Production deploy + verification ← Milestone 1 open
-```
-
-**Vertical slice first (Milestone 1):** real inference → usage → pricing → cost → energy → DB → Owner Inference Detail.
+1. **Push + deploy** `c64ac1f` and follow-up owner settings commit → confirm `gitSha` on `/api/health`
+2. **Milestone 1 smoke:** [`docs/PRODUCTION_ECONOMICS_SMOKE.md`](./PRODUCTION_ECONOMICS_SMOKE.md)
+3. Users detail view, DB-backed pricing admin, provider-reported voice usage

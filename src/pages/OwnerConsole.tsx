@@ -14,9 +14,11 @@ import {
   fetchOwnerInferenceList,
   fetchOwnerInferenceDetail,
   fetchOwnerPricing,
+  fetchOwnerSystemSettings,
   type OwnerInferenceListItem,
   type OwnerInferenceDetail,
   type OwnerPricingEntry,
+  type OwnerSystemSettings,
   type OwnerUserRow,
   type OwnerPersonaRow,
 } from '../lib/api/owner';
@@ -29,6 +31,7 @@ import { OwnerAiSection } from './owner/sections/OwnerAiSection';
 import { OwnerUsersSection } from './owner/sections/OwnerUsersSection';
 import { OwnerPersonasSection } from './owner/sections/OwnerPersonasSection';
 import { OwnerErrorsSection } from './owner/sections/OwnerErrorsSection';
+import { OwnerSettingsSection } from './owner/sections/OwnerSettingsSection';
 import type { OwnerSectionId } from './owner/types';
 import { useOwnerNoIndex } from './owner/utils';
 
@@ -79,6 +82,9 @@ export function OwnerConsole({ onBack }: Props) {
   const [inferenceCostFilter, setInferenceCostFilter] = useState('');
   const [inferenceStatusFilter, setInferenceStatusFilter] = useState('');
   const [inferenceOperationFilter, setInferenceOperationFilter] = useState('');
+  const [systemSettings, setSystemSettings] = useState<OwnerSystemSettings | null>(null);
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [settingsError, setSettingsError] = useState(false);
   const [error, setError] = useState<'AUTH_REQUIRED' | 'FORBIDDEN' | 'INTERNAL_ERROR' | null>(
     null
   );
@@ -193,6 +199,20 @@ export function OwnerConsole({ onBack }: Props) {
     }
   }, []);
 
+  const loadSettings = useCallback(async () => {
+    setSettingsLoading(true);
+    setSettingsError(false);
+    try {
+      const data = await fetchOwnerSystemSettings();
+      setSystemSettings(data.settings);
+    } catch {
+      setSettingsError(true);
+      setSystemSettings(null);
+    } finally {
+      setSettingsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!isLoaded) return;
     if (!isSignedIn) {
@@ -246,12 +266,14 @@ export function OwnerConsole({ onBack }: Props) {
           await loadPricing();
         } else if (section === 'inference') {
           await loadInference();
+        } else if (section === 'settings') {
+          await loadSettings();
         }
       } catch {
         // section-level errors handled per section
       }
     })();
-  }, [section, error, overview, loadEconomy, loadPricing, loadInference, loadUsers, loadPersonas, loadAi, loadErrors]);
+  }, [section, error, overview, loadEconomy, loadPricing, loadInference, loadUsers, loadPersonas, loadAi, loadErrors, loadSettings]);
 
   const loadInferenceDetail = async (id: string) => {
     try {
@@ -420,7 +442,13 @@ export function OwnerConsole({ onBack }: Props) {
       )}
 
       {section === 'settings' && (
-        <p className="text-sm text-zinc-400">{t('owner:settingsHint')}</p>
+        <OwnerSettingsSection
+          settings={systemSettings}
+          loading={settingsLoading}
+          error={settingsError}
+          onRetry={() => void loadSettings()}
+          onSettingsChange={setSystemSettings}
+        />
       )}
 
       {section === 'errors' && (

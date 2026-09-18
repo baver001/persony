@@ -2,10 +2,22 @@ import { useTranslation } from 'react-i18next';
 import { updateOwnerSystemSetting } from '../../../lib/api/owner';
 import { OwnerSectionState } from '../components/OwnerSectionState';
 
+type RoutingRow = {
+  provider: string;
+  modelId: string;
+  displayName: string;
+  status: string;
+  operations: string[];
+  supportsUsage: boolean;
+  enabled: boolean;
+  lastVerifiedAt: string;
+};
+
 type AiOverview = {
   chatTextProvider: string;
   providers: Record<string, { configured: boolean }>;
   billingEnabled: boolean;
+  routingMatrix?: RoutingRow[];
 };
 
 type Props = {
@@ -77,6 +89,43 @@ export function OwnerAiSection({
           <p className="text-xs text-zinc-500">
             {t('billingEnabledLabel')}: {overview.billingEnabled ? t('yes') : t('no')}
           </p>
+          {overview.routingMatrix && overview.routingMatrix.length > 0 && (
+            <section className="space-y-2">
+              <h3 className="text-sm font-medium">{t('aiRoutingMatrix')}</h3>
+              <p className="text-xs text-zinc-500">{t('aiRoutingMatrixHint')}</p>
+              <div className="rounded-xl border border-white/10 overflow-x-auto">
+                <table className="w-full text-sm min-w-[720px]">
+                  <thead className="bg-white/5 text-zinc-400 text-left">
+                    <tr>
+                      <th className="px-3 py-2">{t('aiRoutingColModel')}</th>
+                      <th className="px-3 py-2">{t('aiRoutingColStatus')}</th>
+                      <th className="px-3 py-2">{t('aiRoutingColOperations')}</th>
+                      <th className="px-3 py-2">{t('aiRoutingColUsage')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {overview.routingMatrix.map((row) => (
+                      <tr key={`${row.provider}:${row.modelId}`} className="border-t border-white/5">
+                        <td className="px-3 py-2">
+                          <div className="font-mono text-xs">
+                            {row.provider}/{row.modelId}
+                          </div>
+                          <div className="text-xs text-zinc-500">{row.displayName}</div>
+                        </td>
+                        <td className="px-3 py-2 text-xs">
+                          {row.enabled ? row.status : 'disabled'}
+                        </td>
+                        <td className="px-3 py-2 text-xs font-mono">{row.operations.join(', ')}</td>
+                        <td className="px-3 py-2 text-xs">
+                          {row.supportsUsage ? t('yes') : t('no')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
         </>
       )}
     </div>

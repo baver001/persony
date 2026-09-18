@@ -12,6 +12,7 @@ import {
 import { getSystemSetting, setSystemSetting } from '../repositories/settings-repository';
 import { writeAuditLog } from '../services/audit-service';
 import type { CostConfidence } from '../billing/cost-confidence';
+import { listOwnerRoutingMatrix } from '../ai/model-registry';
 import { getOwnerEconomicsSnapshot } from '../services/economics-service';
 import {
   getOwnerInferenceDetail,
@@ -87,9 +88,24 @@ ownerRoutes.get('/owner/system/settings', async (c) => {
   try {
     await requireOwnerAccess(c);
     if (!c.env.DB) return c.json({ error_code: 'DB_NOT_CONFIGURED' }, 503);
-    const maintenance = await getSystemSetting(c.env.DB, 'maintenance_mode');
-    const featured = await getSystemSetting(c.env.DB, 'featured_personas');
-    return c.json({ settings: { maintenance_mode: maintenance, featured_personas: featured } });
+    const [maintenance, featured, batteryEnabled, batteryMode, targetMargin] = await Promise.all([
+      getSystemSetting(c.env.DB, 'maintenance_mode'),
+      getSystemSetting(c.env.DB, 'featured_personas'),
+      getSystemSetting(c.env.DB, 'battery_enabled'),
+      getSystemSetting(c.env.DB, 'battery_mode'),
+      getSystemSetting(c.env.DB, 'target_ai_gross_margin'),
+    ]);
+    return c.json({
+      settings: {
+        maintenance_mode: maintenance ?? false,
+        featured_personas: featured ?? [],
+        battery_enabled:
+          typeof batteryEnabled === 'boolean' ? batteryEnabled : DEFAULT_BATTERY_CONFIG.battery_enabled,
+        battery_mode:
+          typeof batteryMode === 'string' ? batteryMode : DEFAULT_BATTERY_CONFIG.battery_mode,
+        target_ai_gross_margin: typeof targetMargin === 'number' ? targetMargin : null,
+      },
+    });
   } catch (err) {
     return ownerErrorResponse(c, err);
   }
@@ -228,6 +244,7 @@ ownerRoutes.get('/owner/ai/overview', async (c) => {
         deepseek: { configured: Boolean(c.env.DEEPSEEK_API_KEY?.trim()) },
       },
       billingEnabled: c.env.BILLING_ENABLED === 'true',
+      routingMatrix: listOwnerRoutingMatrix(),
     });
   } catch (err) {
     return ownerErrorResponse(c, err);

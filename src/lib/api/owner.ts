@@ -12,12 +12,36 @@ export async function fetchOwnerBatteryOverview(): Promise<Record<string, unknow
   return ownerFetch('/owner/battery/overview');
 }
 
+export type OwnerRoutingRow = {
+  provider: string;
+  modelId: string;
+  displayName: string;
+  status: string;
+  operations: string[];
+  supportsUsage: boolean;
+  enabled: boolean;
+  lastVerifiedAt: string;
+};
+
 export async function fetchOwnerAiOverview(): Promise<{
   chatTextProvider: string;
   providers: Record<string, { configured: boolean }>;
   billingEnabled: boolean;
+  routingMatrix: OwnerRoutingRow[];
 }> {
   return ownerFetch('/owner/ai/overview');
+}
+
+export type OwnerSystemSettings = {
+  maintenance_mode: boolean;
+  featured_personas: unknown;
+  battery_enabled: boolean;
+  battery_mode: string;
+  target_ai_gross_margin: number | null;
+};
+
+export async function fetchOwnerSystemSettings(): Promise<{ settings: OwnerSystemSettings }> {
+  return ownerFetch('/owner/system/settings');
 }
 
 export type OwnerUserRow = {
