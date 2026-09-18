@@ -1,5 +1,8 @@
 import type { ProviderUsageMetrics } from '../providers/provider-result';
-import { findProviderPrice, PRICING_CATALOG_VERSION } from './provider-pricing';
+import type { CostConfidence } from './cost-confidence';
+import { resolveCostConfidence } from './cost-confidence';
+import { computeUsageCost, PRICING_CATALOG_VERSION } from './pricing-catalog';
+import type { PricingComputationLine } from './pricing-types';
 
 export type CostComputationInput = {
   provider: string;
@@ -10,52 +13,52 @@ export type CostComputationInput = {
 };
 
 export type CostComputationResult = {
-  providerCostMicrousd: number;
+  /** Null when cost cannot be determined — never treat as $0 known COGS. */
+  providerCostMicrousd: number | null;
+  costConfidence: CostConfidence;
   usageEstimated: boolean;
   pricingVersion: string;
+  /** Comma-separated pricing entry ids used for this computation */
+  pricingEntryId: string | null;
+  costLines: PricingComputationLine[];
   priced: boolean;
 };
 
-function costForTokens(tokens: number, pricePerMillion: number): number {
-  if (tokens <= 0 || pricePerMillion <= 0) return 0;
-  return Math.round((tokens * pricePerMillion) / 1_000_000);
-}
-
 export class CostEngine {
   computeProviderCost(input: CostComputationInput): CostComputationResult {
-    const entry = findProviderPrice(
-      input.provider,
-      input.model,
-      input.atIso ?? new Date().toISOString()
-    );
+    const pricing = computeUsageCost({
+      provider: input.provider,
+      model: input.model,
+      usage: input.usage,
+      atIso: input.atIso,
+    });
 
-    if (!entry) {
-      return {
-        providerCostMicrousd: 0,
+    if (!pricing.priced) {
+      const unpriced = {
+        providerCostMicrousd: null,
         usageEstimated: input.usageEstimated,
         pricingVersion: PRICING_CATALOG_VERSION,
+        pricingEntryId: null,
+        costLines: [],
         priced: false,
+      };
+      return {
+        ...unpriced,
+        costConfidence: resolveCostConfidence({ ...unpriced, priced: false }),
       };
     }
 
-    const inputTokens = input.usage.inputTokens ?? 0;
-    const outputTokens = input.usage.outputTokens ?? 0;
-    const cachedTokens = input.usage.cachedInputTokens ?? 0;
-
-    const inputCost = costForTokens(inputTokens, entry.inputPriceMicrousdPerMillion);
-    const cachedCost = entry.cachedInputPriceMicrousdPerMillion
-      ? costForTokens(cachedTokens, entry.cachedInputPriceMicrousdPerMillion)
-      : 0;
-    const outputCost = costForTokens(
-      outputTokens,
-      entry.outputPriceMicrousdPerMillion
-    );
-
-    return {
-      providerCostMicrousd: inputCost + cachedCost + outputCost,
+    const priced = {
+      providerCostMicrousd: pricing.totalMicrousd,
       usageEstimated: input.usageEstimated,
-      pricingVersion: PRICING_CATALOG_VERSION,
+      pricingVersion: pricing.catalogVersion,
+      pricingEntryId: pricing.pricingEntryIds.join(',') || null,
+      costLines: pricing.lines,
       priced: true,
+    };
+    return {
+      ...priced,
+      costConfidence: resolveCostConfidence(priced),
     };
   }
 }

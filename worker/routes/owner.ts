@@ -4,9 +4,19 @@ import { toSqlCount } from '../lib/sql-count';
 import { AuthRequiredError } from '../middleware/auth';
 import { RoleRequiredError, requireOwnerAccess } from '../middleware/roles';
 import { DEFAULT_BATTERY_CONFIG } from '../billing/battery-config';
+import {
+  listCatalogEntries,
+  PRICING_CATALOG_VERSION,
+  pricingFreshness,
+} from '../billing/pricing-catalog';
 import { getSystemSetting, setSystemSetting } from '../repositories/settings-repository';
 import { writeAuditLog } from '../services/audit-service';
+import type { CostConfidence } from '../billing/cost-confidence';
 import { getOwnerEconomicsSnapshot } from '../services/economics-service';
+import {
+  getOwnerInferenceDetail,
+  getOwnerInferenceList,
+} from '../services/inference-explorer-service';
 import { ownerAdjustBattery } from '../services/energy-service';
 import type { PersonyEnv } from '../types/env';
 
@@ -118,6 +128,81 @@ ownerRoutes.get('/owner/economics', async (c) => {
     if (!c.env.DB) return c.json({ error_code: 'DB_NOT_CONFIGURED' }, 503);
     const economics = await getOwnerEconomicsSnapshot(c.env.DB);
     return c.json({ economics });
+  } catch (err) {
+    return ownerErrorResponse(c, err);
+  }
+});
+
+ownerRoutes.get('/owner/inference', async (c) => {
+  try {
+    await requireOwnerAccess(c);
+    if (!c.env.DB) return c.json({ error_code: 'DB_NOT_CONFIGURED' }, 503);
+
+    const limit = Number(c.req.query('limit') || '50');
+    const offset = Number(c.req.query('offset') || '0');
+    const fallback = c.req.query('fallback');
+    const costConfidence = c.req.query('costConfidence') as CostConfidence | undefined;
+
+    const result = await getOwnerInferenceList(c.env.DB, {
+      since: c.req.query('since') || undefined,
+      until: c.req.query('until') || undefined,
+      operation: c.req.query('operation') || undefined,
+      provider: c.req.query('provider') || undefined,
+      model: c.req.query('model') || undefined,
+      status: c.req.query('status') || undefined,
+      costConfidence,
+      userId: c.req.query('userId') || undefined,
+      personaId: c.req.query('personaId') || undefined,
+      fallback:
+        fallback === 'yes' || fallback === 'no' ? fallback : undefined,
+      limit,
+      offset,
+    });
+
+    return c.json(result);
+  } catch (err) {
+    return ownerErrorResponse(c, err);
+  }
+});
+
+ownerRoutes.get('/owner/inference/:id', async (c) => {
+  try {
+    await requireOwnerAccess(c);
+    if (!c.env.DB) return c.json({ error_code: 'DB_NOT_CONFIGURED' }, 503);
+
+    const detail = await getOwnerInferenceDetail(c.env.DB, c.req.param('id'));
+    if (!detail) return c.json({ error_code: 'NOT_FOUND' }, 404);
+    return c.json({ inference: detail });
+  } catch (err) {
+    return ownerErrorResponse(c, err);
+  }
+});
+
+ownerRoutes.get('/owner/pricing', async (c) => {
+  try {
+    await requireOwnerAccess(c);
+    const provider = c.req.query('provider');
+    const model = c.req.query('model');
+    const entries = listCatalogEntries({ provider, model }).map((e) => ({
+      id: e.id,
+      provider: e.provider,
+      model: e.model,
+      dimension: e.dimension,
+      priceMicrousdPerUnit: e.priceMicrousdPerUnit,
+      unit: e.unit,
+      currency: e.currency,
+      pricingTier: e.pricingTier,
+      timeRule: e.timeRule,
+      effectiveFrom: e.effectiveFrom,
+      effectiveTo: e.effectiveTo,
+      sourceReference: e.sourceReference,
+      verifiedAt: e.verifiedAt,
+      freshness: pricingFreshness(e.verifiedAt),
+    }));
+    return c.json({
+      catalogVersion: PRICING_CATALOG_VERSION,
+      entries,
+    });
   } catch (err) {
     return ownerErrorResponse(c, err);
   }

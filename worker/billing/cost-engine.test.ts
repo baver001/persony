@@ -14,10 +14,12 @@ describe('CostEngine', () => {
 
     expect(result.priced).toBe(true);
     expect(result.providerCostMicrousd).toBe(150_000 + 300_000);
+    expect(result.pricingEntryId).toContain('gemini-3.8-flash');
+    expect(result.costLines.length).toBeGreaterThanOrEqual(2);
     expect(result.usageEstimated).toBe(false);
   });
 
-  it('returns priced=false for unknown model', () => {
+  it('returns unpriced (not zero) for unknown model', () => {
     const result = engine.computeProviderCost({
       provider: 'google',
       model: 'unknown-model',
@@ -25,8 +27,20 @@ describe('CostEngine', () => {
       usageEstimated: true,
     });
     expect(result.priced).toBe(false);
-    expect(result.providerCostMicrousd).toBe(0);
+    expect(result.providerCostMicrousd).toBeNull();
+    expect(result.costConfidence).toBe('unpriced');
     expect(result.usageEstimated).toBe(true);
+  });
+
+  it('marks estimated when usage is estimated', () => {
+    const result = engine.computeProviderCost({
+      provider: 'google',
+      model: 'gemini-3.8-flash',
+      usage: { inputTokens: 1000, outputTokens: 500 },
+      usageEstimated: true,
+    });
+    expect(result.costConfidence).toBe('estimated');
+    expect(result.providerCostMicrousd).toBeGreaterThan(0);
   });
 
   it('uses integer-safe token math without float drift', () => {

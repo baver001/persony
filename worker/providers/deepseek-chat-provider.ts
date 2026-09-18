@@ -1,8 +1,13 @@
+import { modelIdsTupleForOperation } from '../ai/model-registry';
 import { formatCleanErrorMessage } from '../lib/errors';
 import { classifyProviderError, shouldFallbackToNextModel } from '../lib/provider-errors';
 import type { ChatProvider, ChatStreamRequest } from './chat-types';
 
-export const DEEPSEEK_CHAT_MODELS = ['deepseek-chat', 'deepseek-reasoner'] as const;
+export const DEEPSEEK_CHAT_MODELS = modelIdsTupleForOperation(
+  'deepseek',
+  'chat_text',
+  'deepseek-chat'
+);
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions';
 
 const MESSENGER_FORMAT_HINT = `[ВАЖНО ДЛЯ ФОРМАТИРОВАНИЯ В МЕССЕНДЖЕРЕ]:

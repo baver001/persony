@@ -1,4 +1,21 @@
+import type { CostConfidence } from '../billing/cost-confidence';
+import { isKnownCostConfidence } from '../billing/cost-confidence';
 import { generateId } from '../lib/ids';
+
+export type InferenceListFilters = {
+  since?: string;
+  until?: string;
+  operation?: string;
+  provider?: string;
+  model?: string;
+  status?: string;
+  costConfidence?: CostConfidence;
+  userId?: string;
+  personaId?: string;
+  fallback?: 'yes' | 'no';
+  limit?: number;
+  offset?: number;
+};
 
 export type InferenceRunStatus = 'pending' | 'streaming' | 'completed' | 'failed';
 
@@ -23,7 +40,12 @@ export type InferenceRunRecord = {
   outputTokens: number | null;
   cachedInputTokens: number | null;
   usageEstimated: boolean;
-  providerCostMicrousd: number;
+  providerCostMicrousd: number | null;
+  costConfidence: CostConfidence;
+  pricingVersion: string | null;
+  pricingEntryId: string | null;
+  costCalculatedAt: string | null;
+  costBreakdownJson: string | null;
   energyReserved: number;
   energyCharged: number;
   latencyMs: number | null;
@@ -57,6 +79,11 @@ type InferenceRunRow = {
   cached_input_tokens?: number | null;
   usage_estimated?: number | null;
   provider_cost_microusd?: number | null;
+  cost_confidence?: string | null;
+  pricing_version?: string | null;
+  pricing_entry_id?: string | null;
+  cost_calculated_at?: string | null;
+  cost_breakdown_json?: string | null;
   energy_reserved?: number | null;
   energy_charged?: number | null;
   latency_ms?: number | null;
@@ -90,7 +117,16 @@ function rowToRecord(row: InferenceRunRow): InferenceRunRecord {
     outputTokens: row.output_tokens ?? null,
     cachedInputTokens: row.cached_input_tokens ?? null,
     usageEstimated: Boolean(row.usage_estimated),
-    providerCostMicrousd: row.provider_cost_microusd ?? 0,
+    costConfidence: (row.cost_confidence as CostConfidence) ?? 'unpriced',
+    providerCostMicrousd: isKnownCostConfidence(
+      (row.cost_confidence as CostConfidence) ?? 'unpriced'
+    )
+      ? row.provider_cost_microusd ?? 0
+      : null,
+    pricingVersion: row.pricing_version ?? null,
+    pricingEntryId: row.pricing_entry_id ?? null,
+    costCalculatedAt: row.cost_calculated_at ?? null,
+    costBreakdownJson: row.cost_breakdown_json ?? null,
     energyReserved: row.energy_reserved ?? 0,
     energyCharged: row.energy_charged ?? 0,
     latencyMs: row.latency_ms ?? null,
@@ -100,6 +136,93 @@ function rowToRecord(row: InferenceRunRow): InferenceRunRecord {
     startedAt: row.started_at,
     completedAt: row.completed_at,
     errorCode: row.error_code,
+  };
+}
+
+export async function findInferenceRunById(
+  db: D1Database,
+  runId: string
+): Promise<InferenceRunRecord | null> {
+  const row = await db
+    .prepare(`SELECT * FROM inference_runs WHERE id = ? LIMIT 1`)
+    .bind(runId)
+    .first<InferenceRunRow>();
+  return row ? rowToRecord(row) : null;
+}
+
+function buildListWhere(filters: InferenceListFilters): { sql: string; params: unknown[] } {
+  const clauses: string[] = [];
+  const params: unknown[] = [];
+
+  if (filters.since) {
+    clauses.push('started_at >= ?');
+    params.push(filters.since);
+  }
+  if (filters.until) {
+    clauses.push('started_at <= ?');
+    params.push(filters.until);
+  }
+  if (filters.operation) {
+    clauses.push('operation_type = ?');
+    params.push(filters.operation);
+  }
+  if (filters.provider) {
+    clauses.push('COALESCE(actual_provider, provider) = ?');
+    params.push(filters.provider);
+  }
+  if (filters.model) {
+    clauses.push('COALESCE(actual_model, model) = ?');
+    params.push(filters.model);
+  }
+  if (filters.status) {
+    clauses.push('status = ?');
+    params.push(filters.status);
+  }
+  if (filters.costConfidence) {
+    clauses.push('cost_confidence = ?');
+    params.push(filters.costConfidence);
+  }
+  if (filters.userId) {
+    clauses.push('user_id = ?');
+    params.push(filters.userId);
+  }
+  if (filters.personaId) {
+    clauses.push('persona_id = ?');
+    params.push(filters.personaId);
+  }
+  if (filters.fallback === 'yes') {
+    clauses.push('fallback_count > 0');
+  } else if (filters.fallback === 'no') {
+    clauses.push('fallback_count = 0');
+  }
+
+  const sql = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  return { sql, params };
+}
+
+export async function listInferenceRuns(
+  db: D1Database,
+  filters: InferenceListFilters
+): Promise<{ rows: InferenceRunRecord[]; total: number }> {
+  const limit = Math.min(Math.max(filters.limit ?? 50, 1), 100);
+  const offset = Math.max(filters.offset ?? 0, 0);
+  const { sql, params } = buildListWhere(filters);
+
+  const countRow = await db
+    .prepare(`SELECT COUNT(*) as count FROM inference_runs ${sql}`)
+    .bind(...params)
+    .first<{ count: number }>();
+
+  const { results } = await db
+    .prepare(
+      `SELECT * FROM inference_runs ${sql} ORDER BY started_at DESC LIMIT ? OFFSET ?`
+    )
+    .bind(...params, limit, offset)
+    .all<InferenceRunRow>();
+
+  return {
+    rows: (results ?? []).map(rowToRecord),
+    total: countRow?.count ?? 0,
   };
 }
 
@@ -184,7 +307,12 @@ export async function createInferenceRun(
     outputTokens: null,
     cachedInputTokens: null,
     usageEstimated: false,
-    providerCostMicrousd: 0,
+    providerCostMicrousd: null,
+    costConfidence: 'unpriced',
+    pricingVersion: null,
+    pricingEntryId: null,
+    costCalculatedAt: null,
+    costBreakdownJson: null,
     energyReserved: 0,
     energyCharged: 0,
     latencyMs: null,
@@ -209,7 +337,12 @@ export async function updateInferenceRunEconomics(
     outputTokens?: number;
     cachedInputTokens?: number;
     usageEstimated?: boolean;
-    providerCostMicrousd?: number;
+    providerCostMicrousd?: number | null;
+    costConfidence?: CostConfidence;
+    pricingVersion?: string;
+    pricingEntryId?: string | null;
+    costCalculatedAt?: string;
+    costBreakdownJson?: string | null;
     energyReserved?: number;
     energyCharged?: number;
     latencyMs?: number;
@@ -249,7 +382,22 @@ export async function updateInferenceRunEconomics(
     set('usage_estimated', input.usageEstimated ? 1 : 0);
   }
   if (input.providerCostMicrousd !== undefined) {
-    set('provider_cost_microusd', input.providerCostMicrousd);
+    set('provider_cost_microusd', input.providerCostMicrousd ?? 0);
+  }
+  if (input.costConfidence !== undefined) {
+    set('cost_confidence', input.costConfidence);
+  }
+  if (input.pricingVersion !== undefined) {
+    set('pricing_version', input.pricingVersion);
+  }
+  if (input.pricingEntryId !== undefined) {
+    set('pricing_entry_id', input.pricingEntryId);
+  }
+  if (input.costCalculatedAt !== undefined) {
+    set('cost_calculated_at', input.costCalculatedAt);
+  }
+  if (input.costBreakdownJson !== undefined) {
+    set('cost_breakdown_json', input.costBreakdownJson);
   }
   if (input.energyReserved !== undefined) set('energy_reserved', input.energyReserved);
   if (input.energyCharged !== undefined) set('energy_charged', input.energyCharged);

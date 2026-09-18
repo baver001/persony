@@ -187,11 +187,12 @@ async function executeInferenceStream(
           await touchConversation(db, run.conversationId);
 
           const batteryConfig = await loadBatteryConfig(db);
+          const knownCostMicrousd = cost.providerCostMicrousd ?? undefined;
           const energyCharged = actualEnergyUnitsForUsage(
             'text_chat',
             batteryConfig,
             { input: usage.inputTokens, output: usage.outputTokens },
-            cost.providerCostMicrousd
+            knownCostMicrousd
           );
 
           await settleEnergyForInference(
@@ -200,9 +201,10 @@ async function executeInferenceStream(
             run.id,
             'text_chat',
             { input: usage.inputTokens, output: usage.outputTokens },
-            cost.providerCostMicrousd
+            knownCostMicrousd
           );
 
+          const costCalculatedAt = new Date().toISOString();
           await updateInferenceRunEconomics(db, run.id, {
             actualProvider: meta.actualProvider,
             actualModel: meta.actualModel,
@@ -210,6 +212,16 @@ async function executeInferenceStream(
             outputTokens: usage.outputTokens,
             usageEstimated,
             providerCostMicrousd: cost.providerCostMicrousd,
+            costConfidence: cost.costConfidence,
+            pricingVersion: cost.pricingVersion,
+            pricingEntryId: cost.pricingEntryId,
+            costCalculatedAt,
+            costBreakdownJson: JSON.stringify({
+              lines: cost.costLines,
+              totalMicrousd: cost.providerCostMicrousd,
+              pricingEntryIds: cost.pricingEntryId?.split(',').filter(Boolean) ?? [],
+              pricingVersion: cost.pricingVersion,
+            }),
             energyCharged,
             latencyMs,
             fallbackCount: meta.fallbackCount,

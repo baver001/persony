@@ -1,0 +1,285 @@
+import type { ProviderUsageMetrics } from '../providers/provider-result';
+import { resolveTimeRuleForProvider } from './pricing-time';
+import type {
+  PricingComputationLine,
+  PricingComputationResult,
+  PricingDimension,
+  PricingEntry,
+  PricingFreshness,
+  PricingTier,
+  TimeRule,
+} from './pricing-types';
+
+export const PRICING_CATALOG_VERSION = '2026-09-18-v2';
+
+const VERIFIED_AT = '2026-09-18';
+const GEMINI_PRICING = 'https://ai.google.dev/gemini-api/docs/pricing';
+const DEEPSEEK_PRICING = 'https://api-docs.deepseek.com/quick_start/pricing';
+
+/** Configurable stale threshold — owner console can override later. */
+export const PRICING_STALE_DAYS = 30;
+
+function entry(
+  id: string,
+  provider: string,
+  model: string,
+  dimension: PricingDimension,
+  priceMicrousdPerUnit: number,
+  opts: {
+    effectiveFrom: string;
+    effectiveTo?: string | null;
+    pricingTier?: PricingTier;
+    timeRule?: TimeRule;
+    sourceReference?: string;
+    verifiedAt?: string;
+  }
+): PricingEntry {
+  return {
+    id,
+    provider,
+    model,
+    dimension,
+    effectiveFrom: opts.effectiveFrom,
+    effectiveTo: opts.effectiveTo ?? null,
+    priceMicrousdPerUnit,
+    unit: 'per_million_tokens',
+    currency: 'USD',
+    pricingTier: opts.pricingTier ?? 'default',
+    timeRule: opts.timeRule ?? 'any',
+    sourceReference: opts.sourceReference ?? GEMINI_PRICING,
+    verifiedAt: opts.verifiedAt ?? VERIFIED_AT,
+  };
+}
+
+function geminiText(
+  model: string,
+  inputMicrousd: number,
+  outputMicrousd: number,
+  effectiveFrom = '2026-01-01'
+): PricingEntry[] {
+  return [
+    entry(`${model}:text_input:default`, 'google', model, 'text_input', inputMicrousd, {
+      effectiveFrom,
+      sourceReference: GEMINI_PRICING,
+    }),
+    entry(`${model}:text_output:default`, 'google', model, 'text_output', outputMicrousd, {
+      effectiveFrom,
+      sourceReference: GEMINI_PRICING,
+    }),
+  ];
+}
+
+function deepseekTokenPair(
+  model: string,
+  offPeakInputMiss: number,
+  offPeakOutput: number,
+  offPeakInputHit: number,
+  effectiveFrom = '2026-01-01'
+): PricingEntry[] {
+  const peakInputMiss = offPeakInputMiss * 2;
+  const peakOutput = offPeakOutput * 2;
+  const peakInputHit = offPeakInputHit * 2;
+
+  const rows: PricingEntry[] = [];
+  for (const [timeRule, inputMiss, inputHit, output] of [
+    ['off_peak', offPeakInputMiss, offPeakInputHit, offPeakOutput],
+    ['peak', peakInputMiss, peakInputHit, peakOutput],
+  ] as const) {
+    rows.push(
+      entry(`${model}:text_input:cache_miss:${timeRule}`, 'deepseek', model, 'text_input', inputMiss, {
+        effectiveFrom,
+        pricingTier: 'cache_miss',
+        timeRule,
+        sourceReference: DEEPSEEK_PRICING,
+      }),
+      entry(`${model}:cached_input:cache_hit:${timeRule}`, 'deepseek', model, 'cached_input', inputHit, {
+        effectiveFrom,
+        pricingTier: 'cache_hit',
+        timeRule,
+        sourceReference: DEEPSEEK_PRICING,
+      }),
+      entry(`${model}:text_output:default:${timeRule}`, 'deepseek', model, 'text_output', output, {
+        effectiveFrom,
+        pricingTier: 'default',
+        timeRule,
+        sourceReference: DEEPSEEK_PRICING,
+      })
+    );
+  }
+  return rows;
+}
+
+/**
+ * Versioned pricing catalog — append new rows; never mutate historical entries.
+ */
+export const PRICING_CATALOG: PricingEntry[] = [
+  ...geminiText('gemini-3.8-flash', 150_000, 600_000),
+  ...geminiText('gemini-3.5-flash-lite', 75_000, 300_000),
+  // Historical price row — superseded but kept for inference repricing
+  entry('gemini-3.8-flash:text_input:legacy', 'google', 'gemini-3.8-flash', 'text_input', 100_000, {
+    effectiveFrom: '2025-01-01',
+    effectiveTo: '2025-12-31T23:59:59.999Z',
+    sourceReference: GEMINI_PRICING,
+  }),
+  entry('gemini-3.8-flash:text_output:legacy', 'google', 'gemini-3.8-flash', 'text_output', 400_000, {
+    effectiveFrom: '2025-01-01',
+    effectiveTo: '2025-12-31T23:59:59.999Z',
+    sourceReference: GEMINI_PRICING,
+  }),
+  ...deepseekTokenPair('deepseek-chat', 140_000, 280_000, 14_000),
+  ...deepseekTokenPair('deepseek-reasoner', 550_000, 2_190_000, 55_000),
+];
+
+export function isEntryEffective(entry: PricingEntry, atMs: number): boolean {
+  const from = Date.parse(entry.effectiveFrom);
+  const to = entry.effectiveTo ? Date.parse(entry.effectiveTo) : Number.POSITIVE_INFINITY;
+  return atMs >= from && atMs <= to;
+}
+
+export function findPricingEntries(
+  provider: string,
+  model: string,
+  dimension: PricingDimension,
+  atIso: string,
+  opts?: { pricingTier?: PricingTier; timeRule?: TimeRule }
+): PricingEntry[] {
+  const atMs = Date.parse(atIso);
+  const timeRule = opts?.timeRule ?? resolveTimeRuleForProvider(provider, atIso);
+
+  return PRICING_CATALOG.filter((e) => {
+    if (e.provider !== provider || e.model !== model || e.dimension !== dimension) {
+      return false;
+    }
+    if (!isEntryEffective(e, atMs)) return false;
+    if (opts?.pricingTier && e.pricingTier !== opts.pricingTier) return false;
+    if (e.timeRule !== 'any' && e.timeRule !== timeRule) return false;
+    return true;
+  }).sort((a, b) => Date.parse(b.effectiveFrom) - Date.parse(a.effectiveFrom));
+}
+
+export function findBestPricingEntry(
+  provider: string,
+  model: string,
+  dimension: PricingDimension,
+  atIso: string,
+  pricingTier: PricingTier
+): PricingEntry | null {
+  const matches = findPricingEntries(provider, model, dimension, atIso, { pricingTier });
+  return matches[0] ?? null;
+}
+
+function costForUnits(units: number, priceMicrousdPerUnit: number): number {
+  if (units <= 0 || priceMicrousdPerUnit <= 0) return 0;
+  return Math.round((units * priceMicrousdPerUnit) / 1_000_000);
+}
+
+function lineFromEntry(entry: PricingEntry, units: number): PricingComputationLine {
+  return {
+    pricingEntryId: entry.id,
+    dimension: entry.dimension,
+    units,
+    priceMicrousdPerUnit: entry.priceMicrousdPerUnit,
+    costMicrousd: costForUnits(units, entry.priceMicrousdPerUnit),
+    pricingTier: entry.pricingTier,
+    timeRule: entry.timeRule,
+  };
+}
+
+export function computeUsageCost(input: {
+  provider: string;
+  model: string;
+  usage: ProviderUsageMetrics;
+  atIso?: string;
+}): PricingComputationResult {
+  const atIso = input.atIso ?? new Date().toISOString();
+  const lines: PricingComputationLine[] = [];
+
+  const inputTokens = input.usage.inputTokens ?? 0;
+  const outputTokens = input.usage.outputTokens ?? 0;
+  const cachedTokens = input.usage.cachedInputTokens ?? 0;
+
+  const nonCachedInput = Math.max(0, inputTokens - cachedTokens);
+
+  if (input.provider === 'deepseek') {
+    if (nonCachedInput > 0) {
+      const miss = findBestPricingEntry(
+        input.provider,
+        input.model,
+        'text_input',
+        atIso,
+        'cache_miss'
+      );
+      if (miss) lines.push(lineFromEntry(miss, nonCachedInput));
+    }
+    if (cachedTokens > 0) {
+      const hit = findBestPricingEntry(
+        input.provider,
+        input.model,
+        'cached_input',
+        atIso,
+        'cache_hit'
+      );
+      if (hit) lines.push(lineFromEntry(hit, cachedTokens));
+    }
+  } else if (nonCachedInput > 0) {
+    const textIn = findBestPricingEntry(
+      input.provider,
+      input.model,
+      'text_input',
+      atIso,
+      'default'
+    );
+    if (textIn) lines.push(lineFromEntry(textIn, nonCachedInput));
+    if (cachedTokens > 0) {
+      const cached = findBestPricingEntry(
+        input.provider,
+        input.model,
+        'cached_input',
+        atIso,
+        'default'
+      );
+      if (cached) lines.push(lineFromEntry(cached, cachedTokens));
+    }
+  }
+
+  if (outputTokens > 0) {
+    const textOut = findBestPricingEntry(
+      input.provider,
+      input.model,
+      'text_output',
+      atIso,
+      input.provider === 'deepseek' ? 'default' : 'default'
+    );
+    if (textOut) lines.push(lineFromEntry(textOut, outputTokens));
+  }
+
+  const priced = lines.length > 0;
+  const totalMicrousd = lines.reduce((sum, l) => sum + l.costMicrousd, 0);
+
+  return {
+    lines,
+    totalMicrousd,
+    pricingEntryIds: lines.map((l) => l.pricingEntryId),
+    catalogVersion: PRICING_CATALOG_VERSION,
+    priced,
+  };
+}
+
+export function pricingFreshness(verifiedAt: string, now = new Date()): PricingFreshness {
+  const verifiedMs = Date.parse(verifiedAt);
+  if (Number.isNaN(verifiedMs)) return 'unknown';
+  const ageDays = (now.getTime() - verifiedMs) / (1000 * 60 * 60 * 24);
+  if (ageDays <= PRICING_STALE_DAYS) return 'verified';
+  return 'stale';
+}
+
+export function listCatalogEntries(filters?: {
+  provider?: string;
+  model?: string;
+}): PricingEntry[] {
+  return PRICING_CATALOG.filter((e) => {
+    if (filters?.provider && e.provider !== filters.provider) return false;
+    if (filters?.model && e.model !== filters.model) return false;
+    return true;
+  });
+}

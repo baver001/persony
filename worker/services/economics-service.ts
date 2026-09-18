@@ -4,11 +4,15 @@ type PeriodRow = {
   total_calls: number;
   successful_calls: number;
   failed_calls: number;
-  provider_cost_microusd: number;
+  known_cost_microusd: number;
+  unpriced_calls: number;
+  estimated_cost_calls: number;
   energy_charged: number;
   avg_latency_ms: number | null;
   fallback_runs: number;
 };
+
+const KNOWN_COST_SQL = `CASE WHEN cost_confidence IN ('actual', 'estimated') THEN provider_cost_microusd ELSE 0 END`;
 
 function isoDaysAgo(days: number): string {
   const d = new Date();
@@ -26,7 +30,9 @@ async function aggregatePeriod(
          COUNT(*) AS total_calls,
          SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS successful_calls,
          SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed_calls,
-         COALESCE(SUM(provider_cost_microusd), 0) AS provider_cost_microusd,
+         COALESCE(SUM(${KNOWN_COST_SQL}), 0) AS known_cost_microusd,
+         SUM(CASE WHEN cost_confidence = 'unpriced' THEN 1 ELSE 0 END) AS unpriced_calls,
+         SUM(CASE WHEN cost_confidence = 'estimated' THEN 1 ELSE 0 END) AS estimated_cost_calls,
          COALESCE(SUM(energy_charged), 0) AS energy_charged,
          AVG(latency_ms) AS avg_latency_ms,
          SUM(CASE WHEN fallback_count > 0 THEN 1 ELSE 0 END) AS fallback_runs
@@ -41,7 +47,9 @@ async function aggregatePeriod(
       total_calls: 0,
       successful_calls: 0,
       failed_calls: 0,
-      provider_cost_microusd: 0,
+      known_cost_microusd: 0,
+      unpriced_calls: 0,
+      estimated_cost_calls: 0,
       energy_charged: 0,
       avg_latency_ms: null,
       fallback_runs: 0,
@@ -49,10 +57,21 @@ async function aggregatePeriod(
   );
 }
 
+function coverageFromRow(row: PeriodRow): number {
+  const pricedCalls = row.total_calls - row.unpriced_calls;
+  if (row.total_calls <= 0) return 100;
+  return Math.round((pricedCalls / row.total_calls) * 1000) / 10;
+}
+
 export type OwnerEconomicsSnapshot = {
+  /** Known AI COGS only — excludes unpriced inferences. */
   aiCostTodayMicrousd: number;
   aiCost7dMicrousd: number;
   aiCost30dMicrousd: number;
+  costCoverageTodayPercent: number;
+  costCoverage7dPercent: number;
+  unpricedCallsToday: number;
+  estimatedCostCallsToday: number;
   energyConsumedToday: number;
   callsToday: number;
   successfulCallsToday: number;
@@ -78,7 +97,7 @@ export async function getOwnerEconomicsSnapshot(
     db
       .prepare(
         `SELECT COALESCE(actual_provider, provider, 'unknown') AS provider,
-                COALESCE(SUM(provider_cost_microusd), 0) AS cost_microusd,
+                COALESCE(SUM(${KNOWN_COST_SQL}), 0) AS cost_microusd,
                 COUNT(*) AS calls
          FROM inference_runs
          WHERE started_at >= ?
@@ -91,7 +110,7 @@ export async function getOwnerEconomicsSnapshot(
       .prepare(
         `SELECT COALESCE(actual_provider, provider, 'unknown') AS provider,
                 COALESCE(actual_model, model, 'unknown') AS model,
-                COALESCE(SUM(provider_cost_microusd), 0) AS cost_microusd,
+                COALESCE(SUM(${KNOWN_COST_SQL}), 0) AS cost_microusd,
                 COUNT(*) AS calls
          FROM inference_runs
          WHERE started_at >= ?
@@ -117,9 +136,13 @@ export async function getOwnerEconomicsSnapshot(
     totalToday > 0 ? todayRow.fallback_runs / totalToday : 0;
 
   return {
-    aiCostTodayMicrousd: todayRow.provider_cost_microusd,
-    aiCost7dMicrousd: row7.provider_cost_microusd,
-    aiCost30dMicrousd: row30.provider_cost_microusd,
+    aiCostTodayMicrousd: todayRow.known_cost_microusd,
+    aiCost7dMicrousd: row7.known_cost_microusd,
+    aiCost30dMicrousd: row30.known_cost_microusd,
+    costCoverageTodayPercent: coverageFromRow(todayRow),
+    costCoverage7dPercent: coverageFromRow(row7),
+    unpricedCallsToday: todayRow.unpriced_calls,
+    estimatedCostCallsToday: todayRow.estimated_cost_calls,
     energyConsumedToday: todayRow.energy_charged,
     callsToday: todayRow.total_calls,
     successfulCallsToday: todayRow.successful_calls,
