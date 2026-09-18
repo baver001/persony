@@ -1,5 +1,6 @@
 import { AuthRequiredError } from '../middleware/auth';
 import { AIEntitlementError } from '../middleware/entitlement';
+import { RateLimitError } from '../middleware/rate-limit';
 
 export function mapApiError(
   err: unknown,
@@ -15,6 +16,16 @@ export function mapApiError(
         error: err.message,
         error_code: err.code,
         battery: err.details,
+      },
+    };
+  }
+  if (err instanceof RateLimitError) {
+    return {
+      status: 429,
+      body: {
+        error: err.message,
+        error_code: err.code,
+        retry_after_sec: err.retryAfterSec,
       },
     };
   }

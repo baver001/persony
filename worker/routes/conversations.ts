@@ -5,7 +5,7 @@ import {
   messageFeedbackSchema,
 } from '../lib/validation';
 import { upsertMessageFeedback } from '../repositories/message-feedback-repository';
-import { AuthRequiredError, requireUser } from '../middleware/auth';
+import { AuthRequiredError, getAuthContext, requireUser } from '../middleware/auth';
 import { requireAIEntitlement } from '../middleware/entitlement';
 import {
   createDirectConversation,
@@ -22,6 +22,8 @@ import {
   streamConversationReply,
 } from '../services/chat-service';
 import { AIEntitlementError } from '../middleware/entitlement';
+import { clientIp, rateLimitMiddleware } from '../middleware/rate-limit';
+import { mapApiError } from '../lib/api-errors';
 import { PersonaNotFoundError } from '../services/persona-service';
 import type { PersonyEnv } from '../types/env';
 
@@ -101,7 +103,18 @@ conversationRoutes.get('/conversations/:id/messages', async (c) => {
   }
 });
 
-conversationRoutes.post('/conversations/:id/messages', async (c) => {
+conversationRoutes.post(
+  '/conversations/:id/messages',
+  rateLimitMiddleware({
+    scope: 'chat_message',
+    limit: 40,
+    windowSec: 60,
+    key: async (c) => {
+      const auth = await getAuthContext(c);
+      return auth.userId || clientIp(c);
+    },
+  }),
+  async (c) => {
   try {
     const userId = await requireAIEntitlement(c);
     if (!c.env.DB) return c.json({ error: 'Database not configured' }, 503);
@@ -147,6 +160,10 @@ conversationRoutes.post('/conversations/:id/messages', async (c) => {
         },
         402
       );
+    }
+    const mapped = mapApiError(err);
+    if (mapped.status !== 500) {
+      return c.json(mapped.body, mapped.status as 401 | 402 | 409 | 429);
     }
     throw err;
   }

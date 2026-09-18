@@ -54,6 +54,25 @@ export async function updateOwnerSystemSetting(
   return res.ok;
 }
 
+export async function fetchOwnerEconomics(): Promise<{
+  economics: {
+    aiCostTodayMicrousd: number;
+    aiCost7dMicrousd: number;
+    aiCost30dMicrousd: number;
+    energyConsumedToday: number;
+    callsToday: number;
+    successfulCallsToday: number;
+    failedCallsToday: number;
+    avgLatencyMsToday: number | null;
+    fallbackRateToday: number;
+    costByProvider: Array<{ provider: string; costMicrousd: number; calls: number }>;
+    costByModel: Array<{ provider: string; model: string; costMicrousd: number; calls: number }>;
+    activeUsersWithInference7d: number;
+  };
+}> {
+  return ownerFetch('/owner/economics');
+}
+
 export async function fetchOwnerAudit(): Promise<{
   entries: Array<{
     id: string;

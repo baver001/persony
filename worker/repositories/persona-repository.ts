@@ -277,7 +277,54 @@ export async function getAccessiblePersona(
   return null;
 }
 
-export async function listPublicPersonas(
+type PersonaPublicRow = {
+  id: string;
+  slug: string | null;
+  name: string;
+  tagline: string | null;
+  description: string | null;
+  avatar_url: string | null;
+  voice: string;
+  category: string;
+  visibility: string;
+  badge: string | null;
+  color: string | null;
+  starter_messages_json: string | null;
+  configuration_json: string | null;
+};
+
+function mapRowToPublicMeta(
+  r: PersonaPublicRow,
+  locale: 'en' | 'ru',
+  options?: { isOfficial?: boolean; sortOrder?: number }
+): PersonaPublicMeta {
+  const official = OFFICIAL_PERSONA_ROSTER.find((o) => o.id === r.id);
+  const spec = official?.spec;
+  const localized = spec ? localizedPresentation(spec, locale) : null;
+  return {
+    id: r.id,
+    slug: r.slug || r.id,
+    name: r.name,
+    tagline: localized?.tagline || r.tagline || '',
+    description: localized?.description || r.description || '',
+    avatarUrl: r.avatar_url || '',
+    voice: r.voice,
+    category: r.category,
+    visibility: r.visibility as PersonaPublicMeta['visibility'],
+    badge: r.badge || undefined,
+    color: r.color || undefined,
+    starterMessages: localized?.starterMessages?.length
+      ? localized.starterMessages
+      : r.starter_messages_json
+        ? (JSON.parse(r.starter_messages_json) as string[])
+        : undefined,
+    disclosure: localized?.disclosure,
+    isOfficial: options?.isOfficial ?? Boolean(official),
+    sortOrder: options?.sortOrder ?? (official ? official.sortOrder : undefined),
+  };
+}
+
+export async function listOfficialPublicPersonas(
   env: PersonyEnv,
   db: D1Database | undefined,
   locale: 'en' | 'ru' = 'en'
@@ -295,51 +342,17 @@ export async function listPublicPersonas(
          ORDER BY p.name ASC`
       )
       .bind(SYSTEM_OWNER)
-      .all<{
-        id: string;
-        slug: string | null;
-        name: string;
-        tagline: string | null;
-        description: string | null;
-        avatar_url: string | null;
-        voice: string;
-        category: string;
-        visibility: string;
-        badge: string | null;
-        color: string | null;
-        starter_messages_json: string | null;
-        configuration_json: string | null;
-      }>();
+      .all<PersonaPublicRow>();
 
     const officialOrder = new Map(OFFICIAL_PERSONA_ROSTER.map((p) => [p.id, p.sortOrder]));
 
     return (results ?? [])
-      .map((r) => {
-        const official = OFFICIAL_PERSONA_ROSTER.find((o) => o.id === r.id);
-        const spec = official?.spec;
-        const localized = spec ? localizedPresentation(spec, locale) : null;
-        return {
-          id: r.id,
-          slug: r.slug || r.id,
-          name: r.name,
-          tagline: localized?.tagline || r.tagline || '',
-          description: localized?.description || r.description || '',
-          avatarUrl: r.avatar_url || '',
-          voice: r.voice,
-          category: r.category,
-          visibility: r.visibility as PersonaPublicMeta['visibility'],
-          badge: r.badge || undefined,
-          color: r.color || undefined,
-          starterMessages: localized?.starterMessages?.length
-            ? localized.starterMessages
-            : r.starter_messages_json
-              ? (JSON.parse(r.starter_messages_json) as string[])
-              : undefined,
-          disclosure: localized?.disclosure,
-          isOfficial: Boolean(official),
+      .map((r) =>
+        mapRowToPublicMeta(r, locale, {
+          isOfficial: true,
           sortOrder: officialOrder.get(r.id),
-        } satisfies PersonaPublicMeta;
-      })
+        })
+      )
       .sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99));
   }
 
@@ -367,6 +380,46 @@ export async function listPublicPersonas(
   }
 
   return [];
+}
+
+export async function listCommunityPublicPersonas(
+  db: D1Database,
+  locale: 'en' | 'ru' = 'en',
+  limit = 48
+): Promise<PersonaPublicMeta[]> {
+  if (!(await isDbReady(db))) return [];
+
+  const { results } = await db
+    .prepare(
+      `SELECT p.id, p.slug, p.name, p.tagline, p.description, p.avatar_url, p.voice, p.category,
+              p.visibility, p.badge, p.color, p.starter_messages_json, pv.configuration_json
+       FROM personas p
+       JOIN persona_versions pv ON pv.persona_id = p.id AND pv.version = p.current_version
+       WHERE p.visibility = 'public' AND p.status = 'active' AND p.owner_user_id != ?
+       ORDER BY p.updated_at DESC
+       LIMIT ?`
+    )
+    .bind(SYSTEM_OWNER, limit)
+    .all<PersonaPublicRow>();
+
+  return (results ?? []).map((r) =>
+    mapRowToPublicMeta(r, locale, { isOfficial: false })
+  );
+}
+
+export async function listPublicPersonas(
+  env: PersonyEnv,
+  db: D1Database | undefined,
+  locale: 'en' | 'ru' = 'en'
+): Promise<PersonaPublicMeta[]> {
+  const official = await listOfficialPublicPersonas(env, db, locale);
+  if (!db || !(await isDbReady(db))) return official;
+
+  const community = await listCommunityPublicPersonas(db, locale);
+  const officialIds = new Set(official.map((p) => p.id));
+  const uniqueCommunity = community.filter((p) => !officialIds.has(p.id));
+
+  return [...official, ...uniqueCommunity];
 }
 
 export async function listUserPersonas(db: D1Database, ownerUserId: string): Promise<PersonaRuntime[]> {

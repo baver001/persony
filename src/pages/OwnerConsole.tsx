@@ -6,6 +6,7 @@ import {
   fetchOwnerAiOverview,
   updateOwnerSystemSetting,
   fetchOwnerAudit,
+  fetchOwnerEconomics,
   fetchOwnerBatteryOverview,
   fetchOwnerMemoryStats,
   fetchOwnerUsers,
@@ -36,19 +37,19 @@ const SECTIONS: OwnerSection[] = [
   'audit',
 ];
 
-function useOwnerNoIndex() {
+function useOwnerNoIndex(title: string, appTitle: string) {
   useEffect(() => {
     const existing = document.querySelector('meta[name="robots"]');
     const tag = existing ?? document.createElement('meta');
     tag.setAttribute('name', 'robots');
     tag.setAttribute('content', 'noindex, nofollow, noarchive');
     if (!existing) document.head.appendChild(tag);
-    document.title = 'Owner Console';
+    document.title = title;
     return () => {
       tag.setAttribute('content', 'index,follow');
-      document.title = 'Persony — AI Messenger';
+      document.title = appTitle;
     };
-  }, []);
+  }, [title, appTitle]);
 }
 
 export function OwnerConsole({ onBack }: Props) {
@@ -61,11 +62,12 @@ export function OwnerConsole({ onBack }: Props) {
   const [memoryStats, setMemoryStats] = useState<Record<string, number> | null>(null);
   const [audit, setAudit] = useState<Array<Record<string, string>>>([]);
   const [aiOverview, setAiOverview] = useState<Record<string, unknown> | null>(null);
+  const [economics, setEconomics] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<'AUTH_REQUIRED' | 'FORBIDDEN' | 'INTERNAL_ERROR' | null>(
     null
   );
 
-  useOwnerNoIndex();
+  useOwnerNoIndex(t('common:ownerConsole'), t('common:appTitle'));
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -81,7 +83,12 @@ export function OwnerConsole({ onBack }: Props) {
           setError('FORBIDDEN');
           return;
         }
-        setOverview(await fetchOwnerOverview());
+        const [overviewData, economicsData] = await Promise.all([
+          fetchOwnerOverview(),
+          fetchOwnerEconomics().catch(() => null),
+        ]);
+        setOverview(overviewData);
+        setEconomics(economicsData?.economics ?? null);
       } catch (e) {
         setError(e instanceof Error ? (e.message as typeof error) : 'INTERNAL_ERROR');
       }
@@ -174,6 +181,47 @@ export function OwnerConsole({ onBack }: Props) {
                       </div>
                     ))}
                   </section>
+                  {economics && (
+                    <section className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
+                      <h3 className="font-medium">{t('owner:economicsTitle')}</h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+                        <div>
+                          <div className="text-xs text-zinc-500">{t('owner:aiCostToday')}</div>
+                          <div className="font-mono">
+                            ${((economics.aiCostTodayMicrousd as number) / 1_000_000).toFixed(4)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-zinc-500">{t('owner:aiCost7d')}</div>
+                          <div className="font-mono">
+                            ${((economics.aiCost7dMicrousd as number) / 1_000_000).toFixed(4)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-zinc-500">{t('owner:callsToday')}</div>
+                          <div>{String(economics.callsToday)}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-zinc-500">{t('owner:energyToday')}</div>
+                          <div>{String(economics.energyConsumedToday)}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-zinc-500">{t('owner:fallbackRate')}</div>
+                          <div>
+                            {(((economics.fallbackRateToday as number) || 0) * 100).toFixed(1)}%
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-zinc-500">{t('owner:avgLatency')}</div>
+                          <div>
+                            {economics.avgLatencyMsToday
+                              ? `${Math.round(economics.avgLatencyMsToday as number)} ms`
+                              : '—'}
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+                  )}
                   <section className="rounded-xl border border-white/10 bg-white/5 p-4">
                     <h3 className="font-medium mb-2">{t('owner:whatChanged')}</h3>
                     <ul className="list-disc pl-5 text-sm text-zinc-300 space-y-1">

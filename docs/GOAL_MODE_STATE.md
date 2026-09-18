@@ -15,9 +15,10 @@
 | inference_runs economy columns | implemented | migration `0008` | apply on prod D1 |
 | Energy reserve → settle → release | implemented | `energy-service.ts`, concurrency test | live/voice endpoints still on legacy charge |
 | Memory waitUntil + job status | implemented | `memory-job-service.ts` | owner UI for failed jobs open |
-| Rate limits | open | — | P1 |
-| Community Discover | open | — | P1 |
-| Voice Call terminology | open | — | P1 |
+| Rate limits | implemented | `rate-limit.ts`, migration `0009`, tests | tune limits in prod |
+| Community Discover | implemented | `listCommunityPublicPersonas`, Discover UI | production smoke with public persona |
+| Voice Call terminology | implemented | en i18n `Voice Call` | device/soak tests open |
+| Owner economics API | implemented | `GET /owner/economics`, Owner Console | margin config open |
 | Voice device/soak specs | open | — | manual only |
 | Paddle live | not applicable | `BILLING_ENABLED=false` | separate Payment Launch |
 | Commercial battery default | not applicable | mode exists, default simulation | enable later |
@@ -31,4 +32,4 @@
 
 ## Next independent task
 
-P1: rate limits middleware + owner economics API aggregate endpoints.
+P1: migrate live voice endpoints to reserve/settle; provider usage from API streams; production smoke with community persona.

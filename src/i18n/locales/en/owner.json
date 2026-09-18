@@ -5,6 +5,13 @@
   "whatChanged": "What changed",
   "personasHint": "{{count}} active personas in the catalog.",
   "aiHint": "{{count}} failed inference runs recorded.",
+  "economicsTitle": "AI economics (internal)",
+  "aiCostToday": "AI cost today",
+  "aiCost7d": "AI cost 7d",
+  "callsToday": "Calls today",
+  "energyToday": "Energy consumed today",
+  "fallbackRate": "Fallback rate today",
+  "avgLatency": "Avg latency today",
   "chatProvider": "Text chat provider",
   "settingsHint": "System settings API is available at /api/owner/system/settings.",
   "sections": {

@@ -14,8 +14,10 @@ import {
 } from '../lib/validation';
 import { generateId } from '../lib/ids';
 import { bodySizeLimit } from '../middleware/body-limit';
+import { getAuthContext } from '../middleware/auth';
 import { requireAIEntitlement } from '../middleware/entitlement';
 import { mapApiError } from '../lib/api-errors';
+import { clientIp, rateLimitMiddleware } from '../middleware/rate-limit';
 import { chargeBatteryForInference } from '../services/energy-service';
 import type { PersonyEnv } from '../types/env';
 import { conversationRoutes } from './conversations';
@@ -42,7 +44,27 @@ apiRoutes.route('/', ownerRoutes);
 apiRoutes.route('/', billingRoutes);
 apiRoutes.route('/', roomRoutes);
 
-apiRoutes.post('/transcribe', async (c) => {
+const aiUserRateLimit = rateLimitMiddleware({
+  scope: 'ai_endpoint',
+  limit: 30,
+  windowSec: 60,
+  key: async (c) => {
+    const auth = await getAuthContext(c);
+    return auth.userId || clientIp(c);
+  },
+});
+
+const aiHeavyRateLimit = rateLimitMiddleware({
+  scope: 'ai_heavy',
+  limit: 12,
+  windowSec: 60,
+  key: async (c) => {
+    const auth = await getAuthContext(c);
+    return auth.userId || clientIp(c);
+  },
+});
+
+apiRoutes.post('/transcribe', aiUserRateLimit, async (c) => {
   try {
     const userId = await requireAIEntitlement(c);
     const body = await c.req.json();
@@ -63,11 +85,11 @@ apiRoutes.post('/transcribe', async (c) => {
     return c.json(result);
   } catch (err) {
     const mapped = mapApiError(err, formatCleanErrorMessage(err));
-    return c.json(mapped.body, mapped.status as 401 | 402 | 500);
+    return c.json(mapped.body, mapped.status as 401 | 402 | 429 | 500);
   }
 });
 
-apiRoutes.post('/generate-character', async (c) => {
+apiRoutes.post('/generate-character', aiHeavyRateLimit, async (c) => {
   try {
     const userId = await requireAIEntitlement(c);
     const body = await c.req.json();
@@ -84,11 +106,11 @@ apiRoutes.post('/generate-character', async (c) => {
     return c.json(result);
   } catch (err) {
     const mapped = mapApiError(err, formatCleanErrorMessage(err));
-    return c.json(mapped.body, mapped.status as 401 | 402 | 500);
+    return c.json(mapped.body, mapped.status as 401 | 402 | 429 | 500);
   }
 });
 
-apiRoutes.post('/summarize-call', async (c) => {
+apiRoutes.post('/summarize-call', aiUserRateLimit, async (c) => {
   try {
     const userId = await requireAIEntitlement(c);
     const body = await c.req.json();
@@ -105,11 +127,11 @@ apiRoutes.post('/summarize-call', async (c) => {
     return c.json(result);
   } catch (err) {
     const mapped = mapApiError(err, formatCleanErrorMessage(err));
-    return c.json(mapped.body, mapped.status as 401 | 402 | 500);
+    return c.json(mapped.body, mapped.status as 401 | 402 | 429 | 500);
   }
 });
 
-apiRoutes.post('/generate-avatar', async (c) => {
+apiRoutes.post('/generate-avatar', aiHeavyRateLimit, async (c) => {
   try {
     const userId = await requireAIEntitlement(c);
     const body = await c.req.json();
@@ -130,6 +152,6 @@ apiRoutes.post('/generate-avatar', async (c) => {
     return c.json(result);
   } catch (err) {
     const mapped = mapApiError(err, formatCleanErrorMessage(err));
-    return c.json(mapped.body, mapped.status as 401 | 402 | 500);
+    return c.json(mapped.body, mapped.status as 401 | 402 | 429 | 500);
   }
 });

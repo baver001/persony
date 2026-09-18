@@ -11,16 +11,35 @@ Deploy **does not** run on pull requests — only after merge to `main`.
 
 ## Local parity
 
-```bash
+Первый раз (или после ошибки `tsc не является командой`):
+
+```powershell
+cd "D:\02_Projects\Utilites\Persony"
+npm ci
+```
+
+Если `npm ci` падает с `EBUSY` — сначала остановите `npm run dev` (Ctrl+C), затем:
+
+```powershell
+cd "D:\02_Projects\Utilites\Persony"
+Remove-Item -Recurse -Force node_modules
+npm ci
+```
+
+Проверки по отдельности:
+
+```powershell
+cd "D:\02_Projects\Utilites\Persony"
 npm run validate:i18n
 npm run lint
 npm test
 npm run build
 ```
 
-Or one command:
+Или одной командой:
 
-```bash
+```powershell
+cd "D:\02_Projects\Utilites\Persony"
 npm run ci
 ```
 
@@ -40,6 +59,7 @@ Worker runtime secrets (`GEMINI_API_KEY`, `CLERK_SECRET_KEY`, etc.) are set in C
 2. **Invalid locale JSON** — `npm run validate:i18n` (missing commas in `src/i18n/locales/**`)
 3. **Tests** — `npm test`
 4. **Missing CF secrets** — deploy job fails at secret verification step
+5. **Missing `dist/`** — deploy job must run `npm run build` before `wrangler deploy` (assets directory)
 
 ## Branch protection (recommended)
 

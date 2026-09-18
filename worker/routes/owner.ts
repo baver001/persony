@@ -6,6 +6,7 @@ import { RoleRequiredError, requireOwnerAccess } from '../middleware/roles';
 import { DEFAULT_BATTERY_CONFIG } from '../billing/battery-config';
 import { getSystemSetting, setSystemSetting } from '../repositories/settings-repository';
 import { writeAuditLog } from '../services/audit-service';
+import { getOwnerEconomicsSnapshot } from '../services/economics-service';
 import { ownerAdjustBattery } from '../services/energy-service';
 import type { PersonyEnv } from '../types/env';
 
@@ -106,6 +107,17 @@ ownerRoutes.put('/owner/system/settings', async (c) => {
     });
 
     return c.json({ ok: true });
+  } catch (err) {
+    return ownerErrorResponse(c, err);
+  }
+});
+
+ownerRoutes.get('/owner/economics', async (c) => {
+  try {
+    await requireOwnerAccess(c);
+    if (!c.env.DB) return c.json({ error_code: 'DB_NOT_CONFIGURED' }, 503);
+    const economics = await getOwnerEconomicsSnapshot(c.env.DB);
+    return c.json({ economics });
   } catch (err) {
     return ownerErrorResponse(c, err);
   }

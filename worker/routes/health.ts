@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { APP_VERSION } from '../lib/version';
 import type { PersonyEnv } from '../types/env';
 import { isDbReady } from '../repositories/persona-repository';
 
@@ -9,7 +10,9 @@ healthRoutes.get('/health', async (c) => {
   return c.json({
     status: 'ok',
     service: 'persony',
-    db: dbReady ? 'ready' : c.env.DB ? 'pending_migration' : 'not_configured',
+    version: APP_VERSION,
+    deployment: c.env.ENVIRONMENT || 'development',
+    database: dbReady ? 'ready' : c.env.DB ? 'pending_migration' : 'not_configured',
     timestamp: Date.now(),
   });
 });

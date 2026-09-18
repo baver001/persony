@@ -19,16 +19,29 @@ import {
   requireUser,
 } from '../middleware/auth';
 import { requireAIEntitlement } from '../middleware/entitlement';
+import { clientIp, rateLimitMiddleware } from '../middleware/rate-limit';
 import { enrichPersonaCreateInput, type PersonaPayload } from '../services/persona-spec-builder';
 import type { PersonyEnv } from '../types/env';
 
 export const personaRoutes = new Hono<{ Bindings: PersonyEnv }>();
 
-personaRoutes.get('/personas', async (c) => {
-  if (c.env.DB) await ensureOfficialPersonasSeeded(c.env.DB);
-  const personas = await listPublicPersonas(c.env, c.env.DB);
-  return c.json({ personas });
-});
+personaRoutes.get(
+  '/personas',
+  rateLimitMiddleware({
+    scope: 'public_personas',
+    limit: 120,
+    windowSec: 60,
+    key: (c) => clientIp(c),
+  }),
+  async (c) => {
+    if (c.env.DB) await ensureOfficialPersonasSeeded(c.env.DB);
+    const locale = c.req.query('locale') === 'ru' ? 'ru' : 'en';
+    const personas = await listPublicPersonas(c.env, c.env.DB, locale);
+    const official = personas.filter((p) => p.isOfficial);
+    const community = personas.filter((p) => !p.isOfficial);
+    return c.json({ personas, official, community });
+  }
+);
 
 personaRoutes.get('/personas/mine', async (c) => {
   try {
@@ -45,13 +58,22 @@ personaRoutes.get('/personas/mine', async (c) => {
   }
 });
 
-personaRoutes.get('/personas/by-slug/:slug', async (c) => {
+personaRoutes.get(
+  '/personas/by-slug/:slug',
+  rateLimitMiddleware({
+    scope: 'public_persona_slug',
+    limit: 60,
+    windowSec: 60,
+    key: (c) => clientIp(c),
+  }),
+  async (c) => {
   const slug = c.req.param('slug');
   const locale = c.req.query('locale') === 'ru' ? 'ru' : 'en';
   const persona = await findPublicPersonaBySlug(c.env, c.env.DB, slug, locale);
   if (!persona) return c.json({ error: 'Persona not found' }, 404);
   return c.json({ persona });
-});
+  }
+);
 
 personaRoutes.get('/personas/:id', async (c) => {
   const auth = await getAuthContext(c);

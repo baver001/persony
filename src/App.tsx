@@ -982,7 +982,7 @@ function ChatApp() {
         </div>
       </div>
 
-      {/* Live Voice Call Modal (Gemini 3.1 Flash Live) */}
+      {/* Voice Call modal (Gemini Live) */}
       <LiveVoiceCallModal
         character={callingPersona}
         isOpen={isCallOpen}

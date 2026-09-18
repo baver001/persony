@@ -1,5 +1,6 @@
 {
   "appName": "Persony",
+  "appTitle": "Persony — AI Messenger",
   "delete": "Delete",
   "edit": "Edit",
   "save": "Save",
@@ -31,7 +32,7 @@
   "createNewPersona": "Create new persona",
   "callVoice": "Call",
   "noPersonasFound": "No personas found",
-  "voiceCallPreview": "Voice call",
+  "voiceCallPreview": "Voice Call",
   "customBadge": "Custom",
   "pwaInstall": "Install <1>Persony</1> for quick calls",
   "pwaManual": "Browser menu → <1>Install app</1> or Add to Home Screen.",
