@@ -30,6 +30,7 @@ Status labels:
 | D1 migrations 0008–0014 (economy, confidence, pricing_entry, breakdown, operation normalize, pricing_entries DB) | ✓ | partial | ✓ migrate job | ✓ |
 | Clerk auth | ✓ | partial | ✓ | ✓ |
 | Owner routes require auth (401 without JWT) | ✓ | — | ✓ post-deploy smoke | ✓ |
+| D1 CostEngine 2.0 rows on production | ✓ code | — | ✓ `smoke:economics:d1` in CI | **0/8 runs** — need fresh chat |
 | Paddle live | ✗ `BILLING_ENABLED=false` | — | — | N/A |
 
 ---
