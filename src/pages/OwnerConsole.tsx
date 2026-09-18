@@ -50,6 +50,10 @@ export function OwnerConsole({ onBack }: Props) {
   const [users, setUsers] = useState<OwnerUserRow[]>([]);
   const [usersError, setUsersError] = useState(false);
   const [usersLoading, setUsersLoading] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<OwnerUserRow | null>(null);
+  const [userInferences, setUserInferences] = useState<OwnerInferenceListItem[]>([]);
+  const [userInferencesTotal, setUserInferencesTotal] = useState(0);
+  const [userInferencesLoading, setUserInferencesLoading] = useState(false);
   const [personas, setPersonas] = useState<OwnerPersonaRow[]>([]);
   const [personasError, setPersonasError] = useState(false);
   const [personasLoading, setPersonasLoading] = useState(false);
@@ -156,6 +160,20 @@ export function OwnerConsole({ onBack }: Props) {
       setUsers([]);
     } finally {
       setUsersLoading(false);
+    }
+  }, []);
+
+  const loadUserInferences = useCallback(async (userId: string) => {
+    setUserInferencesLoading(true);
+    try {
+      const data = await fetchOwnerInferenceList({ userId, limit: 25 });
+      setUserInferences(data.items);
+      setUserInferencesTotal(data.total);
+    } catch {
+      setUserInferences([]);
+      setUserInferencesTotal(0);
+    } finally {
+      setUserInferencesLoading(false);
     }
   }, []);
 
@@ -387,9 +405,26 @@ export function OwnerConsole({ onBack }: Props) {
       {section === 'users' && (
         <OwnerUsersSection
           users={users}
+          selectedUser={selectedUser}
+          userInferences={userInferences}
+          userInferencesTotal={userInferencesTotal}
+          userInferencesLoading={userInferencesLoading}
           loading={usersLoading}
           error={usersError}
           onRetry={() => void loadUsers()}
+          onSelectUser={(user) => {
+            setSelectedUser(user);
+            void loadUserInferences(user.id);
+          }}
+          onClearUser={() => {
+            setSelectedUser(null);
+            setUserInferences([]);
+            setUserInferencesTotal(0);
+          }}
+          onSelectInference={(id) => {
+            setSection('inference');
+            void loadInferenceDetail(id);
+          }}
         />
       )}
 

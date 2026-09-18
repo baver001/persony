@@ -188,6 +188,7 @@ export async function fetchOwnerInferenceList(params?: {
   status?: string;
   costConfidence?: string;
   operation?: string;
+  userId?: string;
 }): Promise<{
   items: OwnerInferenceListItem[];
   total: number;
@@ -200,6 +201,7 @@ export async function fetchOwnerInferenceList(params?: {
   if (params?.status) query.set('status', params.status);
   if (params?.costConfidence) query.set('costConfidence', params.costConfidence);
   if (params?.operation) query.set('operation', params.operation);
+  if (params?.userId) query.set('userId', params.userId);
   const qs = query.toString();
   return ownerFetch(`/owner/inference${qs ? `?${qs}` : ''}`);
 }

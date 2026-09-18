@@ -21,7 +21,7 @@ Implementation: `src/pages/owner/`, orchestrator `src/pages/OwnerConsole.tsx`.
 | Economy | Economics dashboard, Battery | Economics implemented; battery overview API exists |
 | People | Users, Personas | Users + Personas analytics (inference + known COGS) |
 | Usage | Memory stats | Basic stats API |
-| System | Settings, Audit | Settings + audit log |
+| System | Settings, Audit, Errors | Feature flags (maintenance, battery) + audit + failed inference |
 
 ### Mobile layout
 
@@ -80,12 +80,12 @@ Client: `src/lib/api/owner.ts` — typed fetch helpers (no `Record<string, unkno
 
 ## Open gaps (goal brief)
 
-- [ ] Routing UI without deploy (full provider/model matrix)
-- [ ] Voice Calls section + economics breakdown
-- [ ] Personas analytics (usage, cost per persona)
-- [ ] Users detail (inference history per user)
-- [ ] Feature flags section
-- [ ] Errors / failed inference dedicated view
+- [x] Routing matrix (read-only from Model Registry) + `chat_text_provider` toggle
+- [ ] Voice Calls dedicated section (economics in Inference Explorer)
+- [x] Personas analytics (usage, cost per persona)
+- [x] Users detail (inference history per user)
+- [x] Feature flags section (maintenance_mode, battery_enabled, battery_mode)
+- [x] Errors / failed inference dedicated view
 - [ ] DB-backed pricing admin (edit + audit)
 - [ ] Production E2E verification checklist
 
