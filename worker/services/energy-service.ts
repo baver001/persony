@@ -6,7 +6,11 @@ import {
   percentageFromUnits,
   unitsForOperation,
 } from '../billing/battery-config';
-import { energyUnitsFromProviderCost } from '../billing/cost-engine';
+import {
+  energyUnitsFromProviderCost,
+  loadRetailPricingConfig,
+  type RetailPricingConfig,
+} from '../billing/retail-pricing';
 import { generateId } from '../lib/ids';
 import {
   atomicReserveEnergyUnits,
@@ -234,10 +238,11 @@ export function actualEnergyUnitsForUsage(
   operation: string,
   config: BatteryConfig,
   tokenHint?: { input?: number; output?: number },
-  providerCostMicrousd?: number
+  providerCostMicrousd?: number,
+  retailPricing?: RetailPricingConfig
 ): number {
   if (providerCostMicrousd && providerCostMicrousd > 0) {
-    return energyUnitsFromProviderCost(providerCostMicrousd);
+    return energyUnitsFromProviderCost(providerCostMicrousd, retailPricing);
   }
   return unitsForOperation(operation, config, tokenHint);
 }
@@ -316,11 +321,13 @@ export async function settleEnergyForInference(
     return getBatterySnapshot(db, userId);
   }
 
+  const retailPricing = await loadRetailPricingConfig(db);
   const actualUnits = actualEnergyUnitsForUsage(
     operation,
     config,
     tokenHint,
-    providerCostMicrousd
+    providerCostMicrousd,
+    retailPricing
   );
   const now = new Date().toISOString();
 

@@ -11,6 +11,11 @@ type Economics = {
   callsToday: number;
   energyConsumedToday: number;
   costByProvider: Array<{ provider: string; costMicrousd: number; calls: number }>;
+  simulatedRetailValueTodayMicrousd: number;
+  simulatedGrossProfitTodayMicrousd: number;
+  simulatedGrossMarginTodayPercent: number;
+  retailPricingVersion: string;
+  targetAiGrossMargin: number;
 };
 
 type Props = {
@@ -46,6 +51,18 @@ export function OwnerEconomySection({ economics, loading, error, onRetry }: Prop
     { label: t('estimatedCallsLabel'), value: String(economics.estimatedCostCallsToday) },
     { label: t('callsToday'), value: String(economics.callsToday) },
     { label: t('energyToday'), value: String(economics.energyConsumedToday) },
+    {
+      label: t('simulatedRetailToday'),
+      value: formatMicrousd(economics.simulatedRetailValueTodayMicrousd, 4),
+    },
+    {
+      label: t('simulatedGrossMargin'),
+      value: `${economics.simulatedGrossMarginTodayPercent}%`,
+    },
+    {
+      label: t('targetAiGrossMargin'),
+      value: `${Math.round(economics.targetAiGrossMargin * 100)}% (${economics.retailPricingVersion})`,
+    },
   ];
 
   return (

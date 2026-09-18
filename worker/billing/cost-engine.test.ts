@@ -55,8 +55,14 @@ describe('CostEngine', () => {
 });
 
 describe('energyUnitsFromProviderCost', () => {
-  it('applies markup and rounds up to at least 1 unit', () => {
+  it('applies margin-based retail and rounds up to at least 1 unit', () => {
     expect(energyUnitsFromProviderCost(0)).toBe(1);
-    expect(energyUnitsFromProviderCost(1_000, 2.5, 100)).toBeGreaterThanOrEqual(1);
+    expect(
+      energyUnitsFromProviderCost(1_000, {
+        version: 'test',
+        targetAiGrossMargin: 0.5,
+        microusdPerEnergyUnit: 100,
+      })
+    ).toBeGreaterThanOrEqual(1);
   });
 });

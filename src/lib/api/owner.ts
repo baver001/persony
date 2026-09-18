@@ -72,6 +72,11 @@ export async function fetchOwnerEconomics(): Promise<{
     costByProvider: Array<{ provider: string; costMicrousd: number; calls: number }>;
     costByModel: Array<{ provider: string; model: string; costMicrousd: number; calls: number }>;
     activeUsersWithInference7d: number;
+    simulatedRetailValueTodayMicrousd: number;
+    simulatedGrossProfitTodayMicrousd: number;
+    simulatedGrossMarginTodayPercent: number;
+    retailPricingVersion: string;
+    targetAiGrossMargin: number;
   };
 }> {
   return ownerFetch('/owner/economics');

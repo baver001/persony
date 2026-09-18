@@ -1,4 +1,5 @@
 import { defaultCostEngine } from '../billing/cost-engine';
+import { loadRetailPricingConfig } from '../billing/retail-pricing';
 import { resolveChatRoute, streamChatWithRouter } from './model-router';
 import { formatCleanErrorMessage } from '../lib/errors';
 import { logEvent } from '../lib/structured-log';
@@ -187,12 +188,14 @@ async function executeInferenceStream(
           await touchConversation(db, run.conversationId);
 
           const batteryConfig = await loadBatteryConfig(db);
+          const retailPricing = await loadRetailPricingConfig(db);
           const knownCostMicrousd = cost.providerCostMicrousd ?? undefined;
           const energyCharged = actualEnergyUnitsForUsage(
             'text_chat',
             batteryConfig,
             { input: usage.inputTokens, output: usage.outputTokens },
-            knownCostMicrousd
+            knownCostMicrousd,
+            retailPricing
           );
 
           await settleEnergyForInference(

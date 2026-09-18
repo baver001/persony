@@ -1,3 +1,9 @@
+import {
+  loadRetailPricingConfig,
+  retailMicrousdFromProviderCost,
+  simulatedGrossMarginPercent,
+  simulatedGrossProfitMicrousd,
+} from '../billing/retail-pricing';
 import { toSqlCount } from '../lib/sql-count';
 
 type PeriodRow = {
@@ -81,6 +87,12 @@ export type OwnerEconomicsSnapshot = {
   costByProvider: Array<{ provider: string; costMicrousd: number; calls: number }>;
   costByModel: Array<{ provider: string; model: string; costMicrousd: number; calls: number }>;
   activeUsersWithInference7d: number;
+  /** Simulated retail — not actual revenue until Paddle billing. */
+  simulatedRetailValueTodayMicrousd: number;
+  simulatedGrossProfitTodayMicrousd: number;
+  simulatedGrossMarginTodayPercent: number;
+  retailPricingVersion: string;
+  targetAiGrossMargin: number;
 };
 
 export async function getOwnerEconomicsSnapshot(
@@ -135,6 +147,10 @@ export async function getOwnerEconomicsSnapshot(
   const fallbackRateToday =
     totalToday > 0 ? todayRow.fallback_runs / totalToday : 0;
 
+  const retailPricing = await loadRetailPricingConfig(db);
+  const knownCogsToday = todayRow.known_cost_microusd;
+  const simulatedRetailToday = retailMicrousdFromProviderCost(knownCogsToday, retailPricing);
+
   return {
     aiCostTodayMicrousd: todayRow.known_cost_microusd,
     aiCost7dMicrousd: row7.known_cost_microusd,
@@ -161,5 +177,16 @@ export async function getOwnerEconomicsSnapshot(
       calls: r.calls,
     })),
     activeUsersWithInference7d: toSqlCount(activeUsers),
+    simulatedRetailValueTodayMicrousd: simulatedRetailToday,
+    simulatedGrossProfitTodayMicrousd: simulatedGrossProfitMicrousd(
+      knownCogsToday,
+      retailPricing
+    ),
+    simulatedGrossMarginTodayPercent: simulatedGrossMarginPercent(
+      knownCogsToday,
+      retailPricing
+    ),
+    retailPricingVersion: retailPricing.version,
+    targetAiGrossMargin: retailPricing.targetAiGrossMargin,
   };
 }

@@ -43,8 +43,11 @@ Inference stores `pricing_entry_id` (comma-separated when multiple dimensions) a
 
 ## Energy vs COGS
 
-- **AI COGS** — provider cost from CostEngine
-- **Energy** — user-facing units; retail markup configured separately (Phase E: remove hardcoded 2.5)
+- **AI COGS** — provider cost from CostEngine (`actual` / `estimated` / `unpriced`)
+- **Simulated retail** — `retail = COGS / (1 - target_ai_gross_margin)` via `retail-pricing.ts`
+- **Energy units** — `ceil(simulated_retail_microusd / retail_microusd_per_energy_unit)`
+- Config keys: `target_ai_gross_margin`, `retail_microusd_per_energy_unit`, `retail_pricing_version`
+- Default margin: `TARGET_AI_GROSS_MARGIN` (0.8) — **not** a hidden 2.5× markup
 
 ## Open gaps
 

@@ -65,12 +65,5 @@ export class CostEngine {
 
 export const defaultCostEngine = new CostEngine();
 
-export function energyUnitsFromProviderCost(
-  providerCostMicrousd: number,
-  markupTarget = 2.5,
-  microusdPerEnergyUnit = 100
-): number {
-  if (providerCostMicrousd <= 0) return 1;
-  const retailMicrousd = Math.round(providerCostMicrousd * markupTarget);
-  return Math.max(1, Math.ceil(retailMicrousd / microusdPerEnergyUnit));
-}
+/** @deprecated Import from `retail-pricing.ts` */
+export { energyUnitsFromProviderCost } from './retail-pricing';
