@@ -95,7 +95,7 @@ Status labels:
 | `docs/PRODUCTION_ECONOMICS_SMOKE.md` | ✓ incl. transcribe/avatar optional |
 | `docs/METRICS.md` | ✓ |
 | `specs/owner-console.md` | ✓ partial gaps (DB pricing admin) |
-| `specs/economics.md` | partial — catalog still code-defined |
+| `specs/economics.md` | ✓ synced — DB pricing + Milestone 1 manual open |
 | This file | ✓ refresh on each deploy milestone |
 
 ---

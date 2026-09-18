@@ -10,13 +10,13 @@
 
 | Field | Value |
 |-------|--------|
-| **Current production SHA** | `919f463` — full Owner mobile card layouts + economics stack |
+| **Current production SHA** | `c5b3fc1` — Owner mobile cards complete + docs sync |
 | **Production health** | `GET https://beta.persony.org/api/health` → ok, database ready |
 | **Last migration (remote D1)** | `0014_pricing_catalog_db.sql` |
 | **CI** | Green (see latest `main` deploy) |
 | **Public smoke** | `npm run smoke:economics:public` passes when reachable |
 | **Production smoke (economics)** | **NOT RUN** — owner login required |
-| **Tests (local)** | 121/121 |
+| **Tests (local)** | 123/123 |
 
 Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 
