@@ -455,7 +455,7 @@ export async function initLiveSession(
         if (clientWs.readyState !== 1) return;
 
         const usage = mapGeminiUsageMetadata(
-          (serverMessage as { usageMetadata?: Record<string, unknown> }).usageMetadata as
+          (serverMessage as { usageMetadata?: unknown }).usageMetadata as
             | {
                 promptTokenCount?: number;
                 candidatesTokenCount?: number;

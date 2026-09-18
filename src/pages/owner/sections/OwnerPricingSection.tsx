@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CreateOwnerPricingEntryInput, OwnerPricingEntry } from '../../../lib/api/owner';
 import { createOwnerPricingEntry } from '../../../lib/api/owner';
@@ -41,7 +41,7 @@ export function OwnerPricingSection({
     reason: '',
   });
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!form.reason.trim()) {
       setFormError(t('pricingReasonRequired'));
