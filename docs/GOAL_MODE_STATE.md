@@ -18,7 +18,7 @@
 | **Owner API smoke** | `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner` |
 | **D1 operator smoke** | `npm run smoke:economics:d1` (wrangler remote) |
 | **Production smoke (economics)** | **PARTIAL** — D1: 0 runs with `cost_calculated_at` in 7d; need fresh chat post-`dcad14f` |
-| **Tests (local)** | 124/124 (incl. settled cost immutability) |
+| **Tests (local)** | 125/125 (incl. chat_text CostEngine 2.0 integration) |
 
 Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 

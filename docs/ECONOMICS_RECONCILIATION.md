@@ -40,7 +40,7 @@ Status labels:
 | Area | IMPLEMENTED | TESTED | PRODUCTION E2E |
 |------|:-----------:|:------:|:--------------:|
 | Central `model-registry.ts` + `listOwnerRoutingMatrix` | ✓ | ✓ | NOT VERIFIED |
-| Chat text (Gemini + DeepSeek stream usage) | ✓ | ✓ | **MANUAL open** |
+| Chat text (Gemini + DeepSeek stream usage) | ✓ | ✓ phase11 CostEngine 2.0 fields | **MANUAL open** (prod D1) |
 | Voice call (`voice_call`, Live usageMetadata + duration fallback) | ✓ | ✓ | **MANUAL open** |
 | Transcribe (`voice_transcription`, usageMetadata) | ✓ | ✓ | **MANUAL open** |
 | Avatar (`avatar_generation`, per_image COGS) | ✓ | ✓ | **MANUAL open** |

@@ -70,6 +70,8 @@ describe('text-generation-inference-service', () => {
     expect(run?.providerCostMicrousd).toBeGreaterThan(0);
     expect(run?.inputTokens).toBe(400);
     expect(run?.outputTokens).toBe(220);
+    expect(run?.costCalculatedAt).toBeTruthy();
+    expect(run?.costBreakdownJson).toContain('lines');
   });
 
   it('records call_summary inference with priced COGS', async () => {
@@ -91,5 +93,7 @@ describe('text-generation-inference-service', () => {
     expect(run?.status).toBe('completed');
     expect(run?.costConfidence).toBe('actual');
     expect(run?.providerCostMicrousd).toBeGreaterThan(0);
+    expect(run?.costCalculatedAt).toBeTruthy();
+    expect(run?.costBreakdownJson).toContain('lines');
   });
 });

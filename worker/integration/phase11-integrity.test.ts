@@ -4,6 +4,8 @@ import { handleChat } from '../lib/gemini';
 import { createDirectConversation, getConversationForUser, softDeleteConversation } from '../repositories/conversation-repository';
 import { listMessages } from '../repositories/message-repository';
 import { createPersonaInDb, getPersonaVersion } from '../repositories/persona-repository';
+import { findInferenceRunByClientRequest } from '../repositories/inference-run-repository';
+import { setSystemSetting } from '../repositories/settings-repository';
 import { importLocalV1 } from '../services/import-service';
 import { ConversationAccessError, streamConversationReply } from '../services/chat-service';
 import { resolveLiveConversationContext } from '../services/live-context-service';
@@ -24,6 +26,25 @@ function mockChatStream(text: string): ReadableStream<Uint8Array> {
     start(controller) {
       controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));
       controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
+      controller.close();
+    },
+  });
+}
+
+function mockChatStreamWithUsage(text: string): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));
+      controller.enqueue(
+        encoder.encode(
+          `data: ${JSON.stringify({
+            done: true,
+            model: 'gemini-3.8-flash',
+            usage: { inputTokens: 100, outputTokens: 50 },
+          })}\n\n`
+        )
+      );
       controller.close();
     },
   });
@@ -100,6 +121,29 @@ describe('Phase 1.1 integrity', () => {
     expect(messages.filter((m) => m.senderType === 'user')).toHaveLength(1);
     expect(messages.filter((m) => m.senderType === 'persona')).toHaveLength(1);
     expect(vi.mocked(handleChat)).toHaveBeenCalledTimes(1);
+  });
+
+  it('chat_text persists CostEngine 2.0 economics fields when provider reports usage', async () => {
+    vi.mocked(handleChat).mockResolvedValue(mockChatStreamWithUsage('Economics answer'));
+    await setSystemSetting(db, 'battery_enabled', false, 'test');
+
+    const persona = await seedPersona(db);
+    const conversation = await createDirectConversation(db, userId, persona.id, persona.currentVersion);
+    const clientRequestId = 'req_economics_cogs_1';
+
+    await consumeStream(
+      await streamConversationReply(env, userId, conversation.id, 'Hello economics', clientRequestId)
+    );
+
+    const run = await findInferenceRunByClientRequest(db, conversation.id, clientRequestId);
+    expect(run?.operationType).toBe('chat_text');
+    expect(run?.status).toBe('completed');
+    expect(run?.costConfidence).toBe('actual');
+    expect(run?.usageEstimated).toBe(false);
+    expect(run?.providerCostMicrousd).toBeGreaterThan(0);
+    expect(run?.pricingEntryId).toBeTruthy();
+    expect(run?.costCalculatedAt).toBeTruthy();
+    expect(run?.costBreakdownJson).toContain('lines');
   });
 
   it('replays completed inference without a second model call', async () => {
