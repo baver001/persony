@@ -12,13 +12,12 @@ import {
   summarizeCallSchema,
   transcribeRequestSchema,
 } from '../lib/validation';
-import { generateId } from '../lib/ids';
 import { bodySizeLimit } from '../middleware/body-limit';
 import { getAuthContext } from '../middleware/auth';
 import { requireAIEntitlement } from '../middleware/entitlement';
 import { mapApiError } from '../lib/api-errors';
 import { clientIp, rateLimitMiddleware } from '../middleware/rate-limit';
-import { chargeBatteryForInference } from '../services/energy-service';
+import { withEnergyReservation } from '../services/energy-service';
 import type { PersonyEnv } from '../types/env';
 import { conversationRoutes } from './conversations';
 import { healthRoutes } from './health';
@@ -72,16 +71,17 @@ apiRoutes.post('/transcribe', aiUserRateLimit, async (c) => {
     if (!parsed.success) {
       return c.json({ error: 'Invalid transcribe payload' }, 400);
     }
-    const result = await handleTranscribe(
-      c.env.GEMINI_API_KEY,
-      parsed.data.audioBase64,
-      parsed.data.mimeType
+    const result = await withEnergyReservation(
+      c.env.DB,
+      userId,
+      'voice_transcription',
+      () =>
+        handleTranscribe(
+          c.env.GEMINI_API_KEY,
+          parsed.data.audioBase64,
+          parsed.data.mimeType
+        )
     );
-    if (c.env.DB) {
-      await chargeBatteryForInference(c.env.DB, userId, generateId(), 'voice_transcription').catch(
-        () => undefined
-      );
-    }
     return c.json(result);
   } catch (err) {
     const mapped = mapApiError(err, formatCleanErrorMessage(err));

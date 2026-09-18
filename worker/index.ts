@@ -18,7 +18,9 @@ import { ConversationAccessError } from './services/chat-service';
 import {
   assertBatteryAllowsAI,
   BatteryEmptyError,
-  chargeBatteryForInference,
+  releaseEnergyForInference,
+  reserveEnergyForInference,
+  settleEnergyForInference,
 } from './services/energy-service';
 import { resolveLiveConversationContext } from './services/live-context-service';
 import { PersonaNotFoundError } from './services/persona-service';
@@ -47,6 +49,8 @@ app.get(
     let initInProgress = false;
     let sessionTimeout: ReturnType<typeof setTimeout> | null = null;
     let malformedCount = 0;
+    let liveChargeKey: string | null = null;
+    let liveUserId: string | null = null;
 
     const cleanup = () => {
       if (sessionTimeout) {
@@ -110,12 +114,14 @@ app.get(
                 const chargeKey =
                   parsed.data.callSessionId ||
                   `live:${parsed.data.conversationId || parsed.data.personaId}:${generateId()}`;
-                await chargeBatteryForInference(
+                await reserveEnergyForInference(
                   c.env.DB,
                   auth.userId,
                   chargeKey,
                   'live_voice'
-                ).catch(() => undefined);
+                );
+                liveChargeKey = chargeKey;
+                liveUserId = auth.userId;
               }
 
               const liveContext = await resolveLiveConversationContext(
@@ -137,6 +143,16 @@ app.get(
               armSessionTimeout(ws);
               ws.send(JSON.stringify({ type: 'connected' }));
             } catch (err) {
+              if (c.env.DB && liveChargeKey && liveUserId) {
+                void releaseEnergyForInference(
+                  c.env.DB,
+                  liveUserId,
+                  liveChargeKey,
+                  'live_voice_init_failed'
+                );
+                liveChargeKey = null;
+                liveUserId = null;
+              }
               const message =
                 err instanceof AuthRequiredError
                   ? 'Authentication required'
@@ -195,6 +211,18 @@ app.get(
         }
       },
       onClose() {
+        if (c.env.DB && liveChargeKey && liveUserId) {
+          void settleEnergyForInference(
+            c.env.DB,
+            liveUserId,
+            liveChargeKey,
+            'live_voice'
+          ).catch(() =>
+            releaseEnergyForInference(c.env.DB!, liveUserId!, liveChargeKey!, 'live_voice_close')
+          );
+          liveChargeKey = null;
+          liveUserId = null;
+        }
         cleanup();
       },
     };

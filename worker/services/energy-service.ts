@@ -357,6 +357,26 @@ export async function releaseEnergyForInference(
   });
 }
 
+export async function withEnergyReservation<T>(
+  db: D1Database | undefined,
+  userId: string,
+  operation: string,
+  fn: () => Promise<T>
+): Promise<T> {
+  if (!db) return fn();
+
+  const runId = generateId();
+  await reserveEnergyForInference(db, userId, runId, operation);
+  try {
+    const result = await fn();
+    await settleEnergyForInference(db, userId, runId, operation);
+    return result;
+  } catch (err) {
+    await releaseEnergyForInference(db, userId, runId, 'operation_failed');
+    throw err;
+  }
+}
+
 export async function chargeBatteryForInference(
   db: D1Database,
   userId: string,
