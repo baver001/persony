@@ -60,6 +60,11 @@
 13. After a voice call, open call insights recap on the summary message.
 14. Inference filter `call_summary` → token COGS linked to `personaId`.
 
+## Owner Console layout (390px / 1440px)
+
+15. At **390px** width: bottom nav + More drawer work; Inference/Users/Personas use card lists (no required horizontal scroll).
+16. At **1440px** width: desktop sidebar visible; tables render for analytics sections.
+
 ## Record outcome
 
 Update `docs/GOAL_MODE_STATE.md` manual verification table with date, inference run id, and pass/fail per row.

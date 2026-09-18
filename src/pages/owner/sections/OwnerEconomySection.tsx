@@ -76,7 +76,23 @@ export function OwnerEconomySection({ economics, loading, error, onRetry }: Prop
         ))}
       </div>
       {economics.costByProvider.length > 0 && (
-        <section className="rounded-xl border border-white/10 overflow-x-auto">
+        <ul className="md:hidden space-y-2">
+          {economics.costByProvider.map((row) => (
+            <li
+              key={row.provider}
+              className="rounded-xl border border-white/10 bg-white/[0.02] p-3 flex justify-between gap-3"
+            >
+              <div>
+                <div className="font-medium">{row.provider}</div>
+                <div className="text-[11px] text-zinc-500">{row.calls} calls</div>
+              </div>
+              <div className="font-mono text-xs shrink-0">{formatMicrousd(row.costMicrousd, 4)}</div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {economics.costByProvider.length > 0 && (
+        <section className="hidden md:block rounded-xl border border-white/10 overflow-x-auto">
           <table className="w-full text-sm min-w-[480px]">
             <thead className="bg-white/5 text-zinc-400 text-left">
               <tr>

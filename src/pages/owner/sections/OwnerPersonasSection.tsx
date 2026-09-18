@@ -43,7 +43,34 @@ export function OwnerPersonasSection({
         onRetry={onRetry}
       />
       {personas.length > 0 && (
-        <div className="rounded-xl border border-white/10 overflow-x-auto">
+        <ul className="md:hidden space-y-2">
+          {personas.map((persona) => (
+            <li key={persona.id}>
+              <button
+                type="button"
+                onClick={() => onSelectPersona(persona)}
+                className={`w-full rounded-xl border border-white/10 p-3 text-left min-h-[44px] ${
+                  selectedPersona?.id === persona.id
+                    ? 'bg-white/10'
+                    : 'bg-white/[0.02] hover:bg-white/5'
+                }`}
+              >
+                <div className="font-medium">{persona.name}</div>
+                <div className="text-[11px] text-zinc-500 font-mono truncate">{persona.slug || persona.id}</div>
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-zinc-400">
+                  <span>{persona.inferenceCount30d} inf / 30d</span>
+                  <span>{formatMicrousd(persona.knownCostMicrousd30d, 4)}</span>
+                  {persona.unpricedCount30d > 0 && (
+                    <span className="text-amber-300">{persona.unpricedCount30d} unpriced</span>
+                  )}
+                </div>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {personas.length > 0 && (
+        <div className="hidden md:block rounded-xl border border-white/10 overflow-x-auto">
           <table className="w-full text-sm min-w-[640px]">
             <thead className="bg-white/5 text-zinc-400 text-left">
               <tr>
