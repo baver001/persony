@@ -41,6 +41,19 @@ export async function fetchOwnerMemoryStats(): Promise<{
   return ownerFetch('/owner/memory/stats');
 }
 
+export async function updateOwnerSystemSetting(
+  key: string,
+  value: unknown,
+  reason?: string
+): Promise<boolean> {
+  const res = await fetch('/api/owner/system/settings', {
+    method: 'PUT',
+    headers: await getApiHeaders(),
+    body: JSON.stringify({ key, value, reason }),
+  });
+  return res.ok;
+}
+
 export async function fetchOwnerAudit(): Promise<{
   entries: Array<{
     id: string;

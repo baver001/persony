@@ -5,6 +5,7 @@
   "whatChanged": "Что изменилось",
   "personasHint": "Активных персон в каталоге: {{count}}.",
   "aiHint": "Зафиксировано неудачных inference runs: {{count}}.",
+  "chatProvider": "Провайдер текстового чата",
   "settingsHint": "API системных настроек: /api/owner/system/settings.",
   "sections": {
     "overview": "Обзор",

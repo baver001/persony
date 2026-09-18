@@ -30,6 +30,11 @@ export const createConversationSchema = z.object({
   title: z.string().max(200).optional(),
 });
 
+export const createRoomConversationSchema = z.object({
+  title: z.string().min(1).max(120),
+  personaIds: z.array(z.string().min(1).max(128)).min(2).max(4),
+});
+
 const behaviorProfileSchema = z.object({
   warmth: z.number().min(0).max(100).optional(),
   directness: z.number().min(0).max(100).optional(),

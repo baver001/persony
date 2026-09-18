@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Check, Link2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { Persona } from '../types';
 import { fetchPersonaBySlug, installPersona } from '../lib/api/personas';
+import { copyPersonaShareLink } from '../lib/sharePersona';
 
 type Props = {
   slug: string;
@@ -17,6 +18,7 @@ export function PublicPersonaPage({ slug, theme, onBack, onStartChat }: Props) {
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  const [copiedShare, setCopiedShare] = useState(false);
   const isDark = theme === 'dark';
 
   useEffect(() => {
@@ -93,14 +95,32 @@ export function PublicPersonaPage({ slug, theme, onBack, onStartChat }: Props) {
               </p>
             )}
 
-            <button
-              type="button"
-              disabled={starting}
-              onClick={() => void handleStart()}
-              className="w-full py-3 rounded-full bg-indigo-500 hover:bg-indigo-400 text-white font-medium text-sm disabled:opacity-60 transition-colors"
-            >
-              {starting ? t('common:loading') : t('personas:startChat')}
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                type="button"
+                disabled={starting}
+                onClick={() => void handleStart()}
+                className="flex-1 py-3 rounded-full bg-indigo-500 hover:bg-indigo-400 text-white font-medium text-sm disabled:opacity-60 transition-colors"
+              >
+                {starting ? t('common:loading') : t('personas:startChat')}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!persona) return;
+                  void copyPersonaShareLink(persona.id).then((ok) => {
+                    if (ok) {
+                      setCopiedShare(true);
+                      window.setTimeout(() => setCopiedShare(false), 2000);
+                    }
+                  });
+                }}
+                className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-full border border-py-border hover:border-py-text-muted text-sm transition-colors"
+              >
+                {copiedShare ? <Check className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
+                {copiedShare ? t('personas:shareLinkCopied') : t('personas:shareLink')}
+              </button>
+            </div>
           </article>
         )}
       </main>

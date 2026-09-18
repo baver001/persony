@@ -46,6 +46,7 @@ import {
 import { normalizeUserMessageForDisplay } from '../utils/chatMessageDisplay';
 import { useMobileLayout } from '../hooks/useMobileLayout';
 import { useBattery } from '../hooks/useBattery';
+import { SidebarBatteryControl } from './SidebarBatteryControl';
 import { getOfferedCallInsights } from '../utils/callTranscriptPersistence';
 import { submitMessageFeedback } from '../lib/api/feedback';
 
@@ -793,6 +794,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
         {/* Header Right Action Icons */}
         <div className="flex items-center gap-0.5 sm:gap-2 shrink-0">
+          <div className="md:hidden shrink-0">
+            <SidebarBatteryControl />
+          </div>
           {/* Search in Chat Button — desktop only */}
           <button
             onClick={() => setIsSearchOpen(!isSearchOpen)}

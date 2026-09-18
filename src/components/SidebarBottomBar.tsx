@@ -24,9 +24,6 @@ import { useTranslation } from 'react-i18next';
 import i18n, { setStoredLocale } from '../i18n';
 import { updatePreferredLocale } from '../lib/api/me';
 import { usePersonyAuth } from './PersonyAuthProvider';
-import { useBattery } from '../hooks/useBattery';
-import { BatteryIndicator } from './BatteryIndicator';
-import { BatterySheet } from './BatterySheet';
 
 type Props = {
   isDark: boolean;
@@ -107,10 +104,8 @@ export const SidebarBottomBar: React.FC<Props> = ({
   const { t } = useTranslation(['common', 'settings', 'personas']);
   const { openUserProfile, signOut } = useClerk();
   const { clerkEnabled, isLoaded, isSignedIn } = usePersonyAuth();
-  const { battery, refresh: refreshBattery } = useBattery();
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [showBatterySheet, setShowBatterySheet] = useState(false);
 
   const closeMenus = () => {
     setShowSettingsMenu(false);
@@ -157,19 +152,6 @@ export const SidebarBottomBar: React.FC<Props> = ({
           : 'flex-col gap-1.5 px-3 py-2.5'
       } ${isDark ? 'bg-[#18181b] border-zinc-800' : 'bg-white border-neutral-200'}`}
     >
-      {isSignedIn && battery?.enabled && (
-        <div className={compact ? 'w-full flex justify-center' : 'w-full'}>
-          <BatteryIndicator
-            battery={battery}
-            compact={compact}
-            onClick={() => {
-              void refreshBattery();
-              setShowBatterySheet(true);
-            }}
-          />
-        </div>
-      )}
-
       <div className={`flex w-full ${compact ? 'flex-col items-center gap-1' : 'flex-row items-center gap-2'}`}>
       <button
         type="button"
@@ -328,6 +310,12 @@ export const SidebarBottomBar: React.FC<Props> = ({
                     />
                     <MenuItem
                       isDark={isDark}
+                      onClick={() => go('/rooms')}
+                      icon={<Users className="w-3.5 h-3.5" />}
+                      label={t('rooms:title')}
+                    />
+                    <MenuItem
+                      isDark={isDark}
                       onClick={() => go('/my-personas')}
                       icon={<Users className="w-3.5 h-3.5" />}
                       label={t('personas:myPersonasTitle')}
@@ -367,11 +355,6 @@ export const SidebarBottomBar: React.FC<Props> = ({
       </div>
     </div>
 
-    <BatterySheet
-      isOpen={showBatterySheet}
-      onClose={() => setShowBatterySheet(false)}
-      battery={battery}
-    />
     </>
   );
 };

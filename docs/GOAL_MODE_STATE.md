@@ -1,45 +1,36 @@
 # Goal mode state
 
-**Objective:** Closed beta — Persona platform with simulation battery, multi-provider AI, Paddle prepared (not live).
+**Objective:** Closed beta platform — simulation battery, multi-provider AI, Paddle prepared, Rooms MVP.
 
 **Last updated:** 2026-09-18 UTC  
-**Current phase:** Phase 2–4 prep **complete (code)** — verify deploy + D1 `0007`
+**Current phase:** Phase 5–7 partial **complete (code)** — prod verify + D1 migrations
 
 ## Roadmap
 
 | Phase | Status |
 |-------|--------|
-| 1.1 Integrity Hardening | **Complete** |
-| 1.2 Persona + Memory + Trust + i18n | **Complete** |
-| 1.3 Closed beta (Battery, Discover, Owner) | **Complete** |
-| 2 Multi-provider AI | **Complete** (code) |
-| 3 Energy simulation | **Complete** — `battery_mode=simulation`, drain + lazy regen |
-| 4 Paddle payments | **Prepared** — schema + stubs, `BILLING_ENABLED` off |
-| 5 Public persona `/p/:slug` | **Complete** (code) |
-| 6–10 Rooms, tools, OSS | **Planned** |
+| 1.1–1.3 Closed beta core | **Complete** |
+| 2 Multi-provider AI | **Complete** |
+| 3 Energy simulation | **Complete** |
+| 4 Paddle prep | **Prepared** (not live) |
+| 5 Persona platform | **Partial** — visibility, share, `/p/:slug` |
+| 6 Memory | **Core done** — polish ongoing |
+| 7 Rooms | **MVP** — create/list, per-persona chat |
+| 8–10 Tools, voice, OSS | **Planned** |
 
-## Phase 2–4 component status
+## Latest (2026-09-18)
 
-| Component | Implemented | CI | Production |
-|-----------|---------------|-----|------------|
-| ModelRouter + Gemini + DeepSeek adapters | ✅ | Pending | Pending |
-| `chat_text_provider` system setting | ✅ | Pending | Pending |
-| Owner AI overview | ✅ | Pending | Pending |
-| `battery_mode=simulation` (+ beta_regen alias) | ✅ | Pending | Pending |
-| Migration `0007` billing tables | ✅ | Pending | Pending |
-| Billing API stubs (501/503) | ✅ | Pending | Pending |
-| Settings billing “coming soon” | ✅ | Pending | Pending |
-| Public persona `/p/:slug` + API | ✅ | Pending | Pending |
+| Component | Status |
+|-----------|--------|
+| Vertical battery top-left sidebar + mobile chat header | ✅ |
+| Persona visibility (private/unlisted/public) in creator | ✅ |
+| Share link copy (`/p/:slug`) | ✅ |
+| Rooms API + `/rooms` UI | ✅ |
+| Owner: `chat_text_provider` selector | ✅ |
 
 ## Operator next steps
 
-1. Apply D1 migration `0007` on production
-2. Optional: set `DEEPSEEK_API_KEY` secret for Phase 2 fallback
-3. Smoke: chat drain/regen, `/p/athena`, `/api/me/billing` returns disabled
-4. Do **not** set `BILLING_ENABLED` until Paddle catalog + legal ready
-
-## Constraints (unchanged)
-
-- No live Paddle checkout
-- No real payments
-- Battery = simulation only (auto regen, no paid recharge)
+1. `npm run db:migrate:remote` (0006 + 0007)
+2. Smoke: battery UI, rooms create, public persona share
+3. Optional: `DEEPSEEK_API_KEY`
+4. Do **not** enable Paddle checkout until legal + catalog ready

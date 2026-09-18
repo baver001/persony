@@ -5,6 +5,7 @@
   "whatChanged": "What changed",
   "personasHint": "{{count}} active personas in the catalog.",
   "aiHint": "{{count}} failed inference runs recorded.",
+  "chatProvider": "Text chat provider",
   "settingsHint": "System settings API is available at /api/owner/system/settings.",
   "sections": {
     "overview": "Overview",

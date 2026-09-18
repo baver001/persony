@@ -9,6 +9,7 @@ import {
   RefreshCw,
   Mic,
   ImagePlus,
+  ChevronDown,
 } from 'lucide-react';
 import { Persona, VoiceName } from '../types';
 import { generateSvgAvatar, PRESET_AVATARS } from '../utils/avatarGenerator';
@@ -23,6 +24,9 @@ interface CreatePersonaModalProps {
   onSave: (persona: Persona) => void;
   initialPersona?: Persona | null;
 }
+
+const inputClass =
+  'w-full bg-py-input border border-py-border rounded-xl px-3 py-2 text-sm text-py-text placeholder:text-py-text-muted focus:outline-none focus:border-py-accent/45 transition-colors';
 
 export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
   isOpen,
@@ -68,9 +72,13 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
   );
 
   const [aiPrompt, setAiPrompt] = useState('');
+  const [isAiOpen, setIsAiOpen] = useState(false);
   const [isGeneratingWithAi, setIsGeneratingWithAi] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [isAvatarStudioOpen, setIsAvatarStudioOpen] = useState(false);
+  const [visibility, setVisibility] = useState<'private' | 'unlisted' | 'public'>(
+    initialPersona?.visibility || 'private'
+  );
   const [behaviorProfile, setBehaviorProfile] = useState<CustomPersonaStyleInput>({
     warmth: 60,
     directness: 55,
@@ -91,7 +99,6 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
 
   if (!isOpen) return null;
 
-  // AI-Assisted persona generator
   const handleGenerateWithAI = async () => {
     if (!aiPrompt.trim()) return;
     setIsGeneratingWithAi(true);
@@ -170,91 +177,121 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
       starterMessages: starter1.trim() ? [starter1.trim()] : [t('defaultGreeting')],
       behaviorProfile,
       configurationJson: JSON.stringify(spec),
+      visibility,
     };
 
     onSave(newPersona);
     onClose();
   };
 
+  const sectionCardClass = 'rounded-2xl border border-py-border bg-py-elevated/70 p-4 space-y-3';
+
+  const SectionHeader = ({ title, hint }: { title: string; hint?: string }) => (
+    <div className="flex items-center justify-between gap-2">
+      <h3 className="text-[11px] font-semibold uppercase tracking-wide text-py-text-secondary">
+        {title}
+      </h3>
+      {hint ? <span className="text-[10px] text-py-text-muted">{hint}</span> : null}
+    </div>
+  );
+
   return (
     <div
       id="create-persona-backdrop"
-      className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto py-safe-top"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm"
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.96, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.96, y: 10 }}
-        className="w-full sm:max-w-4xl h-full sm:h-auto bg-zinc-900 border-0 sm:border border-zinc-800 rounded-none sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col sm:my-auto sm:max-h-[96vh]"
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 24 }}
+        className="w-full sm:max-w-3xl max-h-[100dvh] sm:max-h-[92dvh] bg-py-sidebar border-0 sm:border border-py-border rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col"
       >
-        {/* Compact Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800 bg-[#18181b] shrink-0">
-          <div>
-            <h2 className="text-sm sm:text-base font-bold text-white leading-tight">
+        <div className="flex items-start justify-between gap-3 px-4 sm:px-5 py-4 border-b border-py-border shrink-0">
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-py-text font-[family-name:var(--font-display)] leading-tight">
               {initialPersona ? t('editTitle') : t('createTitle')}
             </h2>
-            <p className="text-[11px] text-white/50">{t('createSubtitle')}</p>
+            <p className="text-xs text-py-text-muted mt-0.5">{t('createSubtitle')}</p>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="py-touch-target p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            className="py-touch-target p-2 rounded-lg text-py-text-muted hover:text-py-text hover:bg-py-input transition-colors cursor-pointer shrink-0"
+            aria-label={t('common:cancel')}
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* AI Quick Generator Strip */}
-        <div className="px-4 sm:px-5 py-2.5 bg-zinc-800/60 border-b border-zinc-700/60 shrink-0">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-300 shrink-0 hidden sm:flex">
-              <Wand2 className="w-3.5 h-3.5" />
-              <span>{t('quickGenerate')}</span>
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-4 sm:px-5 py-4 space-y-4">
+          {isAiOpen ? (
+            <div className="rounded-2xl border border-py-accent/25 bg-py-accent/5 p-3 space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-py-accent">
+                  <Wand2 className="w-3.5 h-3.5" />
+                  {t('quickGenerate')}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAiOpen(false)}
+                  className="text-[11px] text-py-text-muted hover:text-py-text transition-colors"
+                >
+                  {t('createAiCollapse')}
+                </button>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="text"
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  placeholder={t('conceptPlaceholder')}
+                  className={inputClass}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') void handleGenerateWithAI();
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => void handleGenerateWithAI()}
+                  disabled={isGeneratingWithAi || !aiPrompt.trim()}
+                  className="shrink-0 px-4 py-2 rounded-xl bg-py-accent hover:opacity-90 disabled:opacity-50 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-opacity cursor-pointer"
+                >
+                  {isGeneratingWithAi ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      {t('generating')}
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5" />
+                      {t('generateAi')}
+                    </>
+                  )}
+                </button>
+              </div>
+              {generationError && <p className="text-[11px] text-rose-400">{generationError}</p>}
             </div>
-            <div className="flex-1 relative">
-              <input
-                type="text"
-                value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
-                placeholder={t('conceptPlaceholder')}
-                className="w-full bg-black/40 border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white placeholder-white/40 focus:outline-none focus:border-zinc-500 transition-colors"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleGenerateWithAI();
-                }}
-              />
-            </div>
+          ) : (
             <button
               type="button"
-              onClick={handleGenerateWithAI}
-              disabled={isGeneratingWithAi || !aiPrompt.trim()}
-              className="w-full sm:w-auto px-3 py-1.5 rounded-lg bg-zinc-700 hover:bg-zinc-600 border border-zinc-600 disabled:opacity-50 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm shrink-0 cursor-pointer"
+              onClick={() => setIsAiOpen(true)}
+              className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-dashed border-py-accent/30 bg-py-accent/5 text-sm text-py-accent hover:bg-py-accent/10 transition-colors"
             >
-              {isGeneratingWithAi ? (
-                <>
-                  <RefreshCw className="w-3 h-3 animate-spin" />
-                  <span>{t('generating')}</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-3 h-3" />
-                  <span className="sm:hidden">{t('generateShort')}</span>
-                  <span className="hidden sm:inline">{t('generateAi')}</span>
-                </>
-              )}
+              <span className="inline-flex items-center gap-2 font-medium">
+                <Sparkles className="w-4 h-4" />
+                {t('createAiToggle')}
+              </span>
+              <ChevronDown className="w-4 h-4 opacity-70" />
             </button>
-          </div>
-          {generationError && <p className="text-[11px] text-rose-400 mt-1">{generationError}</p>}
-        </div>
+          )}
 
-        {/* Main 2-Column Layout (Fits directly on single screen) */}
-        <div className="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-5 overflow-y-auto md:overflow-visible">
-          {/* LEFT COLUMN: Identity & Voice (5 cols) */}
-          <div className="md:col-span-6 space-y-3">
-            {/* Avatar Row */}
-            <div className="flex items-center gap-3 bg-[#18181b] p-3 rounded-xl border border-white/5">
+          <section className={sectionCardClass}>
+            <SectionHeader title={t('createSectionIdentity')} />
+            <div className="flex flex-col sm:flex-row gap-4">
               <button
                 type="button"
                 onClick={() => setIsAvatarStudioOpen(true)}
-                className="relative w-16 h-16 rounded-xl overflow-hidden ring-1 ring-zinc-600 bg-black/40 shrink-0 group cursor-pointer"
+                className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden ring-1 ring-py-border bg-py-input shrink-0 self-center sm:self-start group cursor-pointer"
                 title={t('changeAvatar')}
               >
                 <img
@@ -263,17 +300,37 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover"
                 />
-                <span className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <span className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
                   <ImagePlus className="w-4 h-4 text-white" />
+                  <span className="text-[10px] text-white/90 font-medium">{t('art')}</span>
                 </span>
               </button>
 
-              <div className="flex-1 min-w-0 space-y-2">
-                <p className="text-[11px] text-zinc-400">{t('avatarHint')}</p>
+              <div className="flex-1 min-w-0 space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-py-text-secondary">{t('nameLabel')}</label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={t('namePlaceholder')}
+                    className={inputClass}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-py-text-secondary">{t('taglineLabel')}</label>
+                  <input
+                    type="text"
+                    value={tagline}
+                    onChange={(e) => setTagline(e.target.value)}
+                    placeholder={t('taglinePlaceholder')}
+                    className={inputClass}
+                  />
+                </div>
                 <button
                   type="button"
                   onClick={() => setIsAvatarStudioOpen(true)}
-                  className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-xs text-white font-medium inline-flex items-center gap-1.5 transition-colors"
+                  className="text-xs text-py-accent hover:opacity-80 font-medium inline-flex items-center gap-1.5"
                 >
                   <ImagePlus className="w-3.5 h-3.5" />
                   {t('changeAvatar')}
@@ -281,43 +338,18 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
               </div>
             </div>
 
-            {/* Name and Tagline */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-white/70">{t('nameLabel')}</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={t('namePlaceholder')}
-                  className="w-full bg-[#18181b] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-zinc-500 transition-colors"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-white/70">{t('taglineLabel')}</label>
-                <input
-                  type="text"
-                  value={tagline}
-                  onChange={(e) => setTagline(e.target.value)}
-                  placeholder={t('taglinePlaceholder')}
-                  className="w-full bg-[#18181b] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-zinc-500 transition-colors"
-                />
-              </div>
-            </div>
-
-            {/* Category Chips */}
-            <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-white/70">{t('categoryLabel')}</label>
+            <div className="space-y-2 pt-1">
+              <label className="text-xs font-medium text-py-text-secondary">{t('categoryLabel')}</label>
               <div className="flex flex-wrap gap-1.5">
                 {CATEGORIES.map((cat) => (
                   <button
                     key={cat.id}
                     type="button"
                     onClick={() => setCategory(cat.id)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors cursor-pointer ${
                       category === cat.id
-                        ? 'bg-zinc-200 text-zinc-900 shadow-sm font-semibold'
-                        : 'bg-white/5 hover:bg-white/10 text-white/60 border border-white/5'
+                        ? 'bg-py-accent/15 text-py-accent border-py-accent/35'
+                        : 'bg-py-input text-py-text-muted border-py-border hover:text-py-text hover:border-py-text-muted'
                     }`}
                   >
                     {cat.label}
@@ -325,111 +357,122 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
                 ))}
               </div>
             </div>
+          </section>
 
-            {/* Compact Voice Selector (3 cols x 2 rows) */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-semibold text-white/70 flex items-center gap-1">
-                  <Mic className="w-3.5 h-3.5 text-zinc-400" /> {t('voiceLabel')}
-                </label>
-                <span className="text-[10px] text-white/40">{t('voicesAvailable')}</span>
-              </div>
-              <div className="grid grid-cols-3 gap-1.5">
-                {VOICES.map((v) => {
-                  const isSelected = voice === v.id;
-                  return (
-                    <button
-                      key={v.id}
-                      type="button"
-                      onClick={() => setVoice(v.id)}
-                      className={`px-2 py-1.5 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                        isSelected
-                          ? 'bg-zinc-800 border-zinc-500 text-white shadow-sm ring-1 ring-zinc-500'
-                          : 'bg-[#18181b] border-white/5 hover:bg-white/5 text-white/70'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <span className="text-xs font-bold truncate leading-tight text-white">{v.label}</span>
-                        {isSelected && <Check className="w-3 h-3 text-zinc-300 shrink-0 ml-0.5" />}
-                      </div>
-                      <span className="text-[10px] text-white/50 truncate mt-0.5">{v.tone}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT COLUMN: Style, instructions & greeting */}
-          <div className="md:col-span-6 flex flex-col space-y-3">
-            <div className="space-y-2 rounded-xl border border-white/10 bg-[#18181b] p-3">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-semibold text-white/70">{t('styleTitle')}</label>
-                <span className="text-[10px] text-white/40">{t('styleHint')}</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {STYLE_SLIDERS.map(({ key, label }) => (
-                  <label key={key} className="space-y-1">
-                    <div className="flex items-center justify-between text-[10px] text-white/60">
-                      <span>{label}</span>
-                      <span>{behaviorProfile[key]}</span>
+          <section className={sectionCardClass}>
+            <SectionHeader title={t('createSectionVoice')} hint={t('voicesAvailable')} />
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {VOICES.map((v) => {
+                const isSelected = voice === v.id;
+                return (
+                  <button
+                    key={v.id}
+                    type="button"
+                    onClick={() => setVoice(v.id)}
+                    className={`px-3 py-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-py-accent/10 border-py-accent/40 text-py-text ring-1 ring-py-accent/25'
+                        : 'bg-py-input border-py-border text-py-text-secondary hover:border-py-text-muted'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs font-semibold truncate">{v.label}</span>
+                      {isSelected ? (
+                        <Check className="w-3.5 h-3.5 text-py-accent shrink-0" />
+                      ) : (
+                        <Mic className="w-3 h-3 opacity-40 shrink-0" />
+                      )}
                     </div>
-                    <input
-                      type="range"
-                      min={0}
-                      max={100}
-                      value={behaviorProfile[key]}
-                      onChange={(e) =>
-                        setBehaviorProfile((prev) => ({
-                          ...prev,
-                          [key]: Number(e.target.value),
-                        }))
-                      }
-                      className="w-full accent-zinc-300"
-                    />
-                  </label>
-                ))}
-              </div>
+                    <span className="text-[10px] text-py-text-muted truncate block mt-0.5">
+                      {v.tone}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
+          </section>
 
-            {/* System Prompt */}
-            <div className="flex-1 flex flex-col space-y-1">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-semibold text-white/70">
-                  {t('systemPromptLabel')}
+          <section className={sectionCardClass}>
+            <SectionHeader title={t('styleTitle')} hint={t('styleHint')} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {STYLE_SLIDERS.map(({ key, label }) => (
+                <label key={key} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-py-text-secondary">{label}</span>
+                    <span className="tabular-nums text-py-text-muted">{behaviorProfile[key]}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={behaviorProfile[key]}
+                    onChange={(e) =>
+                      setBehaviorProfile((prev) => ({
+                        ...prev,
+                        [key]: Number(e.target.value),
+                      }))
+                    }
+                    className="w-full h-1.5 rounded-full appearance-none bg-py-input accent-py-accent cursor-pointer"
+                  />
                 </label>
-                <span className="text-[10px] text-white/40">{t('systemPromptHint')}</span>
-              </div>
+              ))}
+            </div>
+          </section>
+
+          <section className={sectionCardClass}>
+            <SectionHeader title={t('createSectionInstructions')} hint={t('systemPromptHint')} />
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-py-text-secondary">
+                {t('systemPromptLabel')}
+              </label>
               <textarea
                 value={systemPrompt}
                 onChange={(e) => setSystemPrompt(e.target.value)}
                 placeholder={t('systemPromptPlaceholder')}
-                className="w-full flex-1 min-h-[140px] md:min-h-[160px] bg-[#18181b] border border-white/10 rounded-lg p-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-zinc-500 transition-colors leading-relaxed resize-none"
+                className={`${inputClass} min-h-[120px] resize-y leading-relaxed`}
               />
             </div>
-
-            {/* First Starter Message */}
-            <div className="space-y-1 shrink-0">
-              <label className="text-[11px] font-semibold text-white/70">
-                {t('starterLabel')}
-              </label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-py-text-secondary">{t('starterLabel')}</label>
               <input
                 type="text"
                 value={starter1}
                 onChange={(e) => setStarter1(e.target.value)}
                 placeholder={t('starterPlaceholder')}
-                className="w-full bg-[#18181b] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-zinc-500 transition-colors"
+                className={inputClass}
               />
             </div>
-          </div>
+          </section>
+
+          <section className={sectionCardClass}>
+            <SectionHeader title={t('visibilityTitle')} hint={t('visibilityHint')} />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {(['private', 'unlisted', 'public'] as const).map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setVisibility(option)}
+                  className={`px-3 py-2.5 rounded-xl border text-left transition-all ${
+                    visibility === option
+                      ? 'bg-py-accent/10 border-py-accent/40 ring-1 ring-py-accent/25'
+                      : 'bg-py-input border-py-border hover:border-py-text-muted'
+                  }`}
+                >
+                  <span className="text-xs font-semibold block">{t(`visibility_${option}`)}</span>
+                  <span className="text-[10px] text-py-text-muted mt-0.5 block">
+                    {t(`visibility_${option}Hint`)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
         </div>
 
-        {/* Compact Footer */}
-        <div className="flex items-center justify-end gap-2.5 px-4 sm:px-5 py-3 border-t border-zinc-800 bg-[#18181b] shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div className="flex items-center justify-end gap-2 px-4 sm:px-5 py-3 border-t border-py-border bg-py-sidebar shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <button
             type="button"
             onClick={onClose}
-            className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+            className="px-4 py-2 rounded-xl text-sm font-medium text-py-text-secondary hover:text-py-text hover:bg-py-input transition-colors cursor-pointer"
           >
             {t('common:cancel')}
           </button>
@@ -438,10 +481,10 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
             id="save-persona-btn"
             onClick={handleSave}
             disabled={!name.trim()}
-            className="px-4 py-1.5 rounded-lg bg-zinc-100 hover:bg-white disabled:opacity-50 text-zinc-900 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+            className="px-5 py-2 rounded-xl bg-py-accent hover:opacity-90 disabled:opacity-40 text-white text-sm font-semibold inline-flex items-center gap-1.5 transition-opacity cursor-pointer"
           >
-            <Check className="w-3.5 h-3.5" />
-            <span>{t('savePersona')}</span>
+            <Check className="w-4 h-4" />
+            {t('savePersona')}
           </button>
         </div>
       </motion.div>
@@ -457,4 +500,3 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
     </div>
   );
 };
-

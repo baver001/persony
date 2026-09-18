@@ -47,7 +47,9 @@ export const BatterySheet: React.FC<Props> = ({ isOpen, onClose, battery }) => {
             <div className="flex justify-center">
               <div className="text-4xl font-semibold tabular-nums text-white">{pct}%</div>
             </div>
-            <BatteryIndicator battery={battery} />
+            <div className="flex justify-center py-2">
+              <BatteryIndicator battery={battery} variant="vertical" />
+            </div>
 
             <div className="rounded-xl bg-white/5 border border-white/10 px-3 py-3 space-y-2 text-xs text-zinc-300">
               <p className="font-medium text-white">

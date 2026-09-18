@@ -36,6 +36,7 @@ export interface Persona {
     humor?: number;
   };
   configurationJson?: string;
+  visibility?: 'private' | 'unlisted' | 'public';
 }
 
 export interface ChatMessage {

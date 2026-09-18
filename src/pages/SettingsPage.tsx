@@ -57,6 +57,7 @@ export function SettingsPage({ onBack, isSignedIn }: Props) {
             </p>
             <BatteryIndicator
               battery={battery}
+              variant="horizontal"
               onClick={() => void refresh()}
             />
           </section>

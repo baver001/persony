@@ -9,6 +9,7 @@ import enErrors from './locales/en/errors.json';
 import enCall from './locales/en/call.json';
 import enBattery from './locales/en/battery.json';
 import enOwner from './locales/en/owner.json';
+import enRooms from './locales/en/rooms.json';
 import ruCommon from './locales/ru/common.json';
 import ruChat from './locales/ru/chat.json';
 import ruMemory from './locales/ru/memory.json';
@@ -18,6 +19,7 @@ import ruErrors from './locales/ru/errors.json';
 import ruCall from './locales/ru/call.json';
 import ruBattery from './locales/ru/battery.json';
 import ruOwner from './locales/ru/owner.json';
+import ruRooms from './locales/ru/rooms.json';
 
 const LOCALE_STORAGE_KEY = 'persony.preferred_locale';
 
@@ -42,6 +44,7 @@ void i18n.use(initReactI18next).init({
       call: enCall,
       battery: enBattery,
       owner: enOwner,
+      rooms: enRooms,
     },
     ru: {
       common: ruCommon,
@@ -53,6 +56,7 @@ void i18n.use(initReactI18next).init({
       call: ruCall,
       battery: ruBattery,
       owner: ruOwner,
+      rooms: ruRooms,
     },
   },
   lng: getStoredLocale(),

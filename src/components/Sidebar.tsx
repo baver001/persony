@@ -13,6 +13,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Persona, ChatMessage } from '../types';
 import { SidebarBottomBar } from './SidebarBottomBar';
+import { SidebarBatteryControl } from './SidebarBatteryControl';
 
 interface SidebarProps {
   personas: Persona[];
@@ -127,6 +128,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         className="w-full h-full flex flex-col select-none transition-colors overflow-hidden bg-py-sidebar text-py-text"
       >
         <div className="p-2 border-b border-py-border flex flex-col items-center gap-1 shrink-0">
+          <SidebarBatteryControl />
           {onToggleSidebar && isDesktop && (
             <button
               id="sidebar-expand-btn"
@@ -221,9 +223,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         className="p-3 border-b border-py-border flex flex-col gap-2 shrink-0 bg-py-sidebar"
       >
         <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <h1 className="text-sm font-bold tracking-tight font-[family-name:var(--font-display)]">Persony</h1>
-            <p className="text-[11px] text-py-text-muted truncate">{t('common:sidebarSubtitle')}</p>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <SidebarBatteryControl className="shrink-0" />
+            <div className="min-w-0">
+              <h1 className="text-sm font-bold tracking-tight font-[family-name:var(--font-display)]">Persony</h1>
+              <p className="text-[11px] text-py-text-muted truncate">{t('common:sidebarSubtitle')}</p>
+            </div>
           </div>
 
           <div className="flex items-center gap-0.5 shrink-0">
@@ -403,10 +408,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   />
                 </div>
 
-                <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5 min-h-[2.75rem] pt-0.5">
+                <div className="flex-1 min-w-0 flex flex-col justify-center gap-1 pr-9">
                   <div className="flex items-center justify-between gap-1">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="font-semibold text-sm truncate leading-normal">
+                      <span className="font-semibold text-sm truncate leading-tight">
                         {persona.name}
                       </span>
                       {badge && (
@@ -439,58 +444,56 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between gap-2">
-                    <p
-                      className={`text-xs truncate leading-snug flex items-center gap-1 ${
-                        isSelected
-                          ? isDark
-                            ? 'text-zinc-300'
-                            : 'text-neutral-600'
-                          : 'text-zinc-500'
-                      }`}
-                    >
-                      {isCallSummary ? (
-                        <span className="flex items-center gap-1 text-emerald-400">
-                          <Phone className="w-3 h-3" />
-                          <span>{t('common:voiceCallPreview')}</span>
-                        </span>
-                      ) : lastMsg ? (
-                        <>
-                          {isLastMsgUser && (
-                            <CheckCheck
-                              className={`w-3.5 h-3.5 shrink-0 ${
-                                isSelected ? 'text-zinc-200' : 'text-zinc-400'
-                              }`}
-                            />
-                          )}
-                          <span className="truncate">{lastMsg.text}</span>
-                        </>
-                      ) : (
-                        <span className="truncate italic opacity-75">{persona.tagline}</span>
-                      )}
-                    </p>
-
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onStartCall(persona);
-                      }}
-                      className={`py-touch-target p-2 rounded-full transition-all shrink-0 hidden sm:inline-flex ${
-                        isSelected
-                          ? isDark
-                            ? 'hover:bg-zinc-700 text-zinc-200'
-                            : 'hover:bg-neutral-200 text-neutral-700'
-                          : isDark
-                          ? 'opacity-0 group-hover:opacity-100 hover:bg-zinc-700 text-zinc-400 hover:text-white'
-                          : 'opacity-0 group-hover:opacity-100 hover:bg-neutral-200 text-neutral-600'
-                      }`}
-                      title={t('common:callVoice')}
-                      aria-label={t('common:callVoice')}
-                    >
-                      <Phone className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  <p
+                    className={`text-xs truncate leading-snug flex items-center gap-1 ${
+                      isSelected
+                        ? isDark
+                          ? 'text-zinc-300'
+                          : 'text-neutral-600'
+                        : 'text-zinc-500'
+                    }`}
+                  >
+                    {isCallSummary ? (
+                      <span className="flex items-center gap-1 text-emerald-400">
+                        <Phone className="w-3 h-3" />
+                        <span>{t('common:voiceCallPreview')}</span>
+                      </span>
+                    ) : lastMsg ? (
+                      <>
+                        {isLastMsgUser && (
+                          <CheckCheck
+                            className={`w-3.5 h-3.5 shrink-0 ${
+                              isSelected ? 'text-zinc-200' : 'text-zinc-400'
+                            }`}
+                          />
+                        )}
+                        <span className="truncate">{lastMsg.text}</span>
+                      </>
+                    ) : (
+                      <span className="truncate italic opacity-75">{persona.tagline}</span>
+                    )}
+                  </p>
                 </div>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStartCall(persona);
+                  }}
+                  className={`absolute right-2 top-1/2 -translate-y-1/2 py-touch-target p-2 rounded-full transition-all shrink-0 hidden sm:inline-flex ${
+                    isSelected
+                      ? isDark
+                        ? 'hover:bg-zinc-700 text-zinc-200'
+                        : 'hover:bg-neutral-200 text-neutral-700'
+                      : isDark
+                      ? 'opacity-0 group-hover:opacity-100 hover:bg-zinc-700 text-zinc-400 hover:text-white'
+                      : 'opacity-0 group-hover:opacity-100 hover:bg-neutral-200 text-neutral-600'
+                  }`}
+                  title={t('common:callVoice')}
+                  aria-label={t('common:callVoice')}
+                >
+                  <Phone className="w-3.5 h-3.5" />
+                </button>
               </div>
             );
           })

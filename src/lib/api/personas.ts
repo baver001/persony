@@ -1,9 +1,12 @@
 import type { Persona } from '../../types';
 import { getApiHeaders } from './headers';
 
+type PersonaVisibility = 'private' | 'unlisted' | 'public';
+
 type OwnerPersonaDto = {
   id: string;
   name: string;
+  visibility?: PersonaVisibility;
   tagline: string;
   description: string;
   systemPrompt: string;
@@ -47,6 +50,7 @@ function dtoToPersona(dto: OwnerPersonaDto): Persona {
     starterMessages: dto.starterMessages,
     isCustom: true,
     createdAt: Date.now(),
+    visibility: dto.visibility,
   };
 }
 
@@ -127,7 +131,7 @@ export async function createPersonaOnCloud(
       badge: persona.badge,
       color: persona.color,
       starterMessages: persona.starterMessages,
-      visibility: 'private',
+      visibility: persona.visibility || 'private',
       behaviorProfile: persona.behaviorProfile,
       configurationJson: persona.configurationJson,
     }),
@@ -152,7 +156,7 @@ export async function updatePersonaOnCloud(persona: Persona): Promise<Persona | 
       badge: persona.badge,
       color: persona.color,
       starterMessages: persona.starterMessages,
-      visibility: 'private',
+      visibility: persona.visibility || 'private',
       behaviorProfile: persona.behaviorProfile,
       configurationJson: persona.configurationJson,
     }),

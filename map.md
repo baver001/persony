@@ -114,13 +114,19 @@ flowchart TD
 
 ### Готово — Phase 5 (частично)
 
-- Публичная страница `/p/:slug`, `GET /api/personas/by-slug/:slug`
+- Публичная страница `/p/:slug`, share link, visibility в Persona Creator
+- Вертикальная батарейка в шапке сайдбара (место логотипа) + mobile chat header
+
+### Готово — Phase 7 Rooms (MVP)
+
+- `GET/POST /api/rooms`, `/rooms` UI, `specs/11-rooms.md`
+- Комната = 2–4 персоны; чат пока через direct open (routing — дальше)
 
 ### Дальше
 
-1. **Phase 6–7** — Memory polish, Rooms
+1. **Phase 7+** — @mentions, room thread routing, budgets
 2. **Phase 8–10** — Tools, voice hardening, OSS/BYOK
-3. Включить Paddle (оператор) после legal + Live catalog
+3. Paddle live (оператор) после legal + catalog
 
 ### Проверить
 

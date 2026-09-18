@@ -4,6 +4,7 @@ import { usePersonyAuth } from '../components/PersonyAuthProvider';
 import { fetchMeProfile, fetchOwnerOverview } from '../lib/api/me';
 import {
   fetchOwnerAiOverview,
+  updateOwnerSystemSetting,
   fetchOwnerAudit,
   fetchOwnerBatteryOverview,
   fetchOwnerMemoryStats,
@@ -248,9 +249,33 @@ export function OwnerConsole({ onBack }: Props) {
                     {t('owner:aiHint', { count: String(metrics.failedInferenceRuns ?? 0) })}
                   </p>
                   {aiOverview && (
-                    <pre className="text-xs bg-black/40 border border-white/10 rounded-xl p-4 overflow-x-auto text-zinc-300">
-                      {JSON.stringify(aiOverview, null, 2)}
-                    </pre>
+                    <>
+                      <label className="block space-y-2">
+                        <span className="text-xs text-zinc-400 uppercase tracking-wide">
+                          {t('owner:chatProvider')}
+                        </span>
+                        <select
+                          className="w-full max-w-xs bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-sm"
+                          value={String(aiOverview.chatTextProvider ?? 'google')}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            void updateOwnerSystemSetting('chat_text_provider', value, 'owner_console')
+                              .then((ok) => {
+                                if (ok) {
+                                  setAiOverview({ ...aiOverview, chatTextProvider: value });
+                                }
+                              });
+                          }}
+                        >
+                          <option value="google">google</option>
+                          <option value="deepseek">deepseek</option>
+                          <option value="auto">auto</option>
+                        </select>
+                      </label>
+                      <pre className="text-xs bg-black/40 border border-white/10 rounded-xl p-4 overflow-x-auto text-zinc-300">
+                        {JSON.stringify(aiOverview, null, 2)}
+                      </pre>
+                    </>
                   )}
                 </div>
               )}

@@ -26,6 +26,7 @@ import { memoryRoutes } from './memories';
 import { ownerRoutes } from './owner';
 import { personaRoutes } from './personas';
 import { billingRoutes } from './billing';
+import { roomRoutes } from './rooms';
 
 export const apiRoutes = new Hono<{ Bindings: PersonyEnv }>();
 
@@ -39,6 +40,7 @@ apiRoutes.route('/', memoryRoutes);
 apiRoutes.route('/', meRoutes);
 apiRoutes.route('/', ownerRoutes);
 apiRoutes.route('/', billingRoutes);
+apiRoutes.route('/', roomRoutes);
 
 apiRoutes.post('/transcribe', async (c) => {
   try {

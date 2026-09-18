@@ -108,6 +108,101 @@ export async function findDirectConversationByPersona(
   return mapConversationRow(row);
 }
 
+export type ConversationPersonaParticipant = {
+  personaId: string;
+  personaVersion: number;
+  role: string;
+};
+
+export async function listRoomConversationsForUser(
+  db: D1Database,
+  userId: string
+): Promise<ConversationRecord[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT c.*, cp.persona_id, cp.persona_version
+       FROM conversations c
+       LEFT JOIN conversation_personas cp ON cp.conversation_id = c.id
+       WHERE c.owner_user_id = ? AND c.type = 'room' AND ${ACTIVE_CONVERSATION_FILTER}
+       ORDER BY COALESCE(c.last_message_at, c.updated_at) DESC`
+    )
+    .bind(userId)
+    .all<ConversationRow & { persona_id: string | null; persona_version: number | null }>();
+
+  const seen = new Set<string>();
+  const rooms: ConversationRecord[] = [];
+  for (const row of results ?? []) {
+    if (seen.has(row.id)) continue;
+    seen.add(row.id);
+    rooms.push(mapConversationRow(row));
+  }
+  return rooms;
+}
+
+export async function listConversationPersonas(
+  db: D1Database,
+  conversationId: string
+): Promise<ConversationPersonaParticipant[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT persona_id, persona_version, role
+       FROM conversation_personas
+       WHERE conversation_id = ?
+       ORDER BY added_at ASC`
+    )
+    .bind(conversationId)
+    .all<{ persona_id: string; persona_version: number; role: string }>();
+
+  return (results ?? []).map((row) => ({
+    personaId: row.persona_id,
+    personaVersion: row.persona_version,
+    role: row.role,
+  }));
+}
+
+export async function createRoomConversation(
+  db: D1Database,
+  userId: string,
+  title: string,
+  personas: Array<{ personaId: string; personaVersion: number }>
+): Promise<ConversationRecord> {
+  const id = generateId();
+  const now = new Date().toISOString();
+
+  await db
+    .prepare(
+      `INSERT INTO conversations (id, owner_user_id, type, title, status, deleted_at, created_at, updated_at, last_message_at)
+       VALUES (?, ?, 'room', ?, 'active', NULL, ?, ?, NULL)`
+    )
+    .bind(id, userId, title, now, now)
+    .run();
+
+  for (const persona of personas) {
+    await db
+      .prepare(
+        `INSERT INTO conversation_personas (conversation_id, persona_id, persona_version, role, added_at)
+         VALUES (?, ?, ?, 'participant', ?)`
+      )
+      .bind(id, persona.personaId, persona.personaVersion, now)
+      .run();
+  }
+
+  const primary = personas[0];
+  return {
+    id,
+    ownerUserId: userId,
+    type: 'room',
+    title,
+    personaId: primary?.personaId ?? null,
+    personaVersion: primary?.personaVersion ?? null,
+    status: 'active',
+    deletedAt: null,
+    createdAt: now,
+    updatedAt: now,
+    lastMessageAt: null,
+  };
+}
+
 export async function createDirectConversation(
   db: D1Database,
   userId: string,

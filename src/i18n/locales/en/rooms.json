@@ -1,0 +1,12 @@
+{
+  "title": "Rooms",
+  "subtitle": "Team up multiple personas in one space",
+  "create": "New room",
+  "createTitle": "Create a room",
+  "titlePlaceholder": "Strategy session, brainstorm…",
+  "empty": "No rooms yet. Create one with two or more personas.",
+  "untitled": "Untitled room",
+  "participantCount": "{{count}} personas",
+  "selectHint": "Pick 2–4 personas. Open a persona to start chatting (multi-reply routing comes next).",
+  "chatHint": "Tap a persona to open a direct chat with them."
+}

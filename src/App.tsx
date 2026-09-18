@@ -49,6 +49,7 @@ import { MeetPersonasPage } from './pages/MeetPersonasPage';
 import { DiscoverPage } from './pages/DiscoverPage';
 import { MyPersonasPage } from './pages/MyPersonasPage';
 import { PublicPersonaPage } from './pages/PublicPersonaPage';
+import { RoomsPage } from './pages/RoomsPage';
 import i18n from './i18n';
 import { applyLocaleToPersona, applyLocaleToPersonas } from './utils/personaPresentation';
 
@@ -1092,6 +1093,18 @@ export default function App() {
         theme={getStoredTheme()}
         onBack={navigateHome}
         onStartChat={(persona) => {
+          sessionStorage.setItem(PENDING_PERSONA_KEY, JSON.stringify(persona));
+          navigateHome();
+        }}
+      />
+    );
+  }
+  if (pathname.startsWith('/rooms')) {
+    return (
+      <RoomsPage
+        theme={getStoredTheme()}
+        onBack={navigateHome}
+        onOpenPersona={(persona) => {
           sessionStorage.setItem(PENDING_PERSONA_KEY, JSON.stringify(persona));
           navigateHome();
         }}

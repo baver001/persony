@@ -18,6 +18,7 @@ import { Persona } from '../types';
 import { getLocalizedPersonaPresentation } from '../utils/personaPresentation';
 import { AvatarStudioModal } from './AvatarStudioModal';
 import { fetchRelationshipProfile } from '../lib/api/relationship';
+import { copyPersonaShareLink } from '../lib/sharePersona';
 import { usePersonyAuth } from './PersonyAuthProvider';
 
 interface PersonaProfileDrawerProps {
@@ -44,6 +45,7 @@ export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
   const { t, i18n } = useTranslation(['personas', 'common', 'chat']);
   const { isSignedIn } = usePersonyAuth();
   const [copiedPrompt, setCopiedPrompt] = React.useState(false);
+  const [copiedShare, setCopiedShare] = React.useState(false);
   const [isAvatarStudioOpen, setIsAvatarStudioOpen] = React.useState(false);
   const [relationshipBullets, setRelationshipBullets] = React.useState<string[]>([]);
 
@@ -157,6 +159,30 @@ export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
                   aria-label={t('common:edit')}
                 >
                   <Edit3 className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void copyPersonaShareLink(character.id).then((ok) => {
+                      if (ok) {
+                        setCopiedShare(true);
+                        window.setTimeout(() => setCopiedShare(false), 2000);
+                      }
+                    });
+                  }}
+                  className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 transition-colors border border-white/5"
+                  title={
+                    character.visibility === 'private'
+                      ? t('personas:shareLinkPrivateHint')
+                      : t('personas:shareLink')
+                  }
+                  aria-label={t('personas:shareLink')}
+                >
+                  {copiedShare ? (
+                    <Check className="w-4 h-4 text-emerald-400" />
+                  ) : (
+                    <Share2 className="w-4 h-4" />
+                  )}
                 </button>
               </div>
             </div>
