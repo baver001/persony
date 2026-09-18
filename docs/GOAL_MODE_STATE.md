@@ -10,12 +10,12 @@
 
 | Field | Value |
 |-------|--------|
-| **Current production SHA** | `096f170` — voice inference + owner errors (health без gitSha) |
-| **Local ahead of origin** | `c64ac1f` — gitSha health + Inference Explorer filters; **unpushed** |
+| **Current production SHA** | `d999491` — gitSha health, Inference Explorer, settings/routing, users detail |
+| **Local ahead of origin** | synced (`main` pushed 2026-09-18) |
 | **Last successful deploy** | GitHub Actions — 2026-09-18 |
 | **Last migration applied (remote D1)** | `0013_operation_type_normalize.sql` (0001–0013) |
 | **CI status (last `main` push)** | Green |
-| **Production health** | `GET https://beta.persony.org/api/health` → ok, database ready (no `gitSha` until deploy) |
+| **Production health** | `GET https://beta.persony.org/api/health` → ok, `gitSha: d99949180a3c`, database ready |
 | **Production smoke (economics)** | **NOT RUN** |
 | **Local uncommitted WIP** | UI/dev-mode fixes — separate from economics commits |
 
