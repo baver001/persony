@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   computeDurationCost,
+  computePerImageCost,
   computeUsageCost,
   findBestPricingEntry,
   findPricingEntries,
@@ -127,6 +128,17 @@ describe('findPricingEntries', () => {
       'default'
     );
     expect(entry?.priceMicrousdPerUnit).toBe(600_000);
+  });
+
+  it('prices avatar generation by per_image catalog row', () => {
+    const result = computePerImageCost({
+      provider: 'google',
+      model: 'gemini-2.0-flash-preview-image-generation',
+      imageCount: 1,
+    });
+    expect(result.priced).toBe(true);
+    expect(result.totalMicrousd).toBe(4_000_000);
+    expect(result.lines[0]?.dimension).toBe('per_image');
   });
 
   it('prices voice call duration by per_minute catalog row', () => {

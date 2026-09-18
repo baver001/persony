@@ -78,6 +78,8 @@ export const generateCharacterSchema = z.object({
 export const generateAvatarSchema = z.object({
   prompt: z.string().min(1).max(2000),
   personaName: z.string().max(120).optional(),
+  personaId: z.string().min(1).max(64).optional(),
+  clientRequestId: z.string().min(1).max(128).optional(),
 });
 
 const callTranscriptTurnSchema = z.object({

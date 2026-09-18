@@ -136,6 +136,30 @@ export const PRICING_CATALOG: PricingEntry[] = [
     unit: 'per_minute',
     sourceReference: GEMINI_PRICING,
   }),
+  entry(
+    'gemini-2.0-flash-preview-image-generation:per_image:default',
+    'google',
+    'gemini-2.0-flash-preview-image-generation',
+    'per_image',
+    4_000_000,
+    {
+      effectiveFrom: '2026-01-01',
+      unit: 'per_image',
+      sourceReference: GEMINI_PRICING,
+    }
+  ),
+  entry(
+    'gemini-2.0-flash-exp-image-generation:per_image:default',
+    'google',
+    'gemini-2.0-flash-exp-image-generation',
+    'per_image',
+    4_000_000,
+    {
+      effectiveFrom: '2026-01-01',
+      unit: 'per_image',
+      sourceReference: GEMINI_PRICING,
+    }
+  ),
 ];
 
 export function isEntryEffective(entry: PricingEntry, atMs: number): boolean {
@@ -182,7 +206,9 @@ function costForUnits(
   unit: PricingEntry['unit']
 ): number {
   if (units <= 0 || priceMicrousdPerUnit <= 0) return 0;
-  if (unit === 'per_minute') return Math.round(units * priceMicrousdPerUnit);
+  if (unit === 'per_minute' || unit === 'per_image') {
+    return Math.round(units * priceMicrousdPerUnit);
+  }
   return Math.round((units * priceMicrousdPerUnit) / 1_000_000);
 }
 
@@ -195,6 +221,41 @@ function lineFromEntry(entry: PricingEntry, units: number): PricingComputationLi
     costMicrousd: costForUnits(units, entry.priceMicrousdPerUnit, entry.unit),
     pricingTier: entry.pricingTier,
     timeRule: entry.timeRule,
+  };
+}
+
+/** Per-image COGS (avatar generation). Units = image count (typically 1). */
+export function computePerImageCost(input: {
+  provider: string;
+  model: string;
+  imageCount: number;
+  atIso?: string;
+}): PricingComputationResult {
+  const atIso = input.atIso ?? new Date().toISOString();
+  const count = Math.max(0, input.imageCount);
+  const imageEntry = findBestPricingEntry(
+    input.provider,
+    input.model,
+    'per_image',
+    atIso,
+    'default'
+  );
+  if (!imageEntry || count <= 0) {
+    return {
+      lines: [],
+      totalMicrousd: 0,
+      pricingEntryIds: [],
+      catalogVersion: PRICING_CATALOG_VERSION,
+      priced: false,
+    };
+  }
+  const line = lineFromEntry(imageEntry, count);
+  return {
+    lines: [line],
+    totalMicrousd: line.costMicrousd,
+    pricingEntryIds: [line.pricingEntryId],
+    catalogVersion: PRICING_CATALOG_VERSION,
+    priced: line.costMicrousd > 0,
   };
 }
 

@@ -11,6 +11,7 @@ interface AvatarStudioModalProps {
   onClose: () => void;
   onApply: (avatar: string) => void;
   personaName?: string;
+  personaId?: string;
   category?: string;
   currentAvatar?: string;
 }
@@ -20,6 +21,7 @@ export const AvatarStudioModal: React.FC<AvatarStudioModalProps> = ({
   onClose,
   onApply,
   personaName = '',
+  personaId,
   category = 'custom',
   currentAvatar,
 }) => {
@@ -54,6 +56,8 @@ export const AvatarStudioModal: React.FC<AvatarStudioModalProps> = ({
         body: JSON.stringify({
           prompt: trimmed,
           personaName: personaName.trim() || undefined,
+          personaId,
+          clientRequestId: `avatar_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
         }),
       });
 

@@ -179,7 +179,7 @@ export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
                   aria-label={t('personas:shareLink')}
                 >
                   {copiedShare ? (
-                    <Check className="w-4 h-4 text-emerald-400" />
+                    <Check className="w-4 h-4 text-py-accent" />
                   ) : (
                     <Share2 className="w-4 h-4" />
                   )}
@@ -232,7 +232,7 @@ export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
                   onClick={handleCopyPrompt}
                   className="text-[11px] text-zinc-300 hover:underline flex items-center gap-1 cursor-pointer"
                 >
-                  {copiedPrompt ? <Check className="w-3 h-3 text-emerald-400" /> : <Share2 className="w-3 h-3" />}
+                  {copiedPrompt ? <Check className="w-3 h-3 text-py-accent" /> : <Share2 className="w-3 h-3" />}
                   {copiedPrompt ? t('chat:copied') : t('chat:copy')}
                 </button>
               </div>
@@ -282,6 +282,7 @@ export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
           onClose={() => setIsAvatarStudioOpen(false)}
           onApply={(nextAvatar) => onAvatarChange(character, nextAvatar)}
           personaName={character.name}
+          personaId={character.id}
           category={character.category}
           currentAvatar={character.avatar}
         />

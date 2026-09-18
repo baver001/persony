@@ -18,6 +18,7 @@ import { requireAIEntitlement } from '../middleware/entitlement';
 import { mapApiError } from '../lib/api-errors';
 import { clientIp, rateLimitMiddleware } from '../middleware/rate-limit';
 import { withEnergyReservation } from '../services/energy-service';
+import { runAvatarWithInference } from '../services/avatar-inference-service';
 import { runTranscribeWithInference } from '../services/transcribe-inference-service';
 import type { PersonyEnv } from '../types/env';
 import { conversationRoutes } from './conversations';
@@ -156,6 +157,16 @@ apiRoutes.post('/generate-avatar', aiHeavyRateLimit, async (c) => {
     if (!parsed.success) {
       return c.json({ error: 'Prompt is required' }, 400);
     }
+    if (c.env.DB && parsed.data.personaId && parsed.data.clientRequestId) {
+      const tracked = await runAvatarWithInference(c.env.DB, userId, c.env.GEMINI_API_KEY, {
+        prompt: parsed.data.prompt,
+        personaName: parsed.data.personaName,
+        personaId: parsed.data.personaId,
+        clientRequestId: parsed.data.clientRequestId,
+      });
+      return c.json({ imageDataUrl: tracked.imageDataUrl });
+    }
+
     const result = await withEnergyReservation(
       c.env.DB,
       userId,
@@ -167,7 +178,7 @@ apiRoutes.post('/generate-avatar', aiHeavyRateLimit, async (c) => {
           parsed.data.personaName
         )
     );
-    return c.json(result);
+    return c.json({ imageDataUrl: result.imageDataUrl });
   } catch (err) {
     const mapped = mapApiError(err, formatCleanErrorMessage(err));
     return c.json(mapped.body, mapped.status as 401 | 402 | 429 | 500);

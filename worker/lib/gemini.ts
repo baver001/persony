@@ -297,12 +297,21 @@ ${dialogue}`;
   throw lastErr || new Error('Call summary generation failed');
 }
 
+export type AvatarGenerateResult = {
+  imageDataUrl: string;
+  model?: string;
+  usage?: ProviderUsageMetrics;
+  usageEstimated: boolean;
+  latencyMs: number;
+};
+
 export async function handleGenerateAvatar(
   apiKey: string,
   prompt: string,
   personaName?: string
-): Promise<{ imageDataUrl: string }> {
+): Promise<AvatarGenerateResult> {
   const ai = getAIClient(apiKey);
+  const started = Date.now();
 
   const portraitPrompt = [
     'Create a single square portrait avatar for a fictional AI companion in a messenger app.',
@@ -327,11 +336,18 @@ export async function handleGenerateAvatar(
       });
 
       const parts = response.candidates?.[0]?.content?.parts ?? [];
+      const usage = mapGeminiUsageMetadata(response.usageMetadata);
       for (const part of parts) {
         const data = part.inlineData?.data;
         if (data) {
           const mime = part.inlineData?.mimeType || 'image/png';
-          return { imageDataUrl: `data:${mime};base64,${data}` };
+          return {
+            imageDataUrl: `data:${mime};base64,${data}`,
+            model,
+            usage,
+            usageEstimated: !usage,
+            latencyMs: Date.now() - started,
+          };
         }
       }
     } catch (err) {
