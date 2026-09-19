@@ -57,12 +57,14 @@ Operator smoke уже зелёный на beta (`e2ac39dc`, D1 breakdown). Ос�
 4. Layout: `docs/PRODUCTION_ECONOMICS_SMOKE.md` §15–23 (390px + 1440px).
 5. Сообщить агенту: JWT output или «layout OK» — закроем `GOAL_MODE_STATE.md`.
 
+**Опционально (CI):** добавить GitHub secret `SMOKE_OWNER_BEARER` (короткоживущий Clerk JWT) — deploy workflow прогонит `smoke:economics:owner` + parity после каждого релиза.
+
 ## 6. Безопасность
 
 1. **Ротация `GEMINI_API_KEY`** если ключ когда-либо попадал в логи/чат.
 2. Не коммитить `.dev.vars` (уже в `.gitignore`).
 
-## 6. Локальная разработка (сейчас)
+## 7. Локальная разработка (сейчас)
 
 Скопировать `.dev.vars.example` → `.dev.vars` и задать:
 

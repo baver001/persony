@@ -18,7 +18,7 @@
 | **Owner API smoke** | `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner` |
 | **D1 operator smoke** | `npm run smoke:economics:d1` (wrangler remote) |
 | **Production smoke (economics)** | **PARTIAL** — public+D1 ✅ 2026-09-19; `with_breakdown=11/19` (7d); latest `e2ac39dc` |
-| **Tests (local)** | 126/126 (incl. economics snapshot + CostEngine 2.0 integration) |
+| **Tests (local)** | 127/127 (incl. economics snapshot + energy/retail separation) |
 
 Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 
@@ -36,7 +36,7 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 | Economics E2E (Milestone 1) | **partial** | D1 chat_text + voice_transcription verified; owner API smoke + layout open |
 | DB-backed pricing admin | deployed | migration `0014`, POST `/owner/pricing/entries`, audit log |
 | Immutable inference costs | deployed | `updateInferenceRunEconomics` blocks rewrite after `cost_calculated_at` |
-| CI post-deploy economics smoke | deployed | `smoke:economics` public+D1 green on deploy `35431785194` |
+| CI post-deploy economics smoke | deployed | `smoke:economics` public+D1+layout; deploy `35432565367` |
 | Mobile/desktop layout gates | **partial** | static layout contract in CI; manual 390/1440 sign-off open |
 
 ## Manual verification gates
@@ -48,7 +48,7 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 | Voice note → `voice_transcription` inference row | **pass (D1)** | `e643885a` actual + breakdown | 2026-09-19 |
 | Avatar Studio → `avatar_generation` inference row | **open** | no runs in 7d | — |
 | Owner Console 390px / 1440px | **open** | — | — |
-| Owner auth gate (unauthenticated) | **pass** | `/owner` → «Sign in required»; API → 401 | 2026-09-18 |
+| Owner auth gate (unauthenticated) | **pass** | `/owner` → «Sign in required» at 390/1440; API → 401 | 2026-09-19 |
 | Owner API smoke (`smoke:economics:owner`) | **open** | needs `SMOKE_OWNER_BEARER` | — |
 
 ## Completion audit (2026-09-19)

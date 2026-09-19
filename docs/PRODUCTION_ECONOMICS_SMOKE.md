@@ -28,7 +28,8 @@ Public + D1 + layout contract (no auth): `npm run smoke:economics` — coverage 
 Public only: `npm run smoke:economics:public`  
 Operator D1 only (wrangler): `npm run smoke:economics:d1`  
 Layout contract only: `npm run smoke:economics:layout`  
-D1 ↔ Owner coverage parity (JWT + wrangler): `npm run smoke:economics:parity`
+D1 ↔ Owner coverage parity (JWT + wrangler): `npm run smoke:economics:parity`  
+CI (optional): GitHub secret `SMOKE_OWNER_BEARER` → post-deploy owner + parity smoke in `.github/workflows/deploy.yml`
 
 ## Steps
 

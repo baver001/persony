@@ -75,5 +75,18 @@ describe('getOwnerEconomicsSnapshot', () => {
     expect(snapshot.callsToday).toBe(2);
     expect(snapshot.costCoverageTodayPercent).toBe(50);
     expect(snapshot.simulatedRetailValueTodayMicrousd).toBeGreaterThan(500);
+    expect(snapshot.energyConsumedToday).toBe(0);
+    expect(snapshot.simulatedGrossProfitTodayMicrousd).toBeGreaterThan(0);
+    expect(snapshot.retailPricingVersion).toBeTruthy();
+  });
+
+  it('computes 7d coverage independently from today', async () => {
+    await seedBase();
+    await seedRun('req-today-known', { costConfidence: 'actual', providerCostMicrousd: 100 });
+    await seedRun('req-today-unpriced', { costConfidence: 'unpriced', providerCostMicrousd: null });
+
+    const snapshot = await getOwnerEconomicsSnapshot(db);
+    expect(snapshot.costCoverageTodayPercent).toBe(50);
+    expect(snapshot.costCoverage7dPercent).toBe(50);
   });
 });
