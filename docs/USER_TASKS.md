@@ -1,6 +1,6 @@
 # Задачи для владельца проекта (Persony platform)
 
-Обновлено: 2026-09-15
+Обновлено: 2026-09-19
 
 ## 1. Clerk — authentication (блокер для production custom personas)
 
@@ -44,7 +44,20 @@
    - Дождаться Verify в Clerk (до 48 ч, обычно минуты)
    - Без этой записи SDK падает: `failed_to_load_clerk_js` / `clerk.persony.org net::ERR_FAILED`
 
-## 5. Безопасность
+## 5. Milestone 1 — Owner economics verification (блокер goal)
+
+Operator smoke уже зелёный на beta (`e2ac39dc`, D1 breakdown). Осталось **~5 мин** с owner-аккаунтом:
+
+1. Войти на https://beta.persony.org → `/owner`.
+2. DevTools → Network → любой `/api/owner/*` → скопировать `Authorization: Bearer …`.
+3. Локально:
+   ```bash
+   SMOKE_OWNER_BEARER="<jwt>" npm run smoke:economics:milestone1
+   ```
+4. Layout: `docs/PRODUCTION_ECONOMICS_SMOKE.md` §15–23 (390px + 1440px).
+5. Сообщить агенту: JWT output или «layout OK» — закроем `GOAL_MODE_STATE.md`.
+
+## 6. Безопасность
 
 1. **Ротация `GEMINI_API_KEY`** если ключ когда-либо попадал в логи/чат.
 2. Не коммитить `.dev.vars` (уже в `.gitignore`).
