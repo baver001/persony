@@ -8,6 +8,8 @@ import { getPersonyClerkAppearance, getPersonyClerkLocalization } from '../lib/c
 type PersonyAuthState = {
   isLoaded: boolean;
   isSignedIn: boolean;
+  /** Clerk token getter registered — safe to call authenticated APIs. */
+  apiAuthReady: boolean;
   clerkEnabled: boolean;
   authRequired: boolean;
 };
@@ -15,6 +17,7 @@ type PersonyAuthState = {
 const PersonyAuthContext = createContext<PersonyAuthState>({
   isLoaded: false,
   isSignedIn: false,
+  apiAuthReady: false,
   clerkEnabled: false,
   authRequired: false,
 });
@@ -31,9 +34,14 @@ function ClerkBridge({
   authRequired: boolean;
 }) {
   const { isLoaded, isSignedIn, userId, getToken } = useAuth();
+  const [apiAuthReady, setApiAuthReady] = useState(false);
 
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded) {
+      setApiAuthReady(false);
+      setAuthTokenGetter(null);
+      return;
+    }
     setAuthTokenGetter(async () => {
       try {
         return await getToken();
@@ -41,17 +49,22 @@ function ClerkBridge({
         return null;
       }
     });
-    return () => setAuthTokenGetter(null);
+    setApiAuthReady(true);
+    return () => {
+      setApiAuthReady(false);
+      setAuthTokenGetter(null);
+    };
   }, [getToken, isLoaded]);
 
   const value = useMemo(
     () => ({
       isLoaded,
       isSignedIn: Boolean(isSignedIn ?? userId),
+      apiAuthReady,
       clerkEnabled: true,
       authRequired,
     }),
-    [authRequired, isLoaded, isSignedIn, userId]
+    [apiAuthReady, authRequired, isLoaded, isSignedIn, userId]
   );
 
   return <PersonyAuthContext.Provider value={value}>{children}</PersonyAuthContext.Provider>;
@@ -68,6 +81,7 @@ function DevAuthBridge({
     () => ({
       isLoaded: true,
       isSignedIn: !authRequired,
+      apiAuthReady: true,
       clerkEnabled: false,
       authRequired,
     }),
@@ -82,6 +96,7 @@ function AuthSetupRequired({ children }: { children: React.ReactNode }) {
     () => ({
       isLoaded: true,
       isSignedIn: false,
+      apiAuthReady: false,
       clerkEnabled: false,
       authRequired: true,
     }),
@@ -133,6 +148,7 @@ export function PersonyAuthProvider({ children }: { children: React.ReactNode })
     const bootValue: PersonyAuthState = {
       isLoaded: false,
       isSignedIn: false,
+      apiAuthReady: false,
       clerkEnabled: false,
       authRequired: !import.meta.env.DEV,
     };

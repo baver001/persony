@@ -43,7 +43,7 @@ type EconomicsData = Awaited<ReturnType<typeof fetchOwnerEconomics>>['economics'
 
 export function OwnerConsole({ onBack }: Props) {
   const { t } = useTranslation(['owner', 'common']);
-  const { isSignedIn, isLoaded } = usePersonyAuth();
+  const { isSignedIn, isLoaded, apiAuthReady } = usePersonyAuth();
   const [section, setSection] = useState<OwnerSectionId>('overview');
   const [overview, setOverview] = useState<Record<string, unknown> | null>(null);
   const [battery, setBattery] = useState<Record<string, unknown> | null>(null);
@@ -248,7 +248,7 @@ export function OwnerConsole({ onBack }: Props) {
   }, []);
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn) return;
+    if (!isLoaded || !isSignedIn || !apiAuthReady) return;
 
     setError(null);
 
@@ -266,10 +266,11 @@ export function OwnerConsole({ onBack }: Props) {
         setOverview(overviewData);
         setEconomics(economicsData?.economics ?? null);
       } catch (e) {
+        if (e instanceof Error && e.message === 'AUTH_REQUIRED') return;
         setError(e instanceof Error ? (e.message as typeof error) : 'INTERNAL_ERROR');
       }
     })();
-  }, [isLoaded, isSignedIn]);
+  }, [apiAuthReady, isLoaded, isSignedIn]);
 
   useEffect(() => {
     if (error || !overview) return;
@@ -330,6 +331,11 @@ export function OwnerConsole({ onBack }: Props) {
   if (!isSignedIn) {
     return (
       <div className="min-h-screen bg-zinc-950 p-8 text-zinc-400">{t('owner:authRequired')}</div>
+    );
+  }
+  if (!apiAuthReady) {
+    return (
+      <div className="min-h-screen bg-zinc-950 p-8 text-zinc-500">{t('common:loading')}</div>
     );
   }
   if (error === 'FORBIDDEN') {
