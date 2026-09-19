@@ -47,7 +47,7 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 | Economy coverage % after real inference | **pass (D1 + API)** | today 100% (rolling 24h UTC), 7d 63.2%; D1↔owner parity ✅ | 2026-09-19 |
 | Voice note → `voice_transcription` inference row | **pass (D1)** | `e643885a` actual + breakdown | 2026-09-19 |
 | Avatar Studio → `avatar_generation` inference row | **open** | no runs in 7d | — |
-| Owner Console 390px / 1440px | **open** | — | — |
+| Owner Console 390px / 1440px | **open** | `npm run smoke:economics:layout-live` after deploy `a7eb29f` (/api/me fix) | — |
 | Owner auth gate (unauthenticated) | **pass** | `/owner` → «Sign in required» at 390/1440; API → 401 | 2026-09-19 |
 | Owner API smoke (`smoke:economics:owner`) | **pass** | `npm run smoke:economics:mint-owner` (active Clerk session + `CLERK_SECRET_KEY`) | 2026-09-19 |
 
@@ -58,7 +58,7 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 | Model Registry + Pricing 2.0 | ✅ | deployed, specs + owner API |
 | CostEngine 2.0 + immutable costs | ✅ | D1 `e2ac39dc`, integration tests |
 | Economics truth (unknown ≠ $0) | ✅ | `formatMicrousd(null)`, economics-service test |
-| Owner Console shipped | ✅ partial | code deployed; layout sign-off open |
+| Owner Console shipped | ✅ partial | `/api/me` shadowing fixed in `a7eb29f`; layout-live smoke added |
 | Production E2E Milestone 1 | **partial** | operator + owner API ✅; layout 390/1440 open |
 | Tests + CI smoke | ✅ | 127/127; `smoke:economics` + optional `SMOKE_OWNER_BEARER` in deploy |
 

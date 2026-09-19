@@ -47,15 +47,29 @@ async function loadPlaywright() {
 }
 
 async function waitOwnerShell(page) {
-  await page.waitForFunction(
-    () =>
-      !/Sign in required|Access denied|Server error/i.test(document.body?.innerText || '') &&
-      !/Войдите|Доступ запрещён|Ошибка сервера/i.test(document.body?.innerText || ''),
-    { timeout: 60_000 }
-  );
-  await page.waitForSelector('aside.hidden.lg\\:block, nav.lg\\:hidden.fixed.bottom-0', {
-    timeout: 30_000,
-  });
+  const blocked = await page
+    .waitForFunction(
+      () => {
+        const text = document.body?.innerText || '';
+        if (/Sign in required|Access denied|Server error/i.test(text)) return 'blocked';
+        if (/Войдите|Доступ запрещён|Ошибка сервера/i.test(text)) return 'blocked';
+        if (document.querySelector('aside.hidden.lg\\:block, nav.lg\\:hidden.fixed.bottom-0')) {
+          return 'ready';
+        }
+        return null;
+      },
+      { timeout: 60_000 }
+    )
+    .then((h) => h.jsonValue())
+    .catch(() => 'timeout');
+
+  if (blocked === 'blocked') {
+    const snippet = await page.locator('body').innerText();
+    fail(
+      `owner shell blocked (${snippet.slice(0, 80)}). Deploy /api/me fix (a7eb29f+) if Access denied.`
+    );
+  }
+  if (blocked !== 'ready') fail('owner shell timeout — Clerk session or deploy not ready');
 }
 
 async function clickNav(page, pattern) {

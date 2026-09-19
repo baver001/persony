@@ -28,6 +28,7 @@ Public + D1 + layout contract (no auth): `npm run smoke:economics` — coverage 
 Public only: `npm run smoke:economics:public`  
 Operator D1 only (wrangler): `npm run smoke:economics:d1`  
 Layout contract only: `npm run smoke:economics:layout`  
+Authenticated layout (390/1440, Playwright + Clerk ticket): `npm run smoke:economics:layout-live`  
 D1 ↔ Owner coverage parity (JWT + wrangler): `npm run smoke:economics:parity`  
 Auto-mint (no DevTools): `CLERK_SECRET_KEY` + active owner session on beta → `npm run smoke:economics:mint-owner`  
 (Clerk `createSession` is dev-only; production reuses an active session JWT via Backend API.)  

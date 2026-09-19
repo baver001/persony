@@ -14,6 +14,7 @@ describe('GET /api/me', () => {
       DB: db,
       ENVIRONMENT: 'development',
       PERSONY_DEV_MODE: 'true',
+      GEMINI_API_KEY: 'test-key',
     });
     await grantRole(db, user.id, 'OWNER');
 
