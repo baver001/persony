@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Current production SHA** | `e8716e4` — economics snapshot test + owner smoke invariants (deploy `35432049548`) |
+| **Current production SHA** | `e3ae5ea` — layout checklist + completion audit docs (worker `e8716e4` economics stack) |
 | **Production health** | `GET https://beta.persony.org/api/health` → ok, database ready |
 | **Last migration (remote D1)** | `0014_pricing_catalog_db.sql` |
 | **CI** | Green (see latest `main` deploy) |
@@ -64,5 +64,5 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 
 ## Next actions
 
-1. `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner` — close owner API gate.
+1. `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:milestone1` — operator + owner API gates.
 2. Owner Console 390px / 1440px per `PRODUCTION_ECONOMICS_SMOKE.md` §15–23; optional avatar_generation.

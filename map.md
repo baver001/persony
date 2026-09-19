@@ -133,10 +133,10 @@ flowchart TD
 - Reconciliation: [`docs/ECONOMICS_RECONCILIATION.md`](docs/ECONOMICS_RECONCILIATION.md)
 - Goal state: [`docs/GOAL_MODE_STATE.md`](docs/GOAL_MODE_STATE.md)
 - Metrics: [`docs/METRICS.md`](docs/METRICS.md) · Owner spec: [`specs/owner-console.md`](specs/owner-console.md)
-- Production SHA: `dcad14f` (2026-09-18) — immutable costs, Owner Console mobile, DB pricing `0014`, CI economics smoke
-- Operator smoke: `npm run smoke:economics` (public + D1; CI post-deploy + local)
-- Owner API smoke: `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner`
-- Milestone 1 E2E: [`docs/PRODUCTION_ECONOMICS_SMOKE.md`](docs/PRODUCTION_ECONOMICS_SMOKE.md) — **manual owner smoke open**
+- Production SHA: `e3ae5ea` (2026-09-19) — CostEngine 2.0 verified on D1 (`e2ac39dc`), Inference legacy badges, CI economics smoke
+- Milestone 1 orchestrator: `npm run smoke:economics:milestone1` (operator always; owner when JWT set)
+- Operator smoke: `npm run smoke:economics` (public + D1)
+- Milestone 1 E2E: [`docs/PRODUCTION_ECONOMICS_SMOKE.md`](docs/PRODUCTION_ECONOMICS_SMOKE.md) — **owner JWT + layout sign-off open**
 
 ### Проверить
 
