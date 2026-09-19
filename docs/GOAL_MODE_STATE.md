@@ -10,14 +10,14 @@
 
 | Field | Value |
 |-------|--------|
-| **Current production SHA** | `e3ae5ea` — layout checklist + completion audit docs (worker `e8716e4` economics stack) |
+| **Current production SHA** | `096c95aa839c` (health); docs `4859c2d` (worker economics `e8716e4`+) |
 | **Production health** | `GET https://beta.persony.org/api/health` → ok, database ready |
 | **Last migration (remote D1)** | `0014_pricing_catalog_db.sql` |
 | **CI** | Green (see latest `main` deploy) |
 | **Public smoke** | `npm run smoke:economics:public` |
 | **Owner API smoke** | `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner` |
 | **D1 operator smoke** | `npm run smoke:economics:d1` (wrangler remote) |
-| **Production smoke (economics)** | **PARTIAL** — D1 ✅ `with_breakdown=11/19` (7d); latest `e2ac39dc` actual + immutable breakdown |
+| **Production smoke (economics)** | **PARTIAL** — public+D1 ✅ 2026-09-19; `with_breakdown=11/19` (7d); latest `e2ac39dc` |
 | **Tests (local)** | 126/126 (incl. economics snapshot + CostEngine 2.0 integration) |
 
 Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
