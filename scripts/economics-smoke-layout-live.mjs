@@ -177,6 +177,7 @@ async function main() {
   const browser = await launchBrowser(chromium);
   const context = await browser.newContext();
   const page = await context.newPage();
+  page.setDefaultTimeout(90_000);
 
   try {
     await signInOwnerWithTicket(page, BASE, ticket);

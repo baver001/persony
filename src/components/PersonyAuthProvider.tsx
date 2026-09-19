@@ -30,7 +30,7 @@ function ClerkBridge({
   children: React.ReactNode;
   authRequired: boolean;
 }) {
-  const { isLoaded, isSignedIn, getToken } = useAuth();
+  const { isLoaded, isSignedIn, userId, getToken } = useAuth();
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -47,11 +47,11 @@ function ClerkBridge({
   const value = useMemo(
     () => ({
       isLoaded,
-      isSignedIn: Boolean(isSignedIn),
+      isSignedIn: Boolean(isSignedIn ?? userId),
       clerkEnabled: true,
       authRequired,
     }),
-    [authRequired, isLoaded, isSignedIn]
+    [authRequired, isLoaded, isSignedIn, userId]
   );
 
   return <PersonyAuthContext.Provider value={value}>{children}</PersonyAuthContext.Provider>;
@@ -67,7 +67,7 @@ function DevAuthBridge({
   const value = useMemo(
     () => ({
       isLoaded: true,
-      isSignedIn: import.meta.env.DEV && !authRequired,
+      isSignedIn: !authRequired,
       clerkEnabled: false,
       authRequired,
     }),
@@ -145,8 +145,9 @@ export function PersonyAuthProvider({ children }: { children: React.ReactNode })
     );
   }
 
-  const publishableKey =
-    config.clerkPublishableKey || import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || '';
+  const publishableKey = config.devMode
+    ? ''
+    : config.clerkPublishableKey || import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || '';
 
   if (publishableKey) {
     return (

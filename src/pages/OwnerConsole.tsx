@@ -93,9 +93,7 @@ export function OwnerConsole({ onBack }: Props) {
   const [systemSettings, setSystemSettings] = useState<OwnerSystemSettings | null>(null);
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsError, setSettingsError] = useState(false);
-  const [error, setError] = useState<'AUTH_REQUIRED' | 'FORBIDDEN' | 'INTERNAL_ERROR' | null>(
-    null
-  );
+  const [error, setError] = useState<'FORBIDDEN' | 'INTERNAL_ERROR' | null>(null);
 
   useOwnerNoIndex(t('common:ownerConsole'), t('common:appTitle'));
 
@@ -250,11 +248,7 @@ export function OwnerConsole({ onBack }: Props) {
   }, []);
 
   useEffect(() => {
-    if (!isLoaded) return;
-    if (!isSignedIn) {
-      setError('AUTH_REQUIRED');
-      return;
-    }
+    if (!isLoaded || !isSignedIn) return;
 
     setError(null);
 
@@ -328,7 +322,12 @@ export function OwnerConsole({ onBack }: Props) {
 
   const metrics = (overview?.metrics as Record<string, unknown>) || {};
 
-  if (error === 'AUTH_REQUIRED') {
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-zinc-950 p-8 text-zinc-500">{t('common:loading')}</div>
+    );
+  }
+  if (!isSignedIn) {
     return (
       <div className="min-h-screen bg-zinc-950 p-8 text-zinc-400">{t('owner:authRequired')}</div>
     );
