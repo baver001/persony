@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Current production SHA** | `9dc40f301f93` (parity smoke + expanded layout contract) |
+| **Current production SHA** | `0b0e7527256c` (CI workflow fix + optional owner smoke) |
 | **Production health** | `GET https://beta.persony.org/api/health` → ok, database ready |
 | **Last migration (remote D1)** | `0014_pricing_catalog_db.sql` |
 | **CI** | Green (see latest `main` deploy) |
@@ -36,7 +36,7 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 | Economics E2E (Milestone 1) | **partial** | D1 chat_text + voice_transcription verified; owner API smoke + layout open |
 | DB-backed pricing admin | deployed | migration `0014`, POST `/owner/pricing/entries`, audit log |
 | Immutable inference costs | deployed | `updateInferenceRunEconomics` blocks rewrite after `cost_calculated_at` |
-| CI post-deploy economics smoke | deployed | `smoke:economics` public+D1+layout; deploy `35432565367` |
+| CI post-deploy economics smoke | deployed | `smoke:economics` public+D1+layout; optional owner via secret |
 | Mobile/desktop layout gates | **partial** | static layout contract in CI; manual 390/1440 sign-off open |
 
 ## Manual verification gates
