@@ -85,8 +85,22 @@ Operator D1 only (wrangler): `npm run smoke:economics:d1`
 
 ## Owner Console layout (390px / 1440px)
 
-15. At **390px** width: bottom nav + More drawer work; Inference/Users/Personas use card lists (no required horizontal scroll).
-16. At **1440px** width: desktop sidebar visible; tables render for analytics sections.
+DevTools → toggle device toolbar. Sign in as owner → `/owner`.
+
+### 390px (mobile)
+
+15. Bottom nav shows **Overview · AI · Economy · Inference · More** — all tappable (≥44px).
+16. **More** drawer opens secondary sections (Pricing, Users, Personas, Settings, Errors).
+17. **Inference** — card list (not table); open `e2ac39dc` → **immutable** badge + line-item COGS; legacy rows show **legacy** badge.
+18. **Economy** — metric cards stack; coverage % matches D1 smoke (~92% today).
+19. No required horizontal scroll on any section.
+
+### 1440px (desktop)
+
+20. Left sidebar visible with grouped nav (Overview / AI / Economy / People / Usage / System).
+21. **Inference** — table with columns Time, Operation, Model, COGS, Confidence, Status.
+22. **Users / Personas** — tables on list; detail panel shows inference history.
+23. Unpriced COGS renders as **—** (not $0.00).
 
 ## Record outcome
 

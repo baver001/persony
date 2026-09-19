@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Current production SHA** | `81b1f20` — D1 economy coverage in operator smoke (deploy `35431939046`) |
+| **Current production SHA** | `e8716e4` — economics snapshot test + owner smoke invariants (deploy `35432049548`) |
 | **Production health** | `GET https://beta.persony.org/api/health` → ok, database ready |
 | **Last migration (remote D1)** | `0014_pricing_catalog_db.sql` |
 | **CI** | Green (see latest `main` deploy) |
@@ -51,7 +51,18 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 | Owner auth gate (unauthenticated) | **pass** | `/owner` → «Sign in required»; API → 401 | 2026-09-18 |
 | Owner API smoke (`smoke:economics:owner`) | **open** | needs `SMOKE_OWNER_BEARER` | — |
 
+## Completion audit (2026-09-19)
+
+| Requirement | Status | Evidence |
+|-------------|--------|----------|
+| Model Registry + Pricing 2.0 | ✅ | deployed, specs + owner API |
+| CostEngine 2.0 + immutable costs | ✅ | D1 `e2ac39dc`, integration tests |
+| Economics truth (unknown ≠ $0) | ✅ | `formatMicrousd(null)`, economics-service test |
+| Owner Console shipped | ✅ partial | code deployed; layout sign-off open |
+| Production E2E Milestone 1 | **partial** | D1 operator ✅; owner API + layout open |
+| Tests + CI smoke | ✅ | 126/126, deploy `35432049548` |
+
 ## Next actions
 
 1. `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner` — close owner API gate.
-2. Owner Console 390px / 1440px on beta; optional avatar_generation smoke.
+2. Owner Console 390px / 1440px per `PRODUCTION_ECONOMICS_SMOKE.md` §15–23; optional avatar_generation.
