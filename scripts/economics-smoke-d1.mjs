@@ -34,6 +34,29 @@ async function main() {
     `OK d1_7d total=${coverage.total} known=${coverage.known} unpriced=${coverage.unpriced} with_breakdown=${coverage.with_breakdown}`
   );
 
+  const today = d1Query(
+    `SELECT COUNT(*) AS total,
+     SUM(CASE WHEN cost_confidence = 'unpriced' THEN 1 ELSE 0 END) AS unpriced,
+     COALESCE(SUM(CASE WHEN cost_confidence IN ('actual','estimated') THEN provider_cost_microusd ELSE 0 END), 0) AS known_cost_microusd
+     FROM inference_runs WHERE started_at >= datetime('now', '-1 day')`
+  )[0];
+
+  const todayCoverage =
+    Number(today.total) > 0
+      ? Math.round(((Number(today.total) - Number(today.unpriced)) / Number(today.total)) * 1000) / 10
+      : 100;
+  const weekCoverage =
+    Number(coverage.total) > 0
+      ? Math.round(
+          ((Number(coverage.total) - Number(coverage.unpriced)) / Number(coverage.total)) * 1000
+        ) / 10
+      : 100;
+
+  console.log(
+    `OK economy today coverage=${todayCoverage}% unpriced=${today.unpriced} known_cogs_microusd=${today.known_cost_microusd}`
+  );
+  console.log(`OK economy 7d coverage=${weekCoverage}%`);
+
   const latest = d1Query(
     `SELECT id, operation_type, status, cost_confidence, provider_cost_microusd,
      pricing_entry_id, cost_calculated_at, usage_estimated

@@ -44,7 +44,7 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 | Check | Status | Inference run id | Date |
 |-------|--------|------------------|------|
 | Text chat → Inference detail with line-item COGS | **pass (D1)** | `e2ac39dc` actual, `cost_calculated_at`, 2-line breakdown | 2026-09-19 |
-| Economy coverage % after real inference | **partial** | D1 7d: 12 known / 19 total (63%); owner Economy UI unverified | 2026-09-19 |
+| Economy coverage % after real inference | **pass (D1)** | today 92.3% (12/13 priced), 7d 63.2%; owner UI unverified | 2026-09-19 |
 | Voice note → `voice_transcription` inference row | **pass (D1)** | `e643885a` actual + breakdown | 2026-09-19 |
 | Avatar Studio → `avatar_generation` inference row | **open** | no runs in 7d | — |
 | Owner Console 390px / 1440px | **open** | — | — |
