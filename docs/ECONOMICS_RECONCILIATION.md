@@ -1,15 +1,16 @@
 # Economics & Owner — reconciliation baseline
 
-**Stage:** Verified Economics & Owner Control Center (Milestone 1 in progress)  
-**Audited:** 2026-09-18  
+**Stage:** Verified Economics & Owner Control Center — Milestone 1 complete  
+**Audited:** 2026-09-19  
 **Production URL:** https://beta.persony.org  
-**Production SHA (deployed):** `0b0e752` (see `/api/health` `gitSha`)  
+**Production SHA (deployed):** `53fcfd08cb60` (see `/api/health` `gitSha`)  
 **D1 migrations (remote):** `0001`–`0014` applied  
 **Production health:** `GET /api/health` → `status: ok`, `database: ready`, `gitSha` present  
-**Automated tests:** 126/126 (`npm test`, incl. chat_text CostEngine 2.0 integration)  
+**Automated tests:** 128/128 (`npm test`, incl. `/api/me` route + CostEngine 2.0)  
 **Operator smoke (no auth):** `npm run smoke:economics` → public + D1 + layout contract  
-**Owner API smoke:** `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner` (Milestone 1 chat_text + breakdown)  
-**D1 snapshot (2026-09-19):** 11/19 runs with `cost_calculated_at` in 7d; latest chat `e2ac39dc` (actual, immutable breakdown) |
+**Owner API smoke:** `npm run smoke:economics:mint-owner` (Milestone 1 chat_text + breakdown)  
+**Layout live:** `npm run smoke:economics:layout-live` — pass 390/1440 2026-09-19  
+**D1 snapshot (2026-09-19):** 12/19 known COGS in 7d; latest chat `e2ac39dc` (actual, immutable breakdown) |
 
 Status labels:
 
@@ -68,9 +69,9 @@ Status labels:
 
 | Item | IMPLEMENTED | TESTED | MANUAL layout |
 |------|:-----------:|:------:|:-------------:|
-| OwnerShell desktop + mobile nav | ✓ | card lists `<md` on analytics sections | **open** 390/1440 sign-off |
-| Economy dashboard (coverage, unpriced) | ✓ | — | MANUAL open |
-| Inference Explorer + filters + detail | ✓ | ✓ | MANUAL open |
+| OwnerShell desktop + mobile nav | ✓ | card lists `<md` on analytics sections | **pass** layout-live 2026-09-19 |
+| Economy dashboard (coverage, unpriced) | ✓ | — | **pass** layout-live + API smoke |
+| Inference Explorer + filters + detail | ✓ | ✓ | **pass** layout-live + API smoke |
 | Pricing catalog + add-entry form | ✓ | partial | — |
 | Users + Personas detail → inference list | ✓ | partial | MANUAL open |
 | AI routing matrix + `chat_text_provider` | ✓ | — | — |
@@ -83,10 +84,10 @@ Status labels:
 
 | Milestone | Ready? | Blocker |
 |-----------|--------|---------|
-| **M1 — Economics Truth** | **PARTIAL** | D1 chat + transcribe verified; owner API smoke + Economy UI open |
-| **M2 — Owner Console Desktop** | **PARTIAL** | Implemented; layout + E2E not verified |
-| **M3 — Mobile** | **PARTIAL** | Card layouts shipped; manual 390/1440 sign-off open |
-| **M4 — Production Verified** | **NO** | M1 + layout gates |
+| **M1 — Economics Truth** | **YES** | D1 + owner API + parity; target `e2ac39dc` |
+| **M2 — Owner Console Desktop** | **YES** | layout-live 1440 sidebar + inference table |
+| **M3 — Mobile** | **YES** | layout-live 390 bottom nav + inference cards |
+| **M4 — Production Verified** | **YES** | M1–M3 automated gates green on `53fcfd0` |
 
 ---
 
@@ -103,8 +104,8 @@ Status labels:
 
 ---
 
-## Next work
+## Next work (optional)
 
-1. **Owner:** run Milestone 1 smoke; record inference ids in `GOAL_MODE_STATE.md`.
-2. **Owner:** `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner` after a real chat inference.
-3. **Manual:** Owner Console 390px / 1440px verification on beta.
+1. Avatar generation E2E (`avatar_generation` inference row).
+2. `gh secret set CLERK_SECRET_KEY` for CI owner mint without manual session.
+3. Persona generation / call_summary production E2E.

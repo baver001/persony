@@ -78,6 +78,27 @@ async function clickNav(page, pattern) {
   await btn.click();
 }
 
+async function waitInferenceMobileCards(page) {
+  await page
+    .locator('ul.md\\:hidden button')
+    .first()
+    .waitFor({ state: 'visible', timeout: 45_000 });
+}
+
+async function waitInferenceDesktopTable(page) {
+  await page
+    .locator('div.hidden.md\\:block table tbody tr')
+    .first()
+    .waitFor({ state: 'visible', timeout: 45_000 });
+}
+
+async function waitEconomyMetricCards(page) {
+  await page
+    .locator('div.grid.grid-cols-2.sm\\:grid-cols-3.gap-3')
+    .first()
+    .waitFor({ state: 'visible', timeout: 45_000 });
+}
+
 async function assertVisible(locator, label) {
   const visible = await locator.isVisible();
   if (!visible) fail(`${label} not visible`);
@@ -105,6 +126,7 @@ async function checkMobile(page) {
   ok('layout_390_bottom_nav_five_tiles');
 
   await clickNav(page, /Inference|Инференс/i);
+  await waitInferenceMobileCards(page);
   await assertVisible(page.locator('ul.md\\:hidden'), 'layout_390_inference_card_list');
   await assertHidden(page.locator('div.hidden.md\\:block table'), 'layout_390_inference_table_hidden');
 
@@ -124,11 +146,17 @@ async function checkMobile(page) {
 
   await clickNav(page, /More|Ещё/i);
   await assertVisible(page.getByRole('button', { name: /Pricing|Тарифы/i }), 'layout_390_more_pricing');
-  await page.keyboard.press('Escape');
-  await page.locator('div.lg\\:hidden.fixed.inset-0').click({ position: { x: 10, y: 10 }, force: true }).catch(() => {});
+  await page
+    .locator('div.lg\\:hidden.fixed.inset-0.bg-black\\/60')
+    .click({ position: { x: 24, y: 400 }, force: true })
+    .catch(() => {});
 
   await clickNav(page, /Economy|Экономика/i);
-  await assertVisible(page.locator('.grid.grid-cols-2').first(), 'layout_390_economy_metric_cards');
+  await waitEconomyMetricCards(page);
+  await assertVisible(
+    page.locator('div.grid.grid-cols-2.sm\\:grid-cols-3.gap-3').first(),
+    'layout_390_economy_metric_cards'
+  );
 
   const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
   const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
@@ -146,6 +174,7 @@ async function checkDesktop(page) {
   await assertHidden(page.locator('nav.lg\\:hidden.fixed.bottom-0'), 'layout_1440_mobile_nav_hidden');
 
   await clickNav(page, /Inference|Инференс/i);
+  await waitInferenceDesktopTable(page);
   await assertVisible(page.locator('div.hidden.md\\:block table'), 'layout_1440_inference_table');
   const headers = await page.locator('div.hidden.md\\:block table th').allTextContents();
   const headerText = headers.join(' ').toLowerCase();
@@ -167,6 +196,10 @@ async function checkDesktop(page) {
   }
 
   await clickNav(page, /Users|Пользователи/i);
+  await page
+    .locator('div.hidden.md\\:block table tbody tr')
+    .first()
+    .waitFor({ state: 'visible', timeout: 45_000 });
   await assertVisible(page.locator('div.hidden.md\\:block table').first(), 'layout_1440_users_table');
 }
 
