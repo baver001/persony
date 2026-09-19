@@ -18,7 +18,7 @@
 | **Owner API smoke** | `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner` |
 | **D1 operator smoke** | `npm run smoke:economics:d1` (wrangler remote) |
 | **Production smoke (economics)** | **PARTIAL** — D1 ✅ `with_breakdown=11/19` (7d); latest `e2ac39dc` actual + immutable breakdown |
-| **Tests (local)** | 125/125 (incl. chat_text CostEngine 2.0 integration) |
+| **Tests (local)** | 126/126 (incl. economics snapshot + CostEngine 2.0 integration) |
 
 Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 

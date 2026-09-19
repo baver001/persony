@@ -53,8 +53,15 @@ async function main() {
     fail('economics snapshot missing costCoverageTodayPercent');
   }
   console.log(
-    `OK economics coverage=${economics.costCoverageTodayPercent}% unpricedToday=${economics.unpricedCallsToday}`
+    `OK economics coverage=${economics.costCoverageTodayPercent}% unpricedToday=${economics.unpricedCallsToday} knownCogsToday=${economics.aiCostTodayMicrousd}`
   );
+
+  if (typeof economics.costCoverageTodayPercent !== 'number' || economics.costCoverageTodayPercent < 0) {
+    fail('economics costCoverageTodayPercent invalid');
+  }
+  if (economics.unpricedCallsToday > 0 && economics.costCoverageTodayPercent === 100) {
+    fail('economics reports 100% coverage but unpricedCallsToday > 0');
+  }
 
   const pricingRes = await ownerFetch('/owner/pricing');
   if (pricingRes.status !== 200) fail(`owner pricing HTTP ${pricingRes.status}`);
