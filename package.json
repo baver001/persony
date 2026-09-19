@@ -18,6 +18,7 @@
     "smoke:economics:public": "node scripts/economics-smoke-public.mjs",
     "smoke:economics:owner": "node scripts/economics-smoke-owner.mjs",
     "smoke:economics:d1": "node scripts/economics-smoke-d1.mjs",
+    "smoke:economics:milestone1": "node scripts/economics-smoke-milestone1.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "types": "wrangler types",

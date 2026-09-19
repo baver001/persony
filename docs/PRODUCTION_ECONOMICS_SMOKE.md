@@ -23,6 +23,7 @@ Token extraction (summary):
 SMOKE_OWNER_BEARER="<jwt>" npm run smoke:economics:owner
 ```
 
+**Full Milestone 1 orchestrator:** `npm run smoke:economics:milestone1` (operator always; owner when `SMOKE_OWNER_BEARER` set)  
 Public + D1 (no auth): `npm run smoke:economics` — includes economy coverage % (today + 7d)  
 Public only: `npm run smoke:economics:public`  
 Operator D1 only (wrangler): `npm run smoke:economics:d1`
