@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { toPersonaPublicDTO } from '../domain/persona-dto';
-import { AuthRequiredError, requireUser } from '../middleware/auth';
+import { AuthRequiredError, getAuthContext, requireUser } from '../middleware/auth';
 import { getPersonaRecord } from '../repositories/persona-repository';
 import {
   installPersonaForUser,
@@ -27,7 +27,15 @@ meRoutes.get('/me', async (c) => {
     const locale = await getUserLocale(c.env.DB, userId);
     const roles = await getUserRoles(c.env.DB, userId);
     const isOwner = await userHasRole(c.env.DB, userId, 'OWNER');
-    return c.json({ userId, preferredLocale: locale, roles, isOwner });
+    const auth = await getAuthContext(c);
+    return c.json({
+      userId,
+      preferredLocale: locale,
+      roles,
+      isOwner,
+      isAuthenticated: true,
+      authProvider: auth.authProvider,
+    });
   } catch (err) {
     if (err instanceof AuthRequiredError) return c.json({ error_code: 'AUTH_REQUIRED' }, 401);
     return c.json({ error_code: 'INTERNAL_ERROR' }, 500);

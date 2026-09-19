@@ -40,11 +40,11 @@ export const apiRoutes = new Hono<{ Bindings: PersonyEnv }>();
 apiRoutes.use('*', bodySizeLimit(10 * 1024 * 1024));
 
 apiRoutes.route('/', healthRoutes);
+apiRoutes.route('/', meRoutes);
 apiRoutes.route('/', personaRoutes);
 apiRoutes.route('/', conversationRoutes);
 apiRoutes.route('/', importRoutes);
 apiRoutes.route('/', memoryRoutes);
-apiRoutes.route('/', meRoutes);
 apiRoutes.route('/', ownerRoutes);
 apiRoutes.route('/', billingRoutes);
 apiRoutes.route('/', roomRoutes);

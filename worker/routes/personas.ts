@@ -147,11 +147,3 @@ personaRoutes.delete('/personas/:id', async (c) => {
   }
 });
 
-personaRoutes.get('/me', async (c) => {
-  const auth = await getAuthContext(c);
-  return c.json({
-    userId: auth.userId,
-    authProvider: auth.authProvider,
-    isAuthenticated: auth.isAuthenticated,
-  });
-});
