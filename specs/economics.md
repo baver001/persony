@@ -1,7 +1,7 @@
 # Economics specification
 
-**Status:** Phase D–E deployed; Milestone 1 E2E pending  
-**Last updated:** 2026-09-18
+**Status:** Milestone 1 partial — D1 verified (`e2ac39dc` chat, `e643885a` transcribe); owner API smoke + layout open  
+**Last updated:** 2026-09-19
 
 ## Pipeline
 
@@ -59,5 +59,5 @@ Chat providers emit `usage` on the terminal SSE `done` event when the upstream A
 - [x] Owner UI for adding pricing versions (`POST /owner/pricing/entries`)
 - [x] Voice Call / avatar / transcription pricing dimensions (`per_minute`, `per_image`, transcribe tokens)
 - [x] Inference detail cost breakdown API — `GET /api/owner/inference/:id`
-- [ ] Production E2E economics verification
+- [ ] Production E2E economics verification (owner JWT smoke + Console 390/1440; D1 operator layer ✅)
 - [x] Normalize `operation_type` — `operations.ts` + migration `0013`

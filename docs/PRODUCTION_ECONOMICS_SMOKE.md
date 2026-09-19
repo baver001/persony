@@ -23,7 +23,7 @@ Token extraction (summary):
 SMOKE_OWNER_BEARER="<jwt>" npm run smoke:economics:owner
 ```
 
-Public + D1 (no auth): `npm run smoke:economics`  
+Public + D1 (no auth): `npm run smoke:economics` — includes economy coverage % (today + 7d)  
 Public only: `npm run smoke:economics:public`  
 Operator D1 only (wrangler): `npm run smoke:economics:d1`
 

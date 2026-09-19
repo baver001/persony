@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Current production SHA** | `8aa8607` — Milestone 1 smoke + Inference legacy badges (deploy `35431785194`) |
+| **Current production SHA** | `81b1f20` — D1 economy coverage in operator smoke (deploy `35431939046`) |
 | **Production health** | `GET https://beta.persony.org/api/health` → ok, database ready |
 | **Last migration (remote D1)** | `0014_pricing_catalog_db.sql` |
 | **CI** | Green (see latest `main` deploy) |
