@@ -133,9 +133,9 @@ flowchart TD
 - Reconciliation: [`docs/ECONOMICS_RECONCILIATION.md`](docs/ECONOMICS_RECONCILIATION.md)
 - Goal state: [`docs/GOAL_MODE_STATE.md`](docs/GOAL_MODE_STATE.md)
 - Metrics: [`docs/METRICS.md`](docs/METRICS.md) · Owner spec: [`specs/owner-console.md`](specs/owner-console.md)
-- Production SHA: `e3ae5ea` (2026-09-19) — CostEngine 2.0 verified on D1 (`e2ac39dc`), Inference legacy badges, CI economics smoke
-- Milestone 1 orchestrator: `npm run smoke:economics:milestone1` (operator always; owner when JWT set)
-- Operator smoke: `npm run smoke:economics` (public + D1)
+- Production SHA: `0b0e752` (2026-09-19) — CostEngine 2.0 on D1 (`e2ac39dc`), layout contract smoke, optional CI owner smoke
+- Milestone 1 orchestrator: `npm run smoke:economics:milestone1` (operator always; owner + parity when JWT set)
+- Operator smoke: `npm run smoke:economics` (public + D1 + layout contract)
 - Milestone 1 E2E: [`docs/PRODUCTION_ECONOMICS_SMOKE.md`](docs/PRODUCTION_ECONOMICS_SMOKE.md) — **owner JWT + layout sign-off open**
 
 ### Проверить

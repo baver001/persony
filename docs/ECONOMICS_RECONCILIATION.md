@@ -3,7 +3,7 @@
 **Stage:** Verified Economics & Owner Control Center (Milestone 1 in progress)  
 **Audited:** 2026-09-18  
 **Production URL:** https://beta.persony.org  
-**Production SHA (deployed):** `fd21da3` (see `/api/health` `gitSha`)  
+**Production SHA (deployed):** `0b0e752` (see `/api/health` `gitSha`)  
 **D1 migrations (remote):** `0001`–`0014` applied  
 **Production health:** `GET /api/health` → `status: ok`, `database: ready`, `gitSha` present  
 **Automated tests:** 126/126 (`npm test`, incl. chat_text CostEngine 2.0 integration)  
@@ -94,7 +94,7 @@ Status labels:
 
 | Doc | Accurate? |
 |-----|-----------|
-| `docs/GOAL_MODE_STATE.md` | ✓ updated 2026-09-18 |
+| `docs/GOAL_MODE_STATE.md` | ✓ updated 2026-09-19 |
 | `docs/PRODUCTION_ECONOMICS_SMOKE.md` | ✓ incl. owner API smoke helper |
 | `docs/METRICS.md` | ✓ |
 | `specs/owner-console.md` | ✓ synced |

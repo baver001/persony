@@ -36,3 +36,10 @@ _Журнал пополняется через `record-learning.mjs` и вру�
 - **Reusable practice:** Unknown COGS → `formatMicrousd(null)` = `—`; block cost field rewrites in repository once settled; public smoke includes owner 401 gate; Milestone 1 E2E still needs owner JWT + recorded inference run id
 - **Scope:** project goal mode
 
+## 2026-09-19 — economics verification
+
+- **Change:** Layout contract smoke, D1↔Owner coverage parity, expanded owner API smoke, CI optional owner step (`SMOKE_OWNER_BEARER`; shell skip when unset)
+- **Evidence:** production `0b0e752`; 127/127 tests; deploy `35432809430`; D1 `e2ac39dc` actual + immutable breakdown
+- **Reusable practice:** `smoke:economics` = public + D1 + layout; never use GitHub `secrets` in workflow `if` — gate in shell
+- **Scope:** project goal mode
+

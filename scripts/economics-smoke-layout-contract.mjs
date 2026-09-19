@@ -30,6 +30,7 @@ function main() {
   const personas = read('src/pages/owner/sections/OwnerPersonasSection.tsx');
   const pricing = read('src/pages/owner/sections/OwnerPricingSection.tsx');
   const errors = read('src/pages/owner/sections/OwnerErrorsSection.tsx');
+  const ai = read('src/pages/owner/sections/OwnerAiSection.tsx');
   const utils = read('src/pages/owner/utils.ts');
 
   // Mobile bottom nav (§15)
@@ -72,6 +73,7 @@ function main() {
     ['economy', economy],
     ['pricing', pricing],
     ['errors', errors],
+    ['ai', ai],
   ]) {
     assertIncludes(src, 'md:hidden', `${name} mobile cards`);
     assertIncludes(src, 'hidden md:block', `${name} desktop table`);
