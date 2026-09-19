@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Current production SHA** | `3c5678eb7ff7` (layout contract smoke + owner API checks) |
+| **Current production SHA** | `9dc40f301f93` (parity smoke + expanded layout contract) |
 | **Production health** | `GET https://beta.persony.org/api/health` → ok, database ready |
 | **Last migration (remote D1)** | `0014_pricing_catalog_db.sql` |
 | **CI** | Green (see latest `main` deploy) |
@@ -60,7 +60,7 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 | Economics truth (unknown ≠ $0) | ✅ | `formatMicrousd(null)`, economics-service test |
 | Owner Console shipped | ✅ partial | code deployed; layout sign-off open |
 | Production E2E Milestone 1 | **partial** | D1 operator ✅; owner API + layout open |
-| Tests + CI smoke | ✅ | 126/126; `npm run smoke:economics` green 2026-09-19 |
+| Tests + CI smoke | ✅ | 127/127; `smoke:economics` + optional `SMOKE_OWNER_BEARER` in deploy |
 
 ## Next actions
 
