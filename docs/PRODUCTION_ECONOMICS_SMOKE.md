@@ -29,8 +29,10 @@ Public only: `npm run smoke:economics:public`
 Operator D1 only (wrangler): `npm run smoke:economics:d1`  
 Layout contract only: `npm run smoke:economics:layout`  
 D1 ↔ Owner coverage parity (JWT + wrangler): `npm run smoke:economics:parity`  
-Auto-mint (no DevTools): `CLERK_SECRET_KEY` + `SMOKE_OWNER_CLERK_USER_ID` → `npm run smoke:economics:mint-owner`  
-CI (optional): `SMOKE_OWNER_BEARER` **or** `CLERK_SECRET_KEY` + `SMOKE_OWNER_CLERK_USER_ID` → post-deploy owner + parity
+Auto-mint (no DevTools): `CLERK_SECRET_KEY` + active owner session on beta → `npm run smoke:economics:mint-owner`  
+(Clerk `createSession` is dev-only; production reuses an active session JWT via Backend API.)  
+Browser sign-in URL helper: `node scripts/economics-smoke-sign-in-url.mjs`  
+CI (optional): `SMOKE_OWNER_BEARER` **or** `CLERK_SECRET_KEY` + owner session on beta → post-deploy owner + parity
 
 ## Steps
 
@@ -97,7 +99,7 @@ DevTools → toggle device toolbar. Sign in as owner → `/owner`.
 15. Bottom nav shows **Overview · AI · Economy · Inference · More** — all tappable (≥44px).
 16. **More** drawer opens secondary sections (Pricing, Users, Personas, Settings, Errors).
 17. **Inference** — card list (not table); open `e2ac39dc` → **immutable** badge + line-item COGS; legacy rows show **legacy** badge.
-18. **Economy** — metric cards stack; coverage % matches D1 smoke (~92% today).
+18. **Economy** — metric cards stack; coverage % matches D1 smoke (`npm run smoke:economics:d1` today line).
 19. No required horizontal scroll on any section.
 
 ### 1440px (desktop)

@@ -6,6 +6,7 @@
  *   npm run smoke:economics:d1
  */
 import { execSync } from 'node:child_process';
+import { sinceStartedAtSql } from './economics-smoke-sql.mjs';
 
 function d1Query(sql) {
   const oneLine = sql.replace(/\s+/g, ' ').trim();
@@ -27,7 +28,7 @@ async function main() {
      SUM(CASE WHEN cost_confidence IN ('actual','estimated') THEN 1 ELSE 0 END) AS known,
      SUM(CASE WHEN cost_confidence = 'unpriced' THEN 1 ELSE 0 END) AS unpriced,
      SUM(CASE WHEN cost_calculated_at IS NOT NULL THEN 1 ELSE 0 END) AS with_breakdown
-     FROM inference_runs WHERE started_at >= datetime('now', '-7 days')`
+     FROM inference_runs WHERE ${sinceStartedAtSql(7)}`
   )[0];
 
   console.log(
@@ -38,7 +39,7 @@ async function main() {
     `SELECT COUNT(*) AS total,
      SUM(CASE WHEN cost_confidence = 'unpriced' THEN 1 ELSE 0 END) AS unpriced,
      COALESCE(SUM(CASE WHEN cost_confidence IN ('actual','estimated') THEN provider_cost_microusd ELSE 0 END), 0) AS known_cost_microusd
-     FROM inference_runs WHERE started_at >= datetime('now', '-1 day')`
+     FROM inference_runs WHERE ${sinceStartedAtSql(1)}`
   )[0];
 
   const todayCoverage =

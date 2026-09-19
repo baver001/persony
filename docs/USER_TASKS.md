@@ -59,7 +59,7 @@ Operator smoke уже зелёный на beta (`e2ac39dc`, D1 breakdown). Ос�
 4. Layout: `docs/PRODUCTION_ECONOMICS_SMOKE.md` §15–23 (390px + 1440px).
 5. Сообщить агенту: JWT output или «layout OK» — закроем `GOAL_MODE_STATE.md`.
 
-**Автоматически (без DevTools):** production `CLERK_SECRET_KEY` (тот же instance, что на beta) + owner id:
+**Автоматически (без DevTools):** production `CLERK_SECRET_KEY` + **активная сессия owner на beta** (Clerk `createSession` только для dev):
 
 ```bash
 npm run smoke:economics:discover-owner-id   # из D1

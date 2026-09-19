@@ -4,9 +4,23 @@
  *
  *   npm run smoke:economics:status
  */
+import { readFileSync, existsSync } from 'node:fs';
 import { execSync, spawnSync } from 'node:child_process';
 
 const BASE = (process.env.SMOKE_BASE_URL || 'https://beta.persony.org').replace(/\/$/, '');
+
+function loadDevVars() {
+  if (!existsSync('.dev.vars')) return;
+  for (const line of readFileSync('.dev.vars', 'utf8').split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const idx = trimmed.indexOf('=');
+    if (idx <= 0) continue;
+    const key = trimmed.slice(0, idx);
+    const value = trimmed.slice(idx + 1);
+    if (!process.env[key]) process.env[key] = value;
+  }
+}
 
 function discoverOwnerClerkId() {
   if (process.env.SMOKE_OWNER_CLERK_USER_ID?.trim()) return;
@@ -22,6 +36,7 @@ function discoverOwnerClerkId() {
 }
 
 function tryMintJwt() {
+  loadDevVars();
   if (process.env.SMOKE_OWNER_BEARER?.trim()) return true;
   discoverOwnerClerkId();
   if (!process.env.CLERK_SECRET_KEY?.trim()) return false;
@@ -65,7 +80,7 @@ async function main() {
   console.log('\n--- Owner layer ---');
   if (!hasJwt) {
     console.log('BLOCKED: no owner JWT');
-    console.log('  Option A: production CLERK_SECRET_KEY (.dev.vars or gh secret set CLERK_SECRET_KEY) → npm run smoke:economics:mint-owner');
+    console.log('  Option A: CLERK_SECRET_KEY + active owner session on beta → npm run smoke:economics:mint-owner');
     console.log('  Option B: DevTools Bearer from /api/owner/* → SMOKE_OWNER_BEARER="<jwt>" npm run smoke:economics:milestone1');
     console.log('\n--- Manual layout (authenticated) ---');
     console.log('BLOCKED: docs/PRODUCTION_ECONOMICS_SMOKE.md §15–23 (390px + 1440px)');

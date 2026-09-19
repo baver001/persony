@@ -10,14 +10,14 @@
 
 | Field | Value |
 |-------|--------|
-| **Current production SHA** | `46318c7d80cc` (Clerk mint + discover owner id) |
+| **Current production SHA** | `905f21c3ac5a` (status auto-discover owner id) |
 | **Production health** | `GET https://beta.persony.org/api/health` → ok, database ready |
 | **Last migration (remote D1)** | `0014_pricing_catalog_db.sql` |
 | **CI** | Green (see latest `main` deploy) |
 | **Public smoke** | `npm run smoke:economics` (public + D1 + layout contract) |
 | **Owner API smoke** | `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner` |
 | **D1 operator smoke** | `npm run smoke:economics:d1` (wrangler remote) |
-| **Production smoke (economics)** | **PARTIAL** — public+D1 ✅ 2026-09-19; `with_breakdown=11/19` (7d); latest `e2ac39dc` |
+| **Production smoke (economics)** | **PARTIAL** — operator ✅ + owner API ✅ 2026-09-19; layout 390/1440 open |
 | **Tests (local)** | 127/127 (incl. economics snapshot + energy/retail separation) |
 
 Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
@@ -33,7 +33,7 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 | Voice / transcribe / avatar inference rows | deployed | voice-call, transcribe, avatar services |
 | Call summary / persona gen inference rows | deployed | `text-generation-inference-service.ts` |
 | Owner Console | **partial** | economy, inference, pricing, users/personas detail, settings, errors |
-| Economics E2E (Milestone 1) | **partial** | D1 chat_text + voice_transcription verified; owner API smoke + layout open |
+| Economics E2E (Milestone 1) | **partial** | D1 + owner API verified (`npm run smoke:economics:mint-owner`); layout 390/1440 open |
 | DB-backed pricing admin | deployed | migration `0014`, POST `/owner/pricing/entries`, audit log |
 | Immutable inference costs | deployed | `updateInferenceRunEconomics` blocks rewrite after `cost_calculated_at` |
 | CI post-deploy economics smoke | deployed | `smoke:economics` public+D1+layout; optional owner via secret |
@@ -44,12 +44,12 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 | Check | Status | Inference run id | Date |
 |-------|--------|------------------|------|
 | Text chat → Inference detail with line-item COGS | **pass (D1)** | `e2ac39dc` actual, `cost_calculated_at`, 2-line breakdown | 2026-09-19 |
-| Economy coverage % after real inference | **pass (D1)** | today 92.3% (12/13 priced), 7d 63.2%; owner UI unverified | 2026-09-19 |
+| Economy coverage % after real inference | **pass (D1 + API)** | today 100% (rolling 24h UTC), 7d 63.2%; D1↔owner parity ✅ | 2026-09-19 |
 | Voice note → `voice_transcription` inference row | **pass (D1)** | `e643885a` actual + breakdown | 2026-09-19 |
 | Avatar Studio → `avatar_generation` inference row | **open** | no runs in 7d | — |
 | Owner Console 390px / 1440px | **open** | — | — |
 | Owner auth gate (unauthenticated) | **pass** | `/owner` → «Sign in required» at 390/1440; API → 401 | 2026-09-19 |
-| Owner API smoke (`smoke:economics:owner`) | **open** | needs production `CLERK_SECRET_KEY` (GitHub/gh) or manual JWT | — |
+| Owner API smoke (`smoke:economics:owner`) | **pass** | `npm run smoke:economics:mint-owner` (active Clerk session + `CLERK_SECRET_KEY`) | 2026-09-19 |
 
 ## Completion audit (2026-09-19)
 
@@ -59,12 +59,11 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 | CostEngine 2.0 + immutable costs | ✅ | D1 `e2ac39dc`, integration tests |
 | Economics truth (unknown ≠ $0) | ✅ | `formatMicrousd(null)`, economics-service test |
 | Owner Console shipped | ✅ partial | code deployed; layout sign-off open |
-| Production E2E Milestone 1 | **partial** | D1 operator ✅; owner API + layout open |
+| Production E2E Milestone 1 | **partial** | operator + owner API ✅; layout 390/1440 open |
 | Tests + CI smoke | ✅ | 127/127; `smoke:economics` + optional `SMOKE_OWNER_BEARER` in deploy |
 
 ## Next actions
 
-1. `npm run smoke:economics:status` — operator dashboard + blocker summary.
-2. `gh secret set CLERK_SECRET_KEY` (production) **or** `npm run smoke:economics:mint-owner` locally — then CI/local owner smoke.
-3. `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:milestone1` — manual alternative.
-4. Owner Console 390px / 1440px per `PRODUCTION_ECONOMICS_SMOKE.md` §15–23; optional avatar_generation.
+1. Owner Console layout 390px / 1440px per `PRODUCTION_ECONOMICS_SMOKE.md` §15–23 (or say «layout OK»).
+2. `gh secret set CLERK_SECRET_KEY` — enables CI owner smoke when owner has active Clerk session on beta.
+3. Optional: avatar_generation E2E.

@@ -2,6 +2,9 @@
 /**
  * Mint a short-lived Clerk session JWT for owner smoke (no DevTools copy).
  *
+ * Production: reuses an active owner session (createSession is dev-only in Clerk).
+ * Development: falls back to createSession when no active session exists.
+ *
  * Requires:
  *   CLERK_SECRET_KEY
  *   SMOKE_OWNER_CLERK_USER_ID  (Clerk user id with OWNER role on beta)
@@ -30,16 +33,23 @@ function fail(msg) {
   process.exit(1);
 }
 
-async function mintJwt() {
-  loadDevVars();
+async function tokenFromActiveSession(clerk, userId) {
+  const sessions = await clerk.sessions.getSessionList({ userId, status: 'active', limit: 10 });
+  const list = sessions.data ?? [];
+  if (list.length === 0) return null;
 
-  const secretKey = process.env.CLERK_SECRET_KEY?.trim();
-  const rawUserId = process.env.SMOKE_OWNER_CLERK_USER_ID?.trim();
-  if (!secretKey) fail('CLERK_SECRET_KEY not set (.dev.vars or env)');
-  if (!rawUserId) fail('SMOKE_OWNER_CLERK_USER_ID not set (npm run smoke:economics:discover-owner-id)');
-  const userId = rawUserId.replace(/^clerk:/, '');
+  const session = [...list].sort((a, b) => {
+    const aTs = Date.parse(a.lastActiveAt ?? a.updatedAt ?? a.createdAt ?? 0);
+    const bTs = Date.parse(b.lastActiveAt ?? b.updatedAt ?? b.createdAt ?? 0);
+    return bTs - aTs;
+  })[0];
 
-  const clerk = createClerkClient({ secretKey });
+  const token = await clerk.sessions.getToken(session.id);
+  const jwt = typeof token === 'string' ? token : token?.jwt;
+  return jwt || null;
+}
+
+async function tokenFromNewDevSession(clerk, userId) {
   const session = await clerk.sessions.createSession({ userId });
   const token = await clerk.sessions.getToken(session.id);
   const jwt = typeof token === 'string' ? token : token?.jwt;
@@ -52,6 +62,32 @@ async function mintJwt() {
   }
 
   return jwt;
+}
+
+async function mintJwt() {
+  loadDevVars();
+
+  const secretKey = process.env.CLERK_SECRET_KEY?.trim();
+  const rawUserId = process.env.SMOKE_OWNER_CLERK_USER_ID?.trim();
+  if (!secretKey) fail('CLERK_SECRET_KEY not set (.dev.vars or env)');
+  if (!rawUserId) fail('SMOKE_OWNER_CLERK_USER_ID not set (npm run smoke:economics:discover-owner-id)');
+  const userId = rawUserId.replace(/^clerk:/, '');
+
+  const clerk = createClerkClient({ secretKey });
+
+  const activeJwt = await tokenFromActiveSession(clerk, userId);
+  if (activeJwt) return activeJwt;
+
+  try {
+    return await tokenFromNewDevSession(clerk, userId);
+  } catch (err) {
+    if (err?.errors?.[0]?.code === 'request_invalid_for_environment') {
+      fail(
+        'No active Clerk session for owner on production. Sign in on beta as owner (keeps a session), set SMOKE_OWNER_BEARER from DevTools, or run mint again after login.'
+      );
+    }
+    throw err;
+  }
 }
 
 async function main() {
@@ -70,11 +106,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  if (err?.errors?.[0]?.code === 'request_invalid_for_environment') {
-    fail(
-      'Clerk createSession requires the secret key for the same instance as beta (production sk_live_* for beta.persony.org, not dev sk_test_*)'
-    );
-  }
   console.error(err);
   process.exit(1);
 });

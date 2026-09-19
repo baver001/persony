@@ -5,6 +5,7 @@
  *   SMOKE_OWNER_BEARER="<jwt>" npm run smoke:economics:parity
  */
 import { execSync } from 'node:child_process';
+import { sinceStartedAtSql } from './economics-smoke-sql.mjs';
 
 const BASE = (process.env.SMOKE_BASE_URL || 'https://beta.persony.org').replace(/\/$/, '');
 const TOKEN = process.env.SMOKE_OWNER_BEARER?.trim();
@@ -15,7 +16,7 @@ function fail(msg) {
 }
 
 function d1TodayCoverage() {
-  const sql = `SELECT COUNT(*) AS total, SUM(CASE WHEN cost_confidence = 'unpriced' THEN 1 ELSE 0 END) AS unpriced FROM inference_runs WHERE started_at >= datetime('now', '-1 day')`;
+  const sql = `SELECT COUNT(*) AS total, SUM(CASE WHEN cost_confidence = 'unpriced' THEN 1 ELSE 0 END) AS unpriced FROM inference_runs WHERE ${sinceStartedAtSql(1)}`;
   const oneLine = sql.replace(/\s+/g, ' ').trim();
   const cmd = `npx wrangler d1 execute persony-db --remote --command "${oneLine.replace(/"/g, '\\"')}" --json`;
   const out = execSync(cmd, { encoding: 'utf8', cwd: process.cwd(), shell: true });
