@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Current production SHA** | `096c95aa839c` (health); docs `4859c2d` (worker economics `e8716e4`+) |
+| **Current production SHA** | `3c5678eb7ff7` (layout contract smoke + owner API checks) |
 | **Production health** | `GET https://beta.persony.org/api/health` → ok, database ready |
 | **Last migration (remote D1)** | `0014_pricing_catalog_db.sql` |
 | **CI** | Green (see latest `main` deploy) |

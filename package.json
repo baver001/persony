@@ -16,6 +16,7 @@
     "ci": "npm run validate:i18n && npm run lint && npm test && npm run build",
     "smoke:economics": "npm run smoke:economics:public && npm run smoke:economics:d1 && npm run smoke:economics:layout",
     "smoke:economics:layout": "node scripts/economics-smoke-layout-contract.mjs",
+    "smoke:economics:parity": "node scripts/economics-smoke-coverage-parity.mjs",
     "smoke:economics:public": "node scripts/economics-smoke-public.mjs",
     "smoke:economics:owner": "node scripts/economics-smoke-owner.mjs",
     "smoke:economics:d1": "node scripts/economics-smoke-d1.mjs",

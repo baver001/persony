@@ -27,7 +27,8 @@ SMOKE_OWNER_BEARER="<jwt>" npm run smoke:economics:owner
 Public + D1 + layout contract (no auth): `npm run smoke:economics` — coverage % + static Owner Console layout checks  
 Public only: `npm run smoke:economics:public`  
 Operator D1 only (wrangler): `npm run smoke:economics:d1`  
-Layout contract only: `npm run smoke:economics:layout`
+Layout contract only: `npm run smoke:economics:layout`  
+D1 ↔ Owner coverage parity (JWT + wrangler): `npm run smoke:economics:parity`
 
 ## Steps
 

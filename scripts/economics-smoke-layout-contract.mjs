@@ -26,6 +26,10 @@ function main() {
   const shell = read('src/pages/owner/OwnerShell.tsx');
   const inference = read('src/pages/owner/sections/OwnerInferenceSection.tsx');
   const economy = read('src/pages/owner/sections/OwnerEconomySection.tsx');
+  const users = read('src/pages/owner/sections/OwnerUsersSection.tsx');
+  const personas = read('src/pages/owner/sections/OwnerPersonasSection.tsx');
+  const pricing = read('src/pages/owner/sections/OwnerPricingSection.tsx');
+  const errors = read('src/pages/owner/sections/OwnerErrorsSection.tsx');
   const utils = read('src/pages/owner/utils.ts');
 
   // Mobile bottom nav (§15)
@@ -60,6 +64,18 @@ function main() {
 
   // Unknown COGS ≠ $0 (§23)
   assertIncludes(utils, "return '—'", 'formatMicrousd null → em dash');
+
+  // Card list + table on all analytics sections (§17, §21–22)
+  for (const [name, src] of [
+    ['users', users],
+    ['personas', personas],
+    ['economy', economy],
+    ['pricing', pricing],
+    ['errors', errors],
+  ]) {
+    assertIncludes(src, 'md:hidden', `${name} mobile cards`);
+    assertIncludes(src, 'hidden md:block', `${name} desktop table`);
+  }
 
   console.log('OK layout_contract mobile_primary=overview,ai,economy,inference,more');
   console.log('OK layout_contract mobile_more=pricing,users,personas,settings,errors');

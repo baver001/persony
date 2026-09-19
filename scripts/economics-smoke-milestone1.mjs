@@ -12,10 +12,10 @@ function run(cmd) {
 }
 
 run('npm run smoke:economics');
-run('npm run smoke:economics:layout');
 
 if (process.env.SMOKE_OWNER_BEARER?.trim()) {
   run('npm run smoke:economics:owner');
+  run('npm run smoke:economics:parity');
   console.log('\nMilestone 1 automated gates passed.');
   console.log('Manual: Owner Console layout 390/1440 — docs/PRODUCTION_ECONOMICS_SMOKE.md §15–23');
 } else {
