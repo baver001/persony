@@ -136,11 +136,20 @@ jobs:
         env:
           SMOKE_BASE_URL: https://beta.persony.org
           SMOKE_OWNER_BEARER: ${{ secrets.SMOKE_OWNER_BEARER }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          SMOKE_OWNER_CLERK_USER_ID: ${{ secrets.SMOKE_OWNER_CLERK_USER_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
+          if [ -z "$SMOKE_OWNER_CLERK_USER_ID" ]; then
+            export SMOKE_OWNER_CLERK_USER_ID="$(node scripts/economics-smoke-discover-owner-clerk-id.mjs --print-only || true)"
+          fi
+          if [ -z "$SMOKE_OWNER_BEARER" ] && [ -n "$CLERK_SECRET_KEY" ] && [ -n "$SMOKE_OWNER_CLERK_USER_ID" ]; then
+            echo "Minting owner JWT via Clerk API..."
+            export SMOKE_OWNER_BEARER="$(node scripts/economics-smoke-mint-owner-jwt.mjs --print-only)"
+          fi
           if [ -z "$SMOKE_OWNER_BEARER" ]; then
-            echo "Owner smoke skipped (SMOKE_OWNER_BEARER secret not configured)."
+            echo "Owner smoke skipped (set SMOKE_OWNER_BEARER or CLERK_SECRET_KEY+SMOKE_OWNER_CLERK_USER_ID)."
             exit 0
           fi
           npm run smoke:economics:owner

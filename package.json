@@ -22,6 +22,8 @@
     "smoke:economics:owner": "node scripts/economics-smoke-owner.mjs",
     "smoke:economics:d1": "node scripts/economics-smoke-d1.mjs",
     "smoke:economics:milestone1": "node scripts/economics-smoke-milestone1.mjs",
+    "smoke:economics:mint-owner": "node scripts/economics-smoke-mint-owner-run.mjs",
+    "smoke:economics:discover-owner-id": "node scripts/economics-smoke-discover-owner-clerk-id.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "types": "wrangler types",

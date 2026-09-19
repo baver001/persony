@@ -9,3 +9,4 @@ PERSONY_DEV_USER_ID=dev-local-user
 # Clerk (Phase 1b — после настройки Dashboard)
 # CLERK_SECRET_KEY=
 # CLERK_PUBLISHABLE_KEY=
+# SMOKE_OWNER_CLERK_USER_ID=user_...   # owner smoke auto-mint (npm run smoke:economics:mint-owner)

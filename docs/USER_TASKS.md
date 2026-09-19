@@ -59,7 +59,17 @@ Operator smoke уже зелёный на beta (`e2ac39dc`, D1 breakdown). Ос�
 4. Layout: `docs/PRODUCTION_ECONOMICS_SMOKE.md` §15–23 (390px + 1440px).
 5. Сообщить агенту: JWT output или «layout OK» — закроем `GOAL_MODE_STATE.md`.
 
-**Опционально (CI):** добавить GitHub secret `SMOKE_OWNER_BEARER` (короткоживущий Clerk JWT) — deploy workflow прогонит `smoke:economics:owner` + parity после каждого релиза.
+**Автоматически (без DevTools):** production `CLERK_SECRET_KEY` (тот же instance, что на beta) + owner id:
+
+```bash
+npm run smoke:economics:discover-owner-id   # из D1
+# export SMOKE_OWNER_CLERK_USER_ID=user_...
+npm run smoke:economics:mint-owner          # mint JWT + milestone1
+```
+
+`sk_test_*` не подойдёт для beta production users — нужен production secret из wrangler.
+
+**CI:** secrets `CLERK_SECRET_KEY` (production) — `SMOKE_OWNER_CLERK_USER_ID` discover из D1 автоматически.
 
 ## 6. Безопасность
 

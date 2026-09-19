@@ -29,7 +29,8 @@ Public only: `npm run smoke:economics:public`
 Operator D1 only (wrangler): `npm run smoke:economics:d1`  
 Layout contract only: `npm run smoke:economics:layout`  
 D1 ↔ Owner coverage parity (JWT + wrangler): `npm run smoke:economics:parity`  
-CI (optional): GitHub secret `SMOKE_OWNER_BEARER` → post-deploy owner + parity smoke in `.github/workflows/deploy.yml`
+Auto-mint (no DevTools): `CLERK_SECRET_KEY` + `SMOKE_OWNER_CLERK_USER_ID` → `npm run smoke:economics:mint-owner`  
+CI (optional): `SMOKE_OWNER_BEARER` **or** `CLERK_SECRET_KEY` + `SMOKE_OWNER_CLERK_USER_ID` → post-deploy owner + parity
 
 ## Steps
 
