@@ -12,6 +12,7 @@ function run(cmd) {
 }
 
 run('npm run smoke:economics');
+run('npm run smoke:economics:layout');
 
 if (process.env.SMOKE_OWNER_BEARER?.trim()) {
   run('npm run smoke:economics:owner');

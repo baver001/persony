@@ -63,6 +63,54 @@ async function main() {
     fail('economics reports 100% coverage but unpricedCallsToday > 0');
   }
 
+  // Energy / retail separation — COGS is known cost; retail is simulated only
+  if (typeof economics.energyConsumedToday !== 'number') {
+    fail('economics missing energyConsumedToday');
+  }
+  if (typeof economics.simulatedRetailValueTodayMicrousd !== 'number') {
+    fail('economics missing simulatedRetailValueTodayMicrousd');
+  }
+  if (economics.aiCostTodayMicrousd > 0 && economics.simulatedRetailValueTodayMicrousd <= economics.aiCostTodayMicrousd) {
+    fail('simulated retail must exceed known COGS when COGS > 0');
+  }
+  console.log(
+    `OK energy_retail energyToday=${economics.energyConsumedToday} simulatedRetail=${economics.simulatedRetailValueTodayMicrousd}`
+  );
+
+  const aiRes = await ownerFetch('/owner/ai/overview');
+  if (aiRes.status !== 200) fail(`owner ai/overview HTTP ${aiRes.status}`);
+  if (!Array.isArray(aiRes.body?.routingMatrix) || aiRes.body.routingMatrix.length === 0) {
+    fail('ai/overview routingMatrix empty');
+  }
+  if (aiRes.body.billingEnabled === true) {
+    fail('billingEnabled must be false on beta economics milestone');
+  }
+  console.log(`OK ai routingMatrix=${aiRes.body.routingMatrix.length} billingEnabled=false`);
+
+  const batteryRes = await ownerFetch('/owner/battery/overview');
+  if (batteryRes.status !== 200) fail(`owner battery/overview HTTP ${batteryRes.status}`);
+  if (batteryRes.body?.metrics?.revenue != null || batteryRes.body?.metrics?.payments != null) {
+    fail('battery overview must not expose revenue/payments before Paddle');
+  }
+  console.log('OK battery revenue=null payments=null');
+
+  const usersRes = await ownerFetch('/owner/users');
+  if (usersRes.status !== 200) fail(`owner users HTTP ${usersRes.status}`);
+  if (!Array.isArray(usersRes.body?.users)) fail('users response shape invalid');
+  console.log(`OK users count=${usersRes.body.users.length}`);
+
+  const personasRes = await ownerFetch('/owner/personas/overview');
+  if (personasRes.status !== 200) fail(`owner personas/overview HTTP ${personasRes.status}`);
+  if (!Array.isArray(personasRes.body?.personas)) fail('personas response shape invalid');
+  console.log(`OK personas count=${personasRes.body.personas.length}`);
+
+  const errorsRes = await ownerFetch('/owner/errors/summary');
+  if (errorsRes.status !== 200) fail(`owner errors/summary HTTP ${errorsRes.status}`);
+  if (typeof errorsRes.body?.totalFailed !== 'number' || !Array.isArray(errorsRes.body?.recent)) {
+    fail('errors summary shape invalid');
+  }
+  console.log(`OK errors totalFailed=${errorsRes.body.totalFailed} recent=${errorsRes.body.recent.length}`);
+
   const pricingRes = await ownerFetch('/owner/pricing');
   if (pricingRes.status !== 200) fail(`owner pricing HTTP ${pricingRes.status}`);
   if (!pricingRes.body?.catalogVersion || !Array.isArray(pricingRes.body?.entries)) {
@@ -136,6 +184,36 @@ async function main() {
   console.log(
     `OK detail explainable=${detail.costExplanation.explainable} lines=${detail.costExplanation.lines?.length ?? 0} calculatedAt=${detail.costCalculatedAt ?? '—'}`
   );
+
+  const unpricedRes = await ownerFetch('/owner/inference?limit=5&costConfidence=unpriced');
+  if (unpricedRes.status !== 200) fail(`owner unpriced inference HTTP ${unpricedRes.status}`);
+  const unpricedItems = unpricedRes.body?.items ?? [];
+  if (unpricedItems.length > 0) {
+    const unpriced = unpricedItems[0];
+    const unpricedDetailRes = await ownerFetch(`/owner/inference/${unpriced.id}`);
+    if (unpricedDetailRes.status !== 200) fail(`unpriced detail HTTP ${unpricedDetailRes.status}`);
+    const unpricedDetail = unpricedDetailRes.body?.inference;
+    if (unpricedDetail?.providerCostMicrousd != null) {
+      fail(`unpriced run ${unpriced.id} has providerCostMicrousd — economics truth violated`);
+    }
+    console.log(`OK unpriced_truth id=${unpriced.id} providerCost=null`);
+  } else {
+    console.log('OK unpriced_truth no unpriced rows in sample');
+  }
+
+  const voiceRes = await ownerFetch(
+    '/owner/inference?limit=5&operation=voice_transcription&status=completed'
+  );
+  if (voiceRes.status !== 200) fail(`owner voice_transcription HTTP ${voiceRes.status}`);
+  const voiceItems = voiceRes.body?.items ?? [];
+  if (voiceItems.length > 0) {
+    const voice = voiceItems.find((row) => row.costCalculatedAt) ?? voiceItems[0];
+    console.log(
+      `OK voice_transcription id=${voice.id} confidence=${voice.costConfidence} breakdown=${voice.costCalculatedAt ? 'yes' : 'no'}`
+    );
+  } else {
+    console.log('WARN voice_transcription no completed runs — optional Milestone 1 gate');
+  }
 
   console.log('\nOwner economics smoke passed (Milestone 1 API layer).');
   console.log(`Record inference id in docs/GOAL_MODE_STATE.md: ${target.id}`);

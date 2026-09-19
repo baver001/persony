@@ -6,8 +6,8 @@
 **Production SHA (deployed):** `fd21da3` (see `/api/health` `gitSha`)  
 **D1 migrations (remote):** `0001`–`0014` applied  
 **Production health:** `GET /api/health` → `status: ok`, `database: ready`, `gitSha` present  
-**Automated tests:** 125/125 (`npm test`, incl. chat_text CostEngine 2.0 integration)  
-**Operator smoke (no auth):** `npm run smoke:economics` → public + D1  
+**Automated tests:** 126/126 (`npm test`, incl. chat_text CostEngine 2.0 integration)  
+**Operator smoke (no auth):** `npm run smoke:economics` → public + D1 + layout contract  
 **Owner API smoke:** `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner` (Milestone 1 chat_text + breakdown)  
 **D1 snapshot (2026-09-19):** 11/19 runs with `cost_calculated_at` in 7d; latest chat `e2ac39dc` (actual, immutable breakdown) |
 
@@ -40,9 +40,9 @@ Status labels:
 | Area | IMPLEMENTED | TESTED | PRODUCTION E2E |
 |------|:-----------:|:------:|:--------------:|
 | Central `model-registry.ts` + `listOwnerRoutingMatrix` | ✓ | ✓ | NOT VERIFIED |
-| Chat text (Gemini + DeepSeek stream usage) | ✓ | ✓ phase11 CostEngine 2.0 fields | **MANUAL open** (prod D1) |
-| Voice call (`voice_call`, Live usageMetadata + duration fallback) | ✓ | ✓ | **MANUAL open** |
-| Transcribe (`voice_transcription`, usageMetadata) | ✓ | ✓ | **MANUAL open** |
+| Chat text (Gemini + DeepSeek stream usage) | ✓ | ✓ phase11 CostEngine 2.0 fields | **D1 verified** `e2ac39dc` |
+| Voice call (`voice_call`, Live usageMetadata + duration fallback) | ✓ | ✓ | **D1 verified** (4 runs w/ breakdown) |
+| Transcribe (`voice_transcription`, usageMetadata) | ✓ | ✓ | **D1 verified** `e643885a` |
 | Avatar (`avatar_generation`, per_image COGS) | ✓ | ✓ | **MANUAL open** |
 | Call summary / persona gen inference rows | ✓ | ✓ | **MANUAL open** |
 
@@ -83,7 +83,7 @@ Status labels:
 
 | Milestone | Ready? | Blocker |
 |-----------|--------|---------|
-| **M1 — Economics Truth** | **NO** | Owner manual smoke not recorded (`PRODUCTION_ECONOMICS_SMOKE.md`) |
+| **M1 — Economics Truth** | **PARTIAL** | D1 chat + transcribe verified; owner API smoke + Economy UI open |
 | **M2 — Owner Console Desktop** | **PARTIAL** | Implemented; layout + E2E not verified |
 | **M3 — Mobile** | **PARTIAL** | Card layouts shipped; manual 390/1440 sign-off open |
 | **M4 — Production Verified** | **NO** | M1 + layout gates |
