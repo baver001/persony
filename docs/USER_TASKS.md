@@ -46,6 +46,8 @@
 
 ## 5. Milestone 1 — Owner economics verification (блокер goal)
 
+Проверка статуса: `npm run smoke:economics:status` (operator + список блокеров).
+
 Operator smoke уже зелёный на beta (`e2ac39dc`, D1 breakdown). Осталось **~5 мин** с owner-аккаунтом:
 
 1. Войти на https://beta.persony.org → `/owner`.

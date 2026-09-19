@@ -64,5 +64,6 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 
 ## Next actions
 
-1. `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:milestone1` — operator + owner API gates.
-2. Owner Console 390px / 1440px per `PRODUCTION_ECONOMICS_SMOKE.md` §15–23; optional avatar_generation.
+1. `npm run smoke:economics:status` — operator dashboard + blocker summary.
+2. `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:milestone1` — operator + owner API gates.
+3. Owner Console 390px / 1440px per `PRODUCTION_ECONOMICS_SMOKE.md` §15–23; optional avatar_generation.
