@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Current production SHA** | `0b0e7527256c` (CI workflow fix + optional owner smoke) |
+| **Current production SHA** | `46318c7d80cc` (Clerk mint + discover owner id) |
 | **Production health** | `GET https://beta.persony.org/api/health` → ok, database ready |
 | **Last migration (remote D1)** | `0014_pricing_catalog_db.sql` |
 | **CI** | Green (see latest `main` deploy) |
@@ -49,7 +49,7 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 | Avatar Studio → `avatar_generation` inference row | **open** | no runs in 7d | — |
 | Owner Console 390px / 1440px | **open** | — | — |
 | Owner auth gate (unauthenticated) | **pass** | `/owner` → «Sign in required» at 390/1440; API → 401 | 2026-09-19 |
-| Owner API smoke (`smoke:economics:owner`) | **open** | needs `SMOKE_OWNER_BEARER` | — |
+| Owner API smoke (`smoke:economics:owner`) | **open** | needs production `CLERK_SECRET_KEY` (GitHub/gh) or manual JWT | — |
 
 ## Completion audit (2026-09-19)
 
@@ -65,5 +65,6 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 ## Next actions
 
 1. `npm run smoke:economics:status` — operator dashboard + blocker summary.
-2. `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:milestone1` — operator + owner API gates.
-3. Owner Console 390px / 1440px per `PRODUCTION_ECONOMICS_SMOKE.md` §15–23; optional avatar_generation.
+2. `gh secret set CLERK_SECRET_KEY` (production) **or** `npm run smoke:economics:mint-owner` locally — then CI/local owner smoke.
+3. `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:milestone1` — manual alternative.
+4. Owner Console 390px / 1440px per `PRODUCTION_ECONOMICS_SMOKE.md` §15–23; optional avatar_generation.
