@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Current production SHA** | `fd21da3` — docs sync + economics smoke (deploy verified 2026-09-18) |
+| **Current production SHA** | `8aa8607` — Milestone 1 smoke + Inference legacy badges (deploy `35431785194`) |
 | **Production health** | `GET https://beta.persony.org/api/health` → ok, database ready |
 | **Last migration (remote D1)** | `0014_pricing_catalog_db.sql` |
 | **CI** | Green (see latest `main` deploy) |
@@ -36,7 +36,7 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 | Economics E2E (Milestone 1) | **partial** | D1 chat_text + voice_transcription verified; owner API smoke + layout open |
 | DB-backed pricing admin | deployed | migration `0014`, POST `/owner/pricing/entries`, audit log |
 | Immutable inference costs | deployed | `updateInferenceRunEconomics` blocks rewrite after `cost_calculated_at` |
-| CI post-deploy economics smoke | deployed | `.github/workflows/deploy.yml` |
+| CI post-deploy economics smoke | deployed | `smoke:economics` public+D1 green on deploy `35431785194` |
 | Mobile/desktop layout gates | **partial** | card lists on all main sections `<md`; manual 390/1440 sign-off open |
 
 ## Manual verification gates
@@ -53,6 +53,5 @@ Full audit: [`docs/ECONOMICS_RECONCILIATION.md`](./ECONOMICS_RECONCILIATION.md)
 
 ## Next actions
 
-1. `git push` → deploy `8cc592e` (smoke + Inference legacy badges).
-2. `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner` — close owner API gate.
-3. Owner Console 390px / 1440px on beta; optional avatar_generation smoke.
+1. `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner` — close owner API gate.
+2. Owner Console 390px / 1440px on beta; optional avatar_generation smoke.
