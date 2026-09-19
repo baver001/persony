@@ -92,7 +92,9 @@ async function assertHidden(locator, label) {
 
 async function checkMobile(page) {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(`${BASE}/owner`, { waitUntil: 'domcontentloaded' });
+  if (!page.url().includes('/owner')) {
+    await page.goto(`${BASE}/owner`, { waitUntil: 'domcontentloaded' });
+  }
   await waitOwnerShell(page);
 
   const mobileNav = page.locator('nav.lg\\:hidden.fixed.bottom-0');
@@ -138,7 +140,6 @@ async function checkMobile(page) {
 
 async function checkDesktop(page) {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(`${BASE}/owner`, { waitUntil: 'domcontentloaded' });
   await waitOwnerShell(page);
 
   await assertVisible(page.locator('aside.hidden.lg\\:block'), 'layout_1440_desktop_sidebar');

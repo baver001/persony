@@ -45,13 +45,35 @@ export async function createOwnerSignInTicket() {
   return sit.token;
 }
 
-export async function signInOwnerWithTicket(page, base, ticket) {
-  await page.goto(base, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-  await page.waitForFunction(() => window.Clerk?.loaded, { timeout: 45_000 });
+function ownerReadyFn() {
+  const text = document.body?.innerText || '';
+  const shell = document.querySelector('aside.hidden.lg\\:block, nav.lg\\:hidden.fixed.bottom-0');
+  return (
+    Boolean(window.Clerk?.user?.id) &&
+    Boolean(shell) &&
+    !/Sign in required|Access denied|Войдите|Доступ запрещён/i.test(text)
+  );
+}
 
+export async function signInOwnerWithTicket(page, base, ticket) {
+  const root = base.replace(/\/$/, '');
+  const ownerUrl = `${root}/owner?__clerk_ticket=${encodeURIComponent(ticket)}`;
+
+  await page.goto(ownerUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+  await page.waitForFunction(() => window.Clerk?.loaded, { timeout: 45_000 }).catch(() => {});
+
+  const ready = await page
+    .waitForFunction(ownerReadyFn, { timeout: 90_000 })
+    .then(() => true)
+    .catch(() => false);
+
+  if (ready) return;
+
+  // Fallback: explicit ticket exchange when URL param is not consumed by SPA routing.
   const result = await page.evaluate(async (token) => {
     try {
       const clerk = window.Clerk;
+      if (!clerk?.client) return { ok: false, error: 'clerk client missing' };
       let signIn = await clerk.client.signIn.create({ strategy: 'ticket', ticket: token });
       if (signIn.status !== 'complete') {
         signIn = await signIn.attemptFirstFactor({ strategy: 'ticket', ticket: token });
@@ -70,5 +92,6 @@ export async function signInOwnerWithTicket(page, base, ticket) {
     throw new Error(`Clerk ticket auth failed: ${result?.error || 'unknown'}`);
   }
 
-  await page.goto(`${base.replace(/\/$/, '')}/owner`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+  await page.goto(`${root}/owner`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+  await page.waitForFunction(ownerReadyFn, { timeout: 90_000 });
 }

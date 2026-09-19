@@ -256,6 +256,8 @@ export function OwnerConsole({ onBack }: Props) {
       return;
     }
 
+    setError(null);
+
     void (async () => {
       try {
         const profile = await fetchMeProfile();
