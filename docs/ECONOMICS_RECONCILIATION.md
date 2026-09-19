@@ -9,7 +9,7 @@
 **Automated tests:** 125/125 (`npm test`, incl. chat_text CostEngine 2.0 integration)  
 **Operator smoke (no auth):** `npm run smoke:economics` → public + D1  
 **Owner API smoke:** `SMOKE_OWNER_BEARER=<jwt> npm run smoke:economics:owner` (Milestone 1 chat_text + breakdown)  
-**D1 snapshot (2026-09-18):** 0/8 runs with `cost_calculated_at` in 7d — need fresh owner chat post-`dcad14f`
+**D1 snapshot (2026-09-19):** 11/19 runs with `cost_calculated_at` in 7d; latest chat `e2ac39dc` (actual, immutable breakdown) |
 
 Status labels:
 
@@ -30,7 +30,7 @@ Status labels:
 | D1 migrations 0008–0014 (economy, confidence, pricing_entry, breakdown, operation normalize, pricing_entries DB) | ✓ | partial | ✓ migrate job | ✓ |
 | Clerk auth | ✓ | partial | ✓ | ✓ |
 | Owner routes require auth (401 without JWT) | ✓ | — | ✓ post-deploy smoke | ✓ |
-| D1 CostEngine 2.0 rows on production | ✓ code | — | ✓ `smoke:economics:d1` in CI | **0/8 runs** — need fresh chat |
+| D1 CostEngine 2.0 rows on production | ✓ code | — | ✓ `smoke:economics:d1` in CI | ✓ 11/19 (7d); latest `e2ac39dc` |
 | Paddle live | ✗ `BILLING_ENABLED=false` | — | — | N/A |
 
 ---
