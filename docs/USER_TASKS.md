@@ -69,7 +69,13 @@ npm run smoke:economics:mint-owner          # mint JWT + milestone1
 
 `sk_test_*` не подойдёт для beta production users — нужен production secret из wrangler.
 
-**CI:** secrets `CLERK_SECRET_KEY` (production) — `SMOKE_OWNER_CLERK_USER_ID` discover из D1 автоматически.
+**CI (один раз):** скопировать production `CLERK_SECRET_KEY` в GitHub (сейчас только в Cloudflare):
+
+```powershell
+gh secret set CLERK_SECRET_KEY
+```
+
+После следующего deploy CI сам discover owner id из D1 и прогонит owner smoke.
 
 ## 6. Безопасность
 

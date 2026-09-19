@@ -50,8 +50,17 @@ npm run ci
 | `CLOUDFLARE_API_TOKEN` | D1 migrate, wrangler deploy |
 | `CLOUDFLARE_ACCOUNT_ID` | D1 migrate, wrangler deploy |
 | `VITE_CLERK_PUBLISHABLE_KEY` | production Vite build (optional for typecheck-only) |
+| `CLERK_SECRET_KEY` | **optional** — post-deploy owner economics smoke (mint JWT via Clerk API) |
+| `SMOKE_OWNER_BEARER` | **optional** — short-lived owner JWT (alternative to mint) |
 
-Worker runtime secrets (`GEMINI_API_KEY`, `CLERK_SECRET_KEY`, etc.) are set in Cloudflare, not in GitHub.
+Worker runtime secrets (`GEMINI_API_KEY`, `CLERK_SECRET_KEY`, etc.) live in Cloudflare. For **CI owner smoke**, duplicate production `CLERK_SECRET_KEY` into GitHub (same value as `wrangler secret put CLERK_SECRET_KEY`):
+
+```powershell
+gh secret set CLERK_SECRET_KEY
+# paste production sk_live_* from Clerk Dashboard (Persony production instance)
+```
+
+Deploy then auto-discovers `SMOKE_OWNER_CLERK_USER_ID` from D1 and runs `smoke:economics:owner` + parity. Without this secret, owner smoke is skipped (operator smoke still runs).
 
 ## Common failure causes
 
