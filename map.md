@@ -133,6 +133,7 @@ flowchart TD
 - Reconciliation: [`docs/ECONOMICS_RECONCILIATION.md`](docs/ECONOMICS_RECONCILIATION.md)
 - Goal state: [`docs/GOAL_MODE_STATE.md`](docs/GOAL_MODE_STATE.md)
 - Metrics: [`docs/METRICS.md`](docs/METRICS.md) · Owner spec: [`specs/owner-console.md`](specs/owner-console.md)
+- **Pre-GTM product monitoring (S0→S1):** [`specs/14-product-events.md`](specs/14-product-events.md) — funnel events, D1 `product_events`, Owner Product dashboard M1; battery transition [`specs/battery-beta.md`](specs/battery-beta.md#transition-policy-s0gtm); ritual: [dogfooding journal](/cursor/stores/bc-f0795a01-bd63-480b-9507-2fd2147a24ad/docs/dogfooding-journal.md)
 - Production SHA: `0b0e752` (2026-09-19) — CostEngine 2.0 on D1 (`e2ac39dc`), layout contract smoke, optional CI owner smoke
 - Milestone 1 orchestrator: `npm run smoke:economics:milestone1` (operator always; owner + parity when JWT set)
 - Operator smoke: `npm run smoke:economics` (public + D1 + layout contract)
