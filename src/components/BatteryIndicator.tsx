@@ -17,9 +17,9 @@ function fillColor(status: BatterySnapshot['status'], isDark: boolean): string {
     case 'low':
       return 'bg-amber-400';
     case 'recharging':
-      return isDark ? 'bg-emerald-400' : 'bg-emerald-500';
+      return 'bg-py-accent';
     default:
-      return isDark ? 'bg-py-accent' : 'bg-emerald-500';
+      return 'bg-py-accent';
   }
 }
 

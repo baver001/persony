@@ -91,6 +91,67 @@ function MenuItem({
   );
 }
 
+function SignedInProfileMenu({
+  isDark,
+  closeMenus,
+  go,
+}: {
+  isDark: boolean;
+  closeMenus: () => void;
+  go: (path: string) => void;
+}) {
+  const { t } = useTranslation(['common', 'personas', 'rooms']);
+  const { openUserProfile, signOut } = useClerk();
+
+  return (
+    <>
+      <MenuItem
+        isDark={isDark}
+        onClick={() => go('/discover')}
+        icon={<Compass className="w-3.5 h-3.5" />}
+        label={t('personas:discoverTitle')}
+      />
+      <MenuItem
+        isDark={isDark}
+        onClick={() => go('/rooms')}
+        icon={<Users className="w-3.5 h-3.5" />}
+        label={t('rooms:title')}
+      />
+      <MenuItem
+        isDark={isDark}
+        onClick={() => go('/my-personas')}
+        icon={<Users className="w-3.5 h-3.5" />}
+        label={t('personas:myPersonasTitle')}
+      />
+      <MenuItem
+        isDark={isDark}
+        onClick={() => go('/memory')}
+        icon={<Brain className="w-3.5 h-3.5" />}
+        label={t('common:memory')}
+      />
+      <MenuItem
+        isDark={isDark}
+        onClick={() => {
+          closeMenus();
+          openUserProfile();
+        }}
+        icon={<User className="w-3.5 h-3.5" />}
+        label={t('common:account')}
+      />
+      <div className={`my-1 h-px ${isDark ? 'bg-zinc-700' : 'bg-neutral-200'}`} />
+      <MenuItem
+        isDark={isDark}
+        onClick={() => {
+          closeMenus();
+          void signOut({ redirectUrl: '/' });
+        }}
+        icon={<LogOut className="w-3.5 h-3.5" />}
+        label={t('common:signOut')}
+      />
+    </>
+  );
+}
+
 export const SidebarBottomBar: React.FC<Props> = ({
   isDark,
   theme,
@@ -102,7 +163,6 @@ export const SidebarBottomBar: React.FC<Props> = ({
   compact = false,
 }) => {
   const { t } = useTranslation(['common', 'settings', 'personas']);
-  const { openUserProfile, signOut } = useClerk();
   const { clerkEnabled, isLoaded, isSignedIn } = usePersonyAuth();
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -302,49 +362,7 @@ export const SidebarBottomBar: React.FC<Props> = ({
                   </SignedOut>
 
                   <SignedIn>
-                    <MenuItem
-                      isDark={isDark}
-                      onClick={() => go('/discover')}
-                      icon={<Compass className="w-3.5 h-3.5" />}
-                      label={t('personas:discoverTitle')}
-                    />
-                    <MenuItem
-                      isDark={isDark}
-                      onClick={() => go('/rooms')}
-                      icon={<Users className="w-3.5 h-3.5" />}
-                      label={t('rooms:title')}
-                    />
-                    <MenuItem
-                      isDark={isDark}
-                      onClick={() => go('/my-personas')}
-                      icon={<Users className="w-3.5 h-3.5" />}
-                      label={t('personas:myPersonasTitle')}
-                    />
-                    <MenuItem
-                      isDark={isDark}
-                      onClick={() => go('/memory')}
-                      icon={<Brain className="w-3.5 h-3.5" />}
-                      label={t('common:memory')}
-                    />
-                    <MenuItem
-                      isDark={isDark}
-                      onClick={() => {
-                        closeMenus();
-                        openUserProfile();
-                      }}
-                      icon={<User className="w-3.5 h-3.5" />}
-                      label={t('common:account')}
-                    />
-                    <div className={`my-1 h-px ${isDark ? 'bg-zinc-700' : 'bg-neutral-200'}`} />
-                    <MenuItem
-                      isDark={isDark}
-                      onClick={() => {
-                        closeMenus();
-                        void signOut({ redirectUrl: '/' });
-                      }}
-                      icon={<LogOut className="w-3.5 h-3.5" />}
-                      label={t('common:signOut')}
-                    />
+                    <SignedInProfileMenu isDark={isDark} closeMenus={closeMenus} go={go} />
                   </SignedIn>
                 </>
               )}

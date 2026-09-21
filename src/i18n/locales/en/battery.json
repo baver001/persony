@@ -4,15 +4,12 @@
   "close": "Close",
   "ariaLabel": "Battery {{percent}} percent",
   "recharging": "Recharging",
-  "betaAccess": "Simulation mode",
-  "betaRechargeHint": "Energy drains when you use AI and restores automatically after idle time. No payments in this phase.",
-  "simulationMode": "Simulation",
-  "simulationHint": "Charge decreases with AI usage and recovers over time — payments are not enabled yet.",
+  "sheetHint": "Energy drains when you use AI and restores over time. Payments are not enabled yet.",
   "fullRechargeEta": "Full recharge from empty: about {{hours}} hours.",
   "emptyHint": "Your Battery is empty. New AI actions are paused until some energy returns.",
   "low": "Battery low",
   "critical": "Battery critical",
   "empty": "Battery empty",
   "settingsTitle": "Battery",
-  "settingsHint": "During beta, energy restores automatically after idle time."
+  "settingsHint": "Energy restores automatically after idle time."
 }

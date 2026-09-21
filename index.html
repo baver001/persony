@@ -26,8 +26,28 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   </head>
-  <body class="bg-py-app text-py-text selection:bg-py-accent/30 antialiased overflow-hidden font-sans">
+  <body class="bg-py-app text-py-text selection:bg-py-accent/30 antialiased overflow-hidden font-sans" style="background-color:#0a0a0b;color:#fafafa">
     <div id="root"></div>
+    <script>
+      window.addEventListener('error', function (event) {
+        var root = document.getElementById('root');
+        if (!root || root.childElementCount > 0) return;
+        root.innerHTML =
+          '<pre style="margin:16px;padding:12px;border:1px solid #f87171;border-radius:8px;color:#fecaca;background:#450a0a;white-space:pre-wrap;font:12px/1.4 ui-monospace,monospace">' +
+          'Persony boot error:\\n' +
+          (event.error && event.error.stack ? event.error.stack : event.message) +
+          '</pre>';
+      });
+      window.addEventListener('unhandledrejection', function (event) {
+        var root = document.getElementById('root');
+        if (!root || root.childElementCount > 0) return;
+        root.innerHTML =
+          '<pre style="margin:16px;padding:12px;border:1px solid #f87171;border-radius:8px;color:#fecaca;background:#450a0a;white-space:pre-wrap;font:12px/1.4 ui-monospace,monospace">' +
+          'Persony boot error:\\n' +
+          String(event.reason) +
+          '</pre>';
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

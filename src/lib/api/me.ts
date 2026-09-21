@@ -1,4 +1,5 @@
 import type { Persona, VoiceName } from '../../types';
+import { OFFICIAL_PERSONA_IDS } from '../../../shared/personas/official-roster';
 import { getApiHeaders } from './headers';
 
 export async function fetchInstalledPersonas(): Promise<Persona[]> {
@@ -31,6 +32,7 @@ export async function fetchInstalledPersonas(): Promise<Persona[]> {
     starterMessages: p.starterMessages,
     systemPrompt: '',
     isCustom: p.category === 'custom',
+    isOfficial: OFFICIAL_PERSONA_IDS.includes(p.id),
   }));
 }
 

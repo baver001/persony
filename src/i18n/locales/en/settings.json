@@ -3,11 +3,12 @@
   "language": "Language",
   "english": "English",
   "russian": "Russian",
-  "dataControls": "Data & Personalisation",
+  "dataControls": "Data & personalization",
   "exportData": "Export Data",
+  "exportDataComingSoon": "Export data — coming soon.",
   "deleteAccount": "Delete Account",
   "billingTitle": "Billing",
-  "billingDisabledHint": "Payments are not enabled yet. Battery runs in simulation mode with automatic recharge.",
+  "billingDisabledHint": "Payments are not enabled yet. Energy restores automatically after idle time.",
   "billingEnabledHint": "Billing is configured but checkout is not open yet.",
   "billingComingSoon": "Recharge packs will appear here when Paddle checkout goes live."
 }

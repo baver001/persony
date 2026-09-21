@@ -12,6 +12,7 @@ import { getUserRoles, userHasRole } from '../repositories/role-repository';
 import { getUserLocale, updateUserLocale } from '../repositories/user-repository';
 import { getBatterySnapshot } from '../services/energy-service';
 import { getRelationshipProfileSummary } from '../services/persona-relationship-service';
+import { ensureOfficialPersonasInstalledForUser } from '../services/user-persona-service';
 import type { PersonyEnv } from '../types/env';
 
 const localeSchema = z.object({
@@ -62,6 +63,7 @@ meRoutes.get('/me/personas', async (c) => {
     const userId = await requireUser(c);
     if (!c.env.DB) return c.json({ error_code: 'DB_NOT_CONFIGURED' }, 503);
 
+    await ensureOfficialPersonasInstalledForUser(c.env, c.env.DB, userId);
     const installed = await listInstalledPersonas(c.env.DB, userId);
     const personas = [];
     for (const row of installed) {

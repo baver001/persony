@@ -5,9 +5,10 @@
   "russian": "Русский",
   "dataControls": "Данные и персонализация",
   "exportData": "Экспорт данных",
+  "exportDataComingSoon": "Экспорт данных — скоро.",
   "deleteAccount": "Удалить аккаунт",
   "billingTitle": "Оплата",
-  "billingDisabledHint": "Платежи пока не подключены. Батарея работает в режиме симуляции с автовосстановлением.",
-  "billingEnabledHint": "Биллинг настроен, но checkout ещё не открыт.",
-  "billingComingSoon": "Пакеты пополнения появятся здесь после запуска Paddle checkout."
+  "billingDisabledHint": "Платежи пока не подключены. Энергия восстанавливается автоматически после простоя.",
+  "billingEnabledHint": "Оплата настроена, но покупки ещё недоступны.",
+  "billingComingSoon": "Пакеты пополнения появятся здесь после запуска оплаты через Paddle."
 }

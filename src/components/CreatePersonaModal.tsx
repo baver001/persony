@@ -294,7 +294,7 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
               <button
                 type="button"
                 onClick={() => setIsAvatarStudioOpen(true)}
-                className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden ring-1 ring-py-border bg-py-input shrink-0 self-center sm:self-start group cursor-pointer"
+                className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden ring-1 ring-py-border bg-py-input shrink-0 self-center sm:self-start group cursor-pointer"
                 title={t('changeAvatar')}
               >
                 <img

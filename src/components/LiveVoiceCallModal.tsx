@@ -450,10 +450,10 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
         >
           {/* Avatar with pulsing green ring */}
           <div className="relative shrink-0 cursor-pointer" onClick={() => setIsMinimized(false)}>
-            <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-emerald-500">
+            <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-py-accent">
               <img src={character.avatar} alt={character.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
             </div>
-            <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-[#18181b]" />
+            <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-py-accent ring-2 ring-[#18181b]" />
           </div>
 
           {/* Details & mini wave */}
@@ -463,7 +463,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
               <span className="text-[10px] text-zinc-400 font-mono font-medium">{formatDuration(duration)}</span>
             </div>
             <div className="flex items-center gap-1 h-3 mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <span className="w-1.5 h-1.5 rounded-full bg-py-accent" />
               <span className="text-[10px] text-white/50 truncate">
                 {status === 'connected' ? t('statusActive') : t('statusConnecting')}
               </span>
@@ -519,12 +519,12 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
             <div className="flex items-center gap-2.5 min-w-0">
               <span className="flex h-2 w-2 relative shrink-0">
                 {status === 'connected' && (
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-py-accent opacity-60" />
                 )}
                 <span
                   className={`relative inline-flex rounded-full h-2 w-2 ${
                     status === 'connected'
-                      ? 'bg-emerald-500'
+                      ? 'bg-py-accent'
                       : status === 'connecting'
                         ? 'bg-zinc-500'
                         : 'bg-zinc-600'
@@ -535,7 +535,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                 {headerLabel}
               </span>
               {(status === 'connecting' || status === 'connected') && (
-                <span className="font-mono text-emerald-400/90 text-xs tabular-nums shrink-0">
+                <span className="font-mono text-py-accent/90 text-xs tabular-nums shrink-0">
                   {status === 'connecting' ? '…' : formatDuration(duration)}
                 </span>
               )}
@@ -736,7 +736,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                     <div
                       key={line.id}
                       className={`text-xs leading-relaxed ${
-                        line.sender === 'user' ? 'text-emerald-300/90 text-right' : 'text-zinc-100 text-left'
+                        line.sender === 'user' ? 'text-py-accent/90 text-right' : 'text-zinc-100 text-left'
                       }`}
                     >
                       <span className="font-medium opacity-75">

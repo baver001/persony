@@ -284,13 +284,18 @@ function ChatApp() {
         (p, idx, arr) => arr.findIndex((x) => x.id === p.id) === idx
       );
 
-      if (installedPersonas.length === 0) {
+      const officialInstalled = installedPersonas.filter((p) => p.isOfficial);
+      const merged = [...installedPersonas, ...uniqueCustom].filter(
+        (p, idx, arr) => arr.findIndex((x) => x.id === p.id) === idx
+      );
+
+      if (merged.length === 0) {
         setPersonas(uniqueCustom);
         setShowMeetPersonas(true);
       } else {
-        setPersonas([...installedPersonas, ...uniqueCustom]);
-        setShowMeetPersonas(false);
-        setSelectedPersona(installedPersonas[0]);
+        setPersonas(merged);
+        setShowMeetPersonas(officialInstalled.length === 0 && uniqueCustom.length === 0);
+        setSelectedPersona(merged[0]);
       }
       setCloudPersonasLoaded(true);
       if (hasLegacyLocalData()) {
@@ -563,7 +568,8 @@ function ChatApp() {
     audioBlobUrl?: string,
     audioDuration?: number,
     audioBase64?: string,
-    initialTranscript?: string
+    initialTranscript?: string,
+    audioWaveform?: number[]
   ) => {
     if ((!text.trim() && !audioBase64) || isStreaming) return;
     if (!isAuthLoaded) return;
@@ -594,6 +600,7 @@ function ChatApp() {
       isVoiceNote,
       audioBlobUrl,
       audioDuration,
+      audioWaveform,
       isTranscribing: isVoiceNote && !initialTranscript && !!audioBase64,
       transcript: initialTranscript || '',
     };

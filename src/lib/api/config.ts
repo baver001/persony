@@ -2,12 +2,13 @@ export type AppConfig = {
   authRequired: boolean;
   clerkPublishableKey: string | null;
   appUrl: string | null;
+  devMode?: boolean;
 };
 
 let cachedConfig: AppConfig | null = null;
 
 export async function fetchAppConfig(): Promise<AppConfig> {
-  if (cachedConfig) return cachedConfig;
+  if (cachedConfig && !import.meta.env.DEV) return cachedConfig;
 
   try {
     const res = await fetch('/api/config');
@@ -17,6 +18,7 @@ export async function fetchAppConfig(): Promise<AppConfig> {
       authRequired: Boolean(data.authRequired),
       clerkPublishableKey: data.clerkPublishableKey || null,
       appUrl: data.appUrl || null,
+      devMode: Boolean(data.devMode),
     };
     return cachedConfig;
   } catch {

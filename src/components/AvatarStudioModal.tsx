@@ -62,8 +62,14 @@ export const AvatarStudioModal: React.FC<AvatarStudioModalProps> = ({
       });
 
       if (!res.ok) {
-        const errJson = (await res.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(errJson?.error || t('avatarGenerateFailed'));
+        const errJson = (await res.json().catch(() => null)) as {
+          error?: string;
+          error_code?: string;
+          message?: string;
+        } | null;
+        throw new Error(
+          errJson?.error || errJson?.message || errJson?.error_code || t('avatarGenerateFailed')
+        );
       }
 
       const data = (await res.json()) as { imageDataUrl?: string };
@@ -74,12 +80,6 @@ export const AvatarStudioModal: React.FC<AvatarStudioModalProps> = ({
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t('avatarGenerateFailed');
       setError(message);
-      const fallback = generateSvgAvatar(
-        personaName || trimmed,
-        category,
-        `${Date.now()}-${trimmed}`
-      );
-      setPreview(fallback);
     } finally {
       setIsGenerating(false);
     }
@@ -134,7 +134,7 @@ export const AvatarStudioModal: React.FC<AvatarStudioModalProps> = ({
 
           <div className="p-4 space-y-4">
             <div className="flex justify-center">
-              <div className="w-24 h-24 rounded-2xl overflow-hidden ring-1 ring-zinc-700 bg-zinc-800 shadow-lg">
+              <div className="w-28 h-28 rounded-full overflow-hidden ring-2 ring-zinc-700 bg-zinc-800 shadow-lg">
                 <img
                   src={preview}
                   alt=""
@@ -204,7 +204,7 @@ export const AvatarStudioModal: React.FC<AvatarStudioModalProps> = ({
                       key={i}
                       type="button"
                       onClick={() => setPreview(url)}
-                      className={`relative shrink-0 w-9 h-9 rounded-lg overflow-hidden transition-all ${
+                      className={`relative shrink-0 w-9 h-9 rounded-full overflow-hidden transition-all ${
                         selected
                           ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-900'
                           : 'opacity-55 hover:opacity-100'

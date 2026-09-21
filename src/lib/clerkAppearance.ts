@@ -3,7 +3,7 @@ export function getPersonyClerkAppearance(theme: 'dark' | 'light') {
 
   return {
     variables: {
-      colorPrimary: isDark ? '#4ec9a0' : '#3db892',
+      colorPrimary: isDark ? '#b5d248' : '#92ae30',
       colorDanger: '#f87171',
       colorSuccess: '#22c55e',
       colorWarning: '#fbbf24',

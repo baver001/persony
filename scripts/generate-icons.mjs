@@ -14,7 +14,8 @@ const sources = {
   markLightUiPng: join(root, 'src/assets/persony-icon-light.png'),
 };
 
-const APP_BG = '#0a0a0b';
+const OG_BG = { r: 10, g: 10, b: 11, alpha: 1 };
+const TRANSPARENT = { r: 0, g: 0, b: 0, alpha: 0 };
 
 mkdirSync(brandDir, { recursive: true });
 
@@ -35,7 +36,6 @@ function buildSquareAppIconSvg(markSvgPath) {
   const graphic = extractSvgGraphic(readFileSync(markSvgPath, 'utf8'));
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Persony">
-  <rect width="32" height="32" rx="7" fill="${APP_BG}"/>
   <svg x="3.5" y="2" width="25" height="28" viewBox="0 0 120.564 140.437" overflow="visible">
     ${graphic}
   </svg>
@@ -55,7 +55,7 @@ async function renderSquarePng(svgInput, size, paddingRatio = 0) {
   const resized = await sharp(svgInput)
     .resize(inner, inner, {
       fit: 'contain',
-      background: { r: 10, g: 10, b: 11, alpha: 1 },
+      background: TRANSPARENT,
     })
     .png()
     .toBuffer();
@@ -65,7 +65,7 @@ async function renderSquarePng(svgInput, size, paddingRatio = 0) {
       width: size,
       height: size,
       channels: 4,
-      background: { r: 10, g: 10, b: 11, alpha: 1 },
+      background: TRANSPARENT,
     },
   })
     .composite([{ input: resized, top: pad, left: pad }])
@@ -100,7 +100,7 @@ await sharp({
     width: 1200,
     height: 630,
     channels: 4,
-    background: { r: 10, g: 10, b: 11, alpha: 1 },
+    background: OG_BG,
   },
 })
   .composite([{ input: ogIcon, gravity: 'center' }])

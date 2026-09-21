@@ -5,7 +5,12 @@ import { PersonyAuthProvider } from './components/PersonyAuthProvider.tsx';
 import './i18n';
 import './index.css';
 
-createRoot(document.getElementById('root')!).render(
+const rootEl = document.getElementById('root');
+if (!rootEl) {
+  throw new Error('Persony root element #root was not found');
+}
+
+createRoot(rootEl).render(
   <StrictMode>
     <PersonyAuthProvider>
       <App />

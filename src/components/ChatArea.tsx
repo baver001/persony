@@ -32,6 +32,7 @@ import { useTranslation } from 'react-i18next';
 import { Persona, ChatMessage } from '../types';
 import { soundFX } from '../utils/soundEffects';
 import { getLocalizedPersonaPresentation } from '../utils/personaPresentation';
+import { TypingDots } from './TypingDots';
 import { audioBlobToWav } from '../utils/audioUtils';
 import {
   copyTextToClipboard,
@@ -43,7 +44,17 @@ import {
   messageMenuIcons,
   type MessageContextMenuItem,
 } from './MessageContextMenu';
-import { normalizeUserMessageForDisplay } from '../utils/chatMessageDisplay';
+import { LiveRecordingWaveform } from './LiveRecordingWaveform';
+import { VoiceWaveformBars } from './VoiceWaveformBars';
+import {
+  WAVEFORM_BAR_COUNT,
+  WAVEFORM_MIN_LEVEL,
+  decodeWaveformPeaks,
+} from '../utils/audioWaveform';
+import {
+  normalizeUserMessageForDisplay,
+  stripTranscriptQuotes,
+} from '../utils/chatMessageDisplay';
 import { useMobileLayout } from '../hooks/useMobileLayout';
 import { useBattery } from '../hooks/useBattery';
 import { SidebarBatteryControl } from './SidebarBatteryControl';
@@ -61,7 +72,8 @@ interface ChatAreaProps {
     audioBlobUrl?: string,
     audioDuration?: number,
     audioBase64?: string,
-    initialTranscript?: string
+    initialTranscript?: string,
+    audioWaveform?: number[]
   ) => void;
   onStartCall: (character: Persona) => void;
   onOpenProfile: (character: Persona) => void;
@@ -177,8 +189,8 @@ const PersonyMarkdown: React.FC<{ content: string; isUser: boolean }> = ({ conte
                 >
                   {copiedIndex === idx ? (
                     <>
-                      <Check className="w-3 h-3 text-emerald-400" />
-                      <span className="text-emerald-400">{t('copied')}</span>
+                      <Check className="w-3 h-3 text-py-accent" />
+                      <span className="text-py-accent">{t('copied')}</span>
                     </>
                   ) : (
                     <>
@@ -200,27 +212,6 @@ const PersonyMarkdown: React.FC<{ content: string; isUser: boolean }> = ({ conte
   );
 };
 
-const VOICE_WAVE_HEIGHTS = [4, 8, 14, 8, 16, 12, 6, 14, 18, 10, 8, 14, 6, 12, 16, 8, 10, 14, 8, 6];
-
-const VoiceWaveform: React.FC<{
-  live?: boolean;
-  isPlaying?: boolean;
-  barClassName?: string;
-}> = ({ live = false, isPlaying = false, barClassName }) => (
-  <div className={`py-voice-waveform${live ? ' py-voice-waveform--live' : ''}`}>
-    {VOICE_WAVE_HEIGHTS.map((h, i) => (
-      <span
-        key={i}
-        className={`py-voice-waveform-bar ${isPlaying && !live ? 'animate-pulse' : ''} ${barClassName ?? ''}`}
-        style={{
-          height: isPlaying && !live ? `${((i % 5) + 2) * 3.5}px` : `${h}px`,
-          animationDelay: live ? `${(i % 7) * 0.09}s` : undefined,
-        }}
-      />
-    ))}
-  </div>
-);
-
 // Voice Note Audio Bubble with Transcription
 const VoiceNoteBubble: React.FC<{
   audioUrl?: string;
@@ -228,17 +219,47 @@ const VoiceNoteBubble: React.FC<{
   isUser: boolean;
   transcript?: string;
   isTranscribing?: boolean;
+  waveform?: number[];
 }> = ({
   audioUrl,
   duration = 3,
   isUser,
   transcript,
   isTranscribing,
+  waveform,
 }) => {
   const { t } = useTranslation('chat');
   const [isPlaying, setIsPlaying] = useState(false);
   const [showTranscript, setShowTranscript] = useState(true);
+  const [waveformLevels, setWaveformLevels] = useState<number[]>(
+    waveform?.length
+      ? waveform
+      : Array.from({ length: WAVEFORM_BAR_COUNT }, () => WAVEFORM_MIN_LEVEL)
+  );
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (waveform?.length) {
+      setWaveformLevels(waveform);
+    }
+  }, [waveform]);
+
+  useEffect(() => {
+    if (!audioUrl || waveform?.length) return;
+    let cancelled = false;
+    void decodeWaveformPeaks(audioUrl, WAVEFORM_BAR_COUNT)
+      .then((peaks) => {
+        if (!cancelled) setWaveformLevels(peaks);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setWaveformLevels(Array.from({ length: WAVEFORM_BAR_COUNT }, () => WAVEFORM_MIN_LEVEL));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [audioUrl, waveform]);
 
   useEffect(() => {
     return () => {
@@ -266,9 +287,20 @@ const VoiceNoteBubble: React.FC<{
     }
   };
 
+  const durationLabel = `0:${duration.toString().padStart(2, '0')}`;
+  const cleanTranscript = transcript ? stripTranscriptQuotes(transcript) : '';
+
   return (
-    <div className="flex flex-col py-1 w-full max-w-[min(85vw,20rem)] sm:max-w-sm">
-      <div className="flex items-center gap-3">
+    <div className="relative flex flex-col py-1 w-full min-w-[14rem] max-w-full">
+      <span
+        className={`absolute top-0 right-0 text-[10px] tabular-nums opacity-60 pointer-events-none ${
+          isUser ? 'text-white/80' : 'text-neutral-600 dark:text-white/60'
+        }`}
+      >
+        {durationLabel}
+      </span>
+
+      <div className="flex items-center gap-3 pr-9">
         <button
           onClick={togglePlay}
           className={`w-9 h-9 rounded-full flex items-center justify-center transition-transform active:scale-95 shadow-sm shrink-0 cursor-pointer ${
@@ -281,51 +313,63 @@ const VoiceNoteBubble: React.FC<{
           {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
         </button>
 
-        <div className="flex-1 min-w-0">
-          <VoiceWaveform
+        <div className="flex-1 min-w-0 w-full">
+          <VoiceWaveformBars
+            levels={waveformLevels}
+            barCount={WAVEFORM_BAR_COUNT}
             isPlaying={isPlaying}
             barClassName={
               isPlaying
-                ? 'bg-emerald-400/90'
+                ? '!bg-py-accent/90'
                 : isUser
                   ? '!bg-white/75'
                   : '!bg-white/40'
             }
+            className="w-full"
           />
-          <div className="flex items-center justify-between text-[10px] opacity-75 mt-0.5">
-            <span>{isPlaying ? t('playing') : t('voiceMessage')}</span>
-            <span>0:{duration.toString().padStart(2, '0')}</span>
-          </div>
         </div>
       </div>
 
-      {/* Transcription block */}
-      {(isTranscribing || transcript) && (
-        <div className="mt-2.5 pt-2 border-t border-white/10 text-xs">
+      {(isTranscribing || cleanTranscript) && (
+        <div className="mt-2 text-xs">
           {isTranscribing ? (
             <div className="flex items-center gap-1.5 opacity-80 text-[11px] animate-pulse">
               <Sparkles className="w-3.5 h-3.5 text-zinc-300" />
               <span>{t('transcribing')}</span>
             </div>
           ) : (
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-[10px] opacity-60">
-                <span className="font-semibold uppercase tracking-wider">{t('transcript')}</span>
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <span
+                  className={`text-[10px] font-semibold uppercase tracking-wider opacity-60 ${
+                    isUser ? 'text-white/70' : 'text-neutral-500 dark:text-white/50'
+                  }`}
+                >
+                  {t('transcript')}
+                </span>
                 <button
                   type="button"
                   onClick={() => setShowTranscript(!showTranscript)}
-                  className="hover:underline text-[10px] cursor-pointer"
+                  className={`p-0.5 rounded-md opacity-60 hover:opacity-100 transition-opacity cursor-pointer ${
+                    isUser ? 'text-white/80' : 'text-neutral-600 dark:text-white/70'
+                  }`}
+                  aria-label={showTranscript ? t('hide') : t('show')}
+                  title={showTranscript ? t('hide') : t('show')}
                 >
-                  {showTranscript ? t('hide') : t('show')}
+                  {showTranscript ? (
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  )}
                 </button>
               </div>
               {showTranscript && (
-                <p className={`text-[12px] leading-relaxed italic px-2.5 py-1.5 rounded-lg border ${
-                  isUser
-                    ? 'text-white/95 bg-black/20 border-white/10'
-                    : 'text-neutral-900 dark:text-white/95 bg-black/5 dark:bg-black/25 border-neutral-200 dark:border-white/5'
-                }`}>
-                  «{transcript}»
+                <p
+                  className={`text-[12px] leading-relaxed mt-1 ${
+                    isUser ? 'text-white/90' : 'text-neutral-800 dark:text-white/90'
+                  }`}
+                >
+                  {cleanTranscript}
                 </p>
               )}
             </div>
@@ -379,7 +423,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
   // Voice Note Recording State
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [recordingStream, setRecordingStream] = useState<MediaStream | null>(null);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const recordingWaveformRef = useRef<number[]>(
+    Array.from({ length: WAVEFORM_BAR_COUNT }, () => WAVEFORM_MIN_LEVEL)
+  );
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<number | null>(null);
@@ -517,7 +565,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             audioUrl,
             finalDuration,
             wavBase64,
-            localTranscriptRef.current
+            localTranscriptRef.current,
+            [...recordingWaveformRef.current]
           );
         } catch (wavErr) {
           console.warn('WAV conversion fallback:', wavErr);
@@ -533,7 +582,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               audioUrl,
               elapsedSecs,
               base64Data,
-              localTranscriptRef.current
+              localTranscriptRef.current,
+              [...recordingWaveformRef.current]
             );
           };
         }
@@ -542,6 +592,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       };
 
       recorder.start(100);
+      recordingWaveformRef.current = Array.from(
+        { length: WAVEFORM_BAR_COUNT },
+        () => WAVEFORM_MIN_LEVEL
+      );
+      setRecordingStream(stream);
       setIsRecordingVoice(true);
       setRecordingSeconds(0);
       recordingTimerRef.current = window.setInterval(() => {
@@ -581,6 +636,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       }
     }
     setIsRecordingVoice(false);
+    setRecordingStream(null);
   };
 
   const showCopyFeedback = (label: string) => {
@@ -669,7 +725,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     >
       <div
         className={`shrink-0 rounded-full p-2 ${
-          isDark ? 'bg-py-accent/15 text-py-accent' : 'bg-emerald-500/15 text-emerald-600'
+          'bg-py-accent/15 text-py-accent'
         }`}
       >
         <Sparkles className="w-3.5 h-3.5" />
@@ -784,7 +840,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               {isCallingActive ? (
                 <span className="text-py-accent font-medium">{t('inCall')}</span>
               ) : isStreaming ? (
-                <span className="text-py-text animate-pulse font-medium">{t('typing')}</span>
+                <span className="text-py-text font-medium inline-flex items-baseline">
+                  {t('typing')}
+                  <TypingDots />
+                </span>
               ) : (
                 t('onlineVoice', { voice: character.voice })
               )}
@@ -1011,7 +1070,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     className={`px-3.5 py-2.5 rounded-2xl rounded-tl-md text-sm leading-relaxed border ${
                       isDark
                         ? 'bg-zinc-800/90 text-zinc-100 border-py-accent/25 shadow-md'
-                        : 'bg-white text-neutral-900 border-emerald-200/80 shadow-sm'
+                        : 'bg-white text-neutral-900 border-py-accent/25 shadow-sm'
                     }`}
                   >
                     <PersonyMarkdown content={msg.text} isUser={false} />
@@ -1136,12 +1195,14 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               {/* Message Bubble */}
               <div
                 className={`relative text-sm leading-relaxed transition-all ${
-                  isUser
-                    ? 'max-w-[min(100%,28rem)] px-4 py-2.5 py-bubble-out'
-                    : displayMsg.isVoiceNote || msg.isError
-                      ? 'max-w-[min(100%,28rem)] px-4 py-2.5 py-bubble-in'
-                      : 'w-full max-w-full px-0 sm:px-1 py-1'
-                }`}
+                  displayMsg.isVoiceNote
+                    ? 'w-full max-w-[min(100%,22rem)] px-4 py-2.5'
+                    : isUser
+                      ? 'max-w-[min(100%,28rem)] px-4 py-2.5 py-bubble-out'
+                      : msg.isError
+                        ? 'w-full max-w-[min(100%,22rem)] px-4 py-2.5 py-bubble-in'
+                        : 'w-full max-w-full px-0 sm:px-1 py-1'
+                } ${displayMsg.isVoiceNote ? (isUser ? 'py-bubble-out' : 'py-bubble-in') : ''}`}
               >
                 {!isUser && (
                   <div className="text-[11px] font-semibold text-zinc-400 mb-1">
@@ -1156,6 +1217,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     isUser={isUser}
                     transcript={displayMsg.transcript}
                     isTranscribing={displayMsg.isTranscribing}
+                    waveform={msg.audioWaveform}
                   />
                 ) : msg.isError ? (
                   <div className="flex flex-col gap-2 py-0.5">
@@ -1253,9 +1315,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 {streamingText ? (
                   <PersonyMarkdown content={streamingText} isUser={false} />
                 ) : (
-                  <span className="flex items-center gap-1.5 text-zinc-400 text-xs">
-                    <span className="w-2 h-2 rounded-full bg-zinc-400 animate-ping" />
+                  <span className="text-zinc-400 text-xs inline-flex items-baseline">
                     {t('typingResponse')}
+                    <TypingDots />
                   </span>
                 )}
               </div>
@@ -1328,24 +1390,32 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         <div className="py-composer-row">
           {isRecordingVoice ? (
             <div className="py-composer-recording flex-1">
+              <LiveRecordingWaveform
+                stream={recordingStream}
+                active={isRecordingVoice}
+                onLevelsChange={(levels) => {
+                  recordingWaveformRef.current = levels;
+                }}
+              />
               <span
-                className={`font-mono text-xs tabular-nums shrink-0 ${
-                  isDark ? 'text-zinc-400' : 'text-neutral-500'
+                className={`font-mono text-[11px] tabular-nums shrink-0 min-w-[2.5rem] text-right ${
+                  isDark ? 'text-zinc-300' : 'text-neutral-600'
                 }`}
               >
                 0:{recordingSeconds.toString().padStart(2, '0')}
               </span>
-              <VoiceWaveform live />
               <button
                 type="button"
                 onClick={() => stopVoiceRecording(true)}
-                className={`shrink-0 px-2 py-1 rounded-lg text-xs transition-colors cursor-pointer ${
+                className={`py-touch-target p-1.5 rounded-lg shrink-0 transition-colors cursor-pointer ${
                   isDark
                     ? 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700/50'
                     : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200/80'
                 }`}
+                title={t('cancel')}
+                aria-label={t('cancel')}
               >
-                {t('cancel')}
+                <X className="w-4 h-4" />
               </button>
               <button
                 type="button"
@@ -1356,8 +1426,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     : 'bg-neutral-900 hover:bg-neutral-800 text-white'
                 }`}
                 title={t('sendVoice')}
+                aria-label={t('sendVoice')}
               >
-                <ArrowUp className="w-4 h-4 stroke-[2.5]" />
+                <Check className="w-4 h-4 stroke-[2.5]" />
               </button>
             </div>
           ) : (

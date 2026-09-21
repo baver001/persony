@@ -376,7 +376,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 key={persona.id}
                 id={`chat-item-${persona.id}`}
                 onClick={() => onSelectPersona(persona)}
-                className={`group relative flex items-center gap-3 px-3 py-3 cursor-pointer transition-all ${
+                className={`flex items-center gap-2.5 px-3 py-3 cursor-pointer transition-all ${
                   isSelected
                     ? isDark
                       ? 'bg-zinc-800 text-white'
@@ -408,7 +408,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   />
                 </div>
 
-                <div className="flex-1 min-w-0 flex flex-col justify-center gap-1 pr-9">
+                <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
                   <div className="flex items-center justify-between gap-1">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <span className="font-semibold text-sm truncate leading-tight">
@@ -431,17 +431,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       )}
                     </div>
 
-                    <span
-                      className={`text-[11px] shrink-0 ${
-                        isSelected
-                          ? isDark
-                            ? 'text-zinc-300'
-                            : 'text-neutral-600'
-                          : 'text-zinc-500'
-                      }`}
-                    >
-                      {lastMsg ? formatMessageTime(lastMsg.timestamp) : persona.voice}
-                    </span>
+                    {lastMsg && (
+                      <span
+                        className={`text-[11px] shrink-0 tabular-nums ${
+                          isSelected
+                            ? isDark
+                              ? 'text-zinc-300'
+                              : 'text-neutral-600'
+                            : 'text-zinc-500'
+                        }`}
+                      >
+                        {formatMessageTime(lastMsg.timestamp)}
+                      </span>
+                    )}
                   </div>
 
                   <p
@@ -476,23 +478,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
 
                 <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     onStartCall(persona);
                   }}
-                  className={`absolute right-2 top-1/2 -translate-y-1/2 py-touch-target p-2 rounded-full transition-all shrink-0 hidden sm:inline-flex ${
+                  className={`shrink-0 inline-flex items-center justify-center min-w-[2.5rem] h-10 px-2.5 rounded-xl transition-all active:scale-[0.97] ${
                     isSelected
                       ? isDark
-                        ? 'hover:bg-zinc-700 text-zinc-200'
-                        : 'hover:bg-neutral-200 text-neutral-700'
+                        ? 'bg-white/10 text-zinc-200 hover:bg-white/14'
+                        : 'bg-neutral-200/80 text-neutral-700 hover:bg-neutral-200'
                       : isDark
-                      ? 'opacity-0 group-hover:opacity-100 hover:bg-zinc-700 text-zinc-400 hover:text-white'
-                      : 'opacity-0 group-hover:opacity-100 hover:bg-neutral-200 text-neutral-600'
+                        ? 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-zinc-200'
+                        : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200/90 hover:text-neutral-700'
                   }`}
                   title={t('common:callVoice')}
                   aria-label={t('common:callVoice')}
                 >
-                  <Phone className="w-3.5 h-3.5" />
+                  <Phone className="w-4 h-4" strokeWidth={2.25} />
                 </button>
               </div>
             );

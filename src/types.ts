@@ -48,6 +48,7 @@ export interface ChatMessage {
   status?: 'sending' | 'sent' | 'read';
   audioDuration?: number; // if voice message
   audioBlobUrl?: string; // voice audio playback URL
+  audioWaveform?: number[]; // normalized 0..1 bar levels for UI
   isVoiceNote?: boolean;
   transcript?: string; // verbatim transcribed speech
   isTranscribing?: boolean; // indicator while Gemini transcribes

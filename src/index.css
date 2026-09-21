@@ -9,8 +9,8 @@
   --py-bg-input: #f0f0f2;
   --py-bubble-in: #ffffff;
   --py-bubble-out: #2a2a2e;
-  --py-accent: #3db892;
-  --py-accent-muted: rgba(61, 184, 146, 0.15);
+  --py-accent: #92ae30;
+  --py-accent-muted: rgba(146, 174, 48, 0.16);
   --py-text-primary: #18181b;
   --py-text-secondary: #52525b;
   --py-text-muted: #a1a1aa;
@@ -37,8 +37,8 @@
   --py-bg-input: #1c1c1f;
   --py-bubble-in: #1c1c1f;
   --py-bubble-out: #2a2a2e;
-  --py-accent: #4ec9a0;
-  --py-accent-muted: rgba(78, 201, 160, 0.12);
+  --py-accent: #b5d248;
+  --py-accent-muted: rgba(181, 210, 72, 0.14);
   --py-text-primary: #f4f4f5;
   --py-text-secondary: #a1a1aa;
   --py-text-muted: #71717a;
@@ -157,40 +157,126 @@
   border-radius: 9999px;
 }
 
-/* Voice recording waveform — matches sent voice bubble bars */
-.py-voice-waveform {
+/* Voice waveform — full-width bars (recording + playback) */
+.py-waveform-bars {
   display: flex;
   align-items: center;
-  gap: 2px;
-  height: 1.5rem;
+  width: 100%;
   min-width: 0;
-  flex: 1;
+  gap: 1.5px;
+  height: 1.5rem;
 }
 
-.py-voice-waveform-bar {
-  width: 3px;
+.py-waveform-bars--fade-left {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 12%, #000 100%);
+  mask-image: linear-gradient(to right, transparent 0%, #000 12%, #000 100%);
+}
+
+.py-waveform-bar {
+  flex: 1 1 0;
+  min-width: 1px;
+  max-width: 3px;
   border-radius: 9999px;
-  background: color-mix(in srgb, var(--py-text-primary) 55%, transparent);
-  transform-origin: center;
+  background: color-mix(in srgb, var(--py-text-primary) 62%, transparent);
+  transform-origin: center bottom;
+  transition:
+    height 55ms linear,
+    opacity 80ms ease-out;
 }
 
-.dark .py-voice-waveform-bar {
-  background: color-mix(in srgb, #ffffff 72%, transparent);
+.py-waveform-dot {
+  flex: 1 1 0;
+  min-width: 1px;
+  max-width: 3px;
+  height: 3px;
+  border-radius: 9999px;
+  align-self: center;
+  background: color-mix(in srgb, var(--py-text-primary) 48%, transparent);
+  transition: opacity 80ms ease-out;
 }
 
-.py-voice-waveform--live .py-voice-waveform-bar {
-  animation: py-waveform-live 0.85s ease-in-out infinite;
+.dark .py-waveform-bar {
+  background: color-mix(in srgb, #ffffff 76%, transparent);
 }
 
-@keyframes py-waveform-live {
+.dark .py-waveform-dot {
+  background: color-mix(in srgb, #ffffff 58%, transparent);
+}
+
+.py-waveform-bar--playing {
+  animation: py-waveform-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes py-waveform-pulse {
   0%,
   100% {
-    transform: scaleY(0.28);
-    opacity: 0.55;
+    transform: scaleY(0.92);
   }
   50% {
-    transform: scaleY(1);
+    transform: scaleY(1.08);
+  }
+}
+
+/* Typing indicator — dots appear one after another */
+.typing-dots span {
+  opacity: 0;
+}
+
+.typing-dots span:nth-child(1) {
+  animation: typing-dot-1 1.4s ease-in-out infinite;
+}
+
+.typing-dots span:nth-child(2) {
+  animation: typing-dot-2 1.4s ease-in-out infinite;
+}
+
+.typing-dots span:nth-child(3) {
+  animation: typing-dot-3 1.4s ease-in-out infinite;
+}
+
+@keyframes typing-dot-1 {
+  0%,
+  8% {
+    opacity: 0;
+  }
+  12%,
+  72% {
     opacity: 1;
+  }
+  80%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes typing-dot-2 {
+  0%,
+  28% {
+    opacity: 0;
+  }
+  32%,
+  72% {
+    opacity: 1;
+  }
+  80%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes typing-dot-3 {
+  0%,
+  48% {
+    opacity: 0;
+  }
+  52%,
+  72% {
+    opacity: 1;
+  }
+  80%,
+  100% {
+    opacity: 0;
   }
 }
 
@@ -199,10 +285,11 @@
   align-items: center;
   flex: 1;
   min-width: 0;
+  width: 100%;
   min-height: 2.75rem;
-  gap: 0.75rem;
+  gap: 0.5rem;
   border-radius: 1.625rem;
-  padding: 0.25rem 0.3125rem 0.25rem 1rem;
+  padding: 0.35rem 0.4rem 0.35rem 0.75rem;
   background: var(--py-bg-input);
   border: 1px solid var(--py-border);
   box-shadow: var(--py-shadow-sm);

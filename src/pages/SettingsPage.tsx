@@ -50,11 +50,7 @@ export function SettingsPage({ onBack, isSignedIn }: Props) {
         {isSignedIn && battery?.enabled && (
           <section className="py-surface-card p-4 space-y-3">
             <h2 className="font-medium">{t('battery:settingsTitle')}</h2>
-            <p className="text-sm text-py-text-secondary">
-              {battery.mode === 'simulation'
-                ? t('battery:simulationHint')
-                : t('battery:settingsHint')}
-            </p>
+            <p className="text-sm text-py-text-secondary">{t('battery:settingsHint')}</p>
             <BatteryIndicator
               battery={battery}
               variant="horizontal"
@@ -99,7 +95,7 @@ export function SettingsPage({ onBack, isSignedIn }: Props) {
 
         <section className="py-surface-card p-4">
           <h2 className="font-medium mb-2">{t('settings:dataControls')}</h2>
-          <p className="text-sm text-py-text-secondary">{t('settings:exportData')} — coming soon</p>
+          <p className="text-sm text-py-text-secondary">{t('settings:exportDataComingSoon')}</p>
         </section>
       </div>
     </div>

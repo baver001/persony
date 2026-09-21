@@ -62,10 +62,15 @@ export function generateSvgAvatar(name: string, category: string = 'custom', see
     <filter id="f_${hash}" x="-10%" y="-10%" width="120%" height="120%">
       <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.3"/>
     </filter>
+    <clipPath id="clip_${hash}">
+      <circle cx="100" cy="100" r="100" />
+    </clipPath>
   </defs>
-  <rect width="200" height="200" rx="48" fill="url(#g_${hash})" />
-  ${shapeMarkup}
-  <text x="100" y="116" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="46" font-weight="700" fill="${grad.text}" text-anchor="middle" filter="url(#f_${hash})">${initials}</text>
+  <g clip-path="url(#clip_${hash})">
+    <circle cx="100" cy="100" r="100" fill="url(#g_${hash})" />
+    ${shapeMarkup}
+    <text x="100" y="116" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="46" font-weight="700" fill="${grad.text}" text-anchor="middle" filter="url(#f_${hash})">${initials}</text>
+  </g>
 </svg>
   `.trim();
 

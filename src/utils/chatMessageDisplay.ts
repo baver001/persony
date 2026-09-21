@@ -7,8 +7,15 @@ const LEGACY_VOICE_SILENCE =
   /^\[Пользователь отправил голосовое аудиосообщение длительностью (\d+)/;
 const DISPLAY_VOICE_WITH_TRANSCRIPT = /^🎤 "(.+)"$/;
 
+export function stripTranscriptQuotes(text: string): string {
+  return text
+    .trim()
+    .replace(/^[\s«"'“]+/, '')
+    .replace(/[\s»"'”]+$/, '');
+}
+
 export function buildVoiceNoteDisplayText(transcript: string): string {
-  return `🎤 "${transcript}"`;
+  return `🎤 "${stripTranscriptQuotes(transcript)}"`;
 }
 
 export function buildVoiceNoteModelText(

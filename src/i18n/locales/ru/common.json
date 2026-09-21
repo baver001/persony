@@ -1,5 +1,6 @@
 {
   "appName": "Persony",
+  "appTitle": "Persony — AI-мессенджер",
   "delete": "Удалить",
   "edit": "Изменить",
   "save": "Сохранить",
@@ -25,7 +26,7 @@
   "aiDisclaimer": "AI-персоны могут ошибаться.",
   "localePrompt": "Persony также доступен на русском языке.",
   "switchToRussian": "Переключить на русский",
-  "keepEnglish": "Оставить English",
+  "keepEnglish": "Оставить английский",
   "sidebarSubtitle": "AI-собеседники",
   "searchChats": "Поиск диалогов...",
   "createNewPersona": "Создать нового персонажа",
