@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { VoiceWaveformBars } from './VoiceWaveformBars';
 import { WAVEFORM_MIN_LEVEL, normalizeWaveformLevel } from '../utils/audioWaveform';
 
-const BUFFER_SIZE = 96;
-const SAMPLE_MS = 36;
+const BUFFER_SIZE = 128;
+const SAMPLE_MS = 72;
 
 type Props = {
   stream: MediaStream | null;
@@ -50,7 +50,7 @@ export function LiveRecordingWaveform({ stream, active, onLevelsChange }: Props)
     const source = ctx.createMediaStreamSource(stream);
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 512;
-    analyser.smoothingTimeConstant = 0.45;
+    analyser.smoothingTimeConstant = 0.62;
     source.connect(analyser);
     analyserRef.current = analyser;
     bufferRef.current = new Uint8Array(analyser.fftSize);
@@ -81,8 +81,7 @@ export function LiveRecordingWaveform({ stream, active, onLevelsChange }: Props)
   return (
     <VoiceWaveformBars
       levels={levels}
-      fadeFromLeft
-      quietAsDots
+      variant="live"
       className="flex-1 min-w-0 w-full h-[1.5rem]"
     />
   );

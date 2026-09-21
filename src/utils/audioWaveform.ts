@@ -1,10 +1,11 @@
-export const WAVEFORM_MIN_LEVEL = 0.07;
-export const WAVEFORM_BAR_COUNT = 56;
+export const WAVEFORM_MIN_LEVEL = 0.12;
+export const WAVEFORM_BAR_COUNT = 40;
 
 export function normalizeWaveformLevel(value: number): number {
   return Math.min(1, Math.max(WAVEFORM_MIN_LEVEL, value));
 }
 
+/** Bucket-max resampling keeps peaks visible and avoids moiré from single-sample picks. */
 export function resampleWaveformLevels(levels: number[], targetCount: number): number[] {
   if (targetCount <= 0) return [];
   if (levels.length === 0) {
@@ -14,11 +15,21 @@ export function resampleWaveformLevels(levels: number[], targetCount: number): n
 
   const out: number[] = [];
   for (let i = 0; i < targetCount; i++) {
-    const position = (i / targetCount) * levels.length;
-    const idx = Math.min(levels.length - 1, Math.floor(position));
-    out.push(levels[idx]);
+    const start = Math.floor((i / targetCount) * levels.length);
+    const end = Math.floor(((i + 1) / targetCount) * levels.length);
+    let peak = WAVEFORM_MIN_LEVEL;
+    for (let j = start; j < end; j++) {
+      peak = Math.max(peak, levels[j]);
+    }
+    out.push(peak);
   }
   return out;
+}
+
+function enhanceWaveformContrast(levels: number[]): number[] {
+  const max = Math.max(...levels, WAVEFORM_MIN_LEVEL);
+  const floor = 0.22;
+  return levels.map((level) => normalizeWaveformLevel(floor + (level / max) * (1 - floor)));
 }
 
 export async function decodeWaveformPeaks(
@@ -46,7 +57,7 @@ export async function decodeWaveformPeaks(
       peaks.push(normalizeWaveformLevel(rms * 3.8));
     }
 
-    return peaks;
+    return enhanceWaveformContrast(peaks);
   } finally {
     await ctx.close();
   }

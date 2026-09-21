@@ -163,45 +163,48 @@
   align-items: center;
   width: 100%;
   min-width: 0;
-  gap: 1.5px;
   height: 1.5rem;
+}
+
+.py-waveform-bars--live {
+  justify-content: space-between;
+}
+
+.py-waveform-bars--playback {
+  justify-content: space-between;
+  gap: 2px;
 }
 
 .py-waveform-bars--fade-left {
   overflow: hidden;
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 12%, #000 100%);
-  mask-image: linear-gradient(to right, transparent 0%, #000 12%, #000 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 14%, #000 100%);
+  mask-image: linear-gradient(to right, transparent 0%, #000 14%, #000 100%);
 }
 
 .py-waveform-bar {
-  flex: 1 1 0;
-  min-width: 1px;
-  max-width: 3px;
   border-radius: 9999px;
   background: color-mix(in srgb, var(--py-text-primary) 62%, transparent);
-  transform-origin: center bottom;
-  transition:
-    height 55ms linear,
-    opacity 80ms ease-out;
+  transform-origin: center center;
+  flex-shrink: 0;
 }
 
-.py-waveform-dot {
+.py-waveform-bars--live .py-waveform-bar {
+  width: 2px;
+  min-width: 2px;
+  max-width: 2px;
+  flex: 0 0 2px;
+  transition: height 60ms ease-out;
+}
+
+.py-waveform-bars--playback .py-waveform-bar {
   flex: 1 1 0;
-  min-width: 1px;
+  min-width: 2px;
   max-width: 3px;
-  height: 3px;
-  border-radius: 9999px;
-  align-self: center;
-  background: color-mix(in srgb, var(--py-text-primary) 48%, transparent);
-  transition: opacity 80ms ease-out;
+  transition: height 100ms ease-out;
 }
 
 .dark .py-waveform-bar {
   background: color-mix(in srgb, #ffffff 76%, transparent);
-}
-
-.dark .py-waveform-dot {
-  background: color-mix(in srgb, #ffffff 58%, transparent);
 }
 
 .py-waveform-bar--playing {

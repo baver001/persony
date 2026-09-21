@@ -50,6 +50,7 @@ import {
   WAVEFORM_BAR_COUNT,
   WAVEFORM_MIN_LEVEL,
   decodeWaveformPeaks,
+  resampleWaveformLevels,
 } from '../utils/audioWaveform';
 import {
   normalizeUserMessageForDisplay,
@@ -316,6 +317,7 @@ const VoiceNoteBubble: React.FC<{
         <div className="flex-1 min-w-0 w-full">
           <VoiceWaveformBars
             levels={waveformLevels}
+            variant="playback"
             barCount={WAVEFORM_BAR_COUNT}
             isPlaying={isPlaying}
             barClassName={
@@ -566,7 +568,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             finalDuration,
             wavBase64,
             localTranscriptRef.current,
-            [...recordingWaveformRef.current]
+            resampleWaveformLevels(recordingWaveformRef.current, WAVEFORM_BAR_COUNT)
           );
         } catch (wavErr) {
           console.warn('WAV conversion fallback:', wavErr);
@@ -583,7 +585,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               elapsedSecs,
               base64Data,
               localTranscriptRef.current,
-              [...recordingWaveformRef.current]
+              resampleWaveformLevels(recordingWaveformRef.current, WAVEFORM_BAR_COUNT)
             );
           };
         }
