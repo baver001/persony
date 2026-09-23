@@ -102,7 +102,7 @@ npm run dev
 
 ## 8. Beta RC — 4 gate до GO (~76% automated done)
 
-Трекер: `docs/BETA_RC_PROGRESS.md` · git/prod `af3a78d` · E2E 11/11 · CI 165 tests.
+Трекер: `docs/BETA_RC_PROGRESS.md` · git/prod `af3a78d` · E2E 12/12 · CI 165 tests.
 
 ### 8.1 Official avatars (BLOCKER-1)
 

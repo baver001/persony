@@ -29,7 +29,7 @@ npm run test:e2e:beta
 | 7 | Persona create → save → reload → edit → delete | partial | ✓ | E2E lifecycle **3/3** (opt-in); includes reload→edit→delete |
 | 8 | AI Persona + portrait generation | — | ✓ | WIP |
 | 9 | Avatar Studio save + reload | — | ✓ | WIP |
-| 10 | Discover install → chat opens | — | ✓ | |
+| 10 | Discover install → chat opens | partial | ✓ | E2E `discover-install` (opt-in Clerk) |
 | 11 | Chat persist after reload | partial | ✓ | |
 | 12 | Voice note record + playback waveform | partial | ✓ | |
 | 13 | Voice Call 15–30 min (iPhone Safari, Android Chrome) | — | ✓ | **user** |
@@ -39,7 +39,7 @@ npm run test:e2e:beta
 
 ## Sign-off
 
-- [x] All automated gates green on target SHA (`af3a78d` prod; CI + E2E 11/11 2026-09-23)
+- [x] All automated gates green on target SHA (`af3a78d` prod; CI + E2E 12/12 2026-09-23)
 - [ ] Manual rows 7–16 verified
 - [ ] No P0 regressions in Persona / Auth / Chat
 - [ ] `docs/BETA_READINESS.md` recommendation updated to GO/NO-GO

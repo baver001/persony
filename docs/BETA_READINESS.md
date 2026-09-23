@@ -15,7 +15,7 @@ Legend: `impl` = implemented in code · `test` = automated · `manual` = human v
 | Persona AI generation | ✓ | — | — | ✓ | auto portrait after character gen |
 | Avatar Studio | ✓ | partial | — | ✓ | `gemini-3.1-flash-image` |
 | Official avatars | ✗ | — | — | ✗ | Unsplash URLs — **user blocker** |
-| Discover / Gallery | ✓ | ✓ | — | partial | install states + installed badge |
+| Discover / Gallery | ✓ | ✓ | — | partial | install E2E (opt-in) + installed badge |
 | Chat + persist | ✓ | ✓ | partial | ✓ | voice note mic UX fixed (WIP) |
 | Voice message | partial | ✓ | — | ? | `chatMessageDisplay` + waveform tests |
 | Voice Call | ✓ | — | — | ? | device soak open — **user blocker** |
@@ -25,7 +25,7 @@ Legend: `impl` = implemented in code · `test` = automated · `manual` = human v
 | Beta Battery | ✓ | — | — | ✓ | — |
 | Commercial billing | hidden | ✓ | — | ✓ | `BILLING_ENABLED=false` |
 | Rooms | hidden | ✓ | — | partial | `ROOMS_ENABLED=false` |
-| Playwright beta-critical | ✓ | ✓ | — | ✓ | **11/11** on prod (2026-09-23, msedge) |
+| Playwright beta-critical | ✓ | ✓ | — | ✓ | **12/12** on prod (2026-09-23, msedge) |
 
 ## Release gate (§85)
 
