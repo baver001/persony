@@ -108,7 +108,7 @@
 **Шаги:**
 
 1. Подтвердить стиль (avatar style bible §21) или прислать референс.
-2. Убедиться, что `GEMINI_API_KEY` имеет **платный quota** на `gemini-3.1-flash-image` (free tier limit=0 для image model).
+2. Убедиться, что `GEMINI_API_KEY` имеет **платный quota** на `gemini-3.1-flash-image` (free tier limit=0 для image model). Симптом: Worker **429** («Превышен лимит запросов») при `--via-api`.
 3. `node scripts/generate-official-avatars.mjs --execute --via-api` (Worker key + Clerk JWT) или `--execute` (локальный `GEMINI_API_KEY`).
 4. По одному: `--slug=athena`.
 5. Визуально approve 6 candidates → `node scripts/generate-official-avatars.mjs --apply-roster --confirm`.

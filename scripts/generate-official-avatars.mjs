@@ -177,7 +177,12 @@ async function generatePortraitViaApi(apiBase, bearer, entry) {
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
     const detail = body?.error || body?.message || body?.error_code || res.statusText;
-    throw new Error(`API ${res.status}: ${detail}`);
+    let message = `API ${res.status}: ${detail}`;
+    if (res.status === 429) {
+      message +=
+        '\nEnable paid quota for gemini-3.1-flash-image on the Google project used by Worker GEMINI_API_KEY (see docs/BETA_RC_PROGRESS.md BLOCKER-1).';
+    }
+    throw new Error(message);
   }
 
   const dataUrl = body?.imageDataUrl;
