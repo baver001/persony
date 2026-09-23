@@ -80,16 +80,54 @@ test.describe('Beta critical — persona lifecycle', () => {
     expect(createResponse.ok()).toBeTruthy();
     await expect(modal).toBeHidden({ timeout: 60_000 });
 
-    // Save redirects to chat — delete via profile drawer (works before My Personas auth-gate deploy).
     await expect(page.getByRole('heading', { level: 2, name: personaName })).toBeVisible({
       timeout: 30_000,
     });
+
+    const updatedTagline = `E2E tagline ${Date.now()}`;
+    await page.reload();
+    await expect(page.getByRole('heading', { level: 2, name: personaName })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    await page.goto('/my-personas');
+    await page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/personas/mine') && response.request().method() === 'GET',
+      { timeout: 60_000 }
+    );
     await dismissBlockingModals(page);
-    await page.getByRole('button', { name: /persona info|о персоне/i }).click();
+
+    const card = page.getByRole('article').filter({ hasText: personaName });
+    await card.getByRole('button', { name: /edit persona|редактировать персонажа/i }).click();
+    const editModal = page.locator('#create-persona-backdrop');
+    await expect(editModal).toBeVisible();
+    await editModal.locator('input[type="text"]').nth(1).fill(updatedTagline);
+    const [patchResponse] = await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.url().includes('/api/personas') &&
+          (response.request().method() === 'PATCH' || response.request().method() === 'PUT')
+      ),
+      editModal.locator('#save-persona-btn').click(),
+    ]);
+    expect(patchResponse.ok()).toBeTruthy();
+    await expect(editModal).toBeHidden({ timeout: 60_000 });
+
+    await page.reload();
+    await page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/personas/mine') && response.request().method() === 'GET',
+      { timeout: 60_000 }
+    );
+    const cardAfterEdit = page.getByRole('article').filter({ hasText: personaName });
+    await expect(cardAfterEdit.getByText(updatedTagline)).toBeVisible({ timeout: 30_000 });
+
+    await cardAfterEdit.getByRole('button', { name: /more actions|ещё действия/i }).click();
     page.once('dialog', (dialog) => dialog.accept());
     await page.getByRole('button', { name: /delete persona|удалить персонажа/i }).click();
 
-    await expect(page.getByRole('heading', { level: 2, name: personaName })).toHaveCount(0, {
+    await expect(page.getByRole('heading', { level: 3, name: personaName })).toHaveCount(0, {
       timeout: 30_000,
     });
   });

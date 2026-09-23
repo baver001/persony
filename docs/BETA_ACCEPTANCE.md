@@ -26,7 +26,7 @@ npm run test:e2e:beta
 | 4 | Anonymous: billing hidden in Settings | ✓ | — | **ok** E2E 2026-09-23 |
 | 5 | Anonymous: Rooms hidden | ✓ | — | **ok** E2E 2026-09-23 |
 | 6 | Auth: Sign in / Sign up entry visible | ✓ | sign-in flow | **ok** E2E entry |
-| 7 | Persona create → save → reload → edit → delete | partial | ✓ | E2E create→delete **3/3** green (opt-in); reload/edit manual |
+| 7 | Persona create → save → reload → edit → delete | partial | ✓ | E2E lifecycle **3/3** (opt-in); includes reload→edit→delete |
 | 8 | AI Persona + portrait generation | — | ✓ | WIP |
 | 9 | Avatar Studio save + reload | — | ✓ | WIP |
 | 10 | Discover install → chat opens | — | ✓ | |
