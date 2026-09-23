@@ -43,10 +43,16 @@ async function withQuotaRetry(label, fn, { attempts = 3, baseDelayMs = 45_000 } 
     } catch (err) {
       lastError = err;
       const message = err instanceof Error ? err.message : String(err);
-      const retryable = /429|quota|rate limit|RESOURCE_EXHAUSTED/i.test(message);
+      const retryable =
+        /429|quota|rate limit|RESOURCE_EXHAUSTED|API 500|перегружен|overloaded|temporarily unavailable/i.test(
+          message
+        );
       if (!retryable || attempt === attempts) throw err;
-      const waitMs = baseDelayMs * attempt;
-      console.warn(`${label}: quota/rate limit (attempt ${attempt}/${attempts}), retry in ${Math.round(waitMs / 1000)}s…`);
+      const overload = /API 500|перегружен|overloaded/i.test(message);
+      const waitMs = (overload ? 15_000 : baseDelayMs) * attempt;
+      console.warn(
+        `${label}: ${overload ? 'model overload' : 'quota/rate limit'} (attempt ${attempt}/${attempts}), retry in ${Math.round(waitMs / 1000)}s…`
+      );
       await sleep(waitMs);
     }
   }
