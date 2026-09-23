@@ -127,6 +127,8 @@ node scripts/reset-beta-user-personas.mjs --clerk-user-id=user_3JPI4vKD0eD3KVY32
 
 Перед `--execute`: сделать D1 backup/snapshot.
 
+**Последний dry-run (2026-09-23):** 22 custom personas, 17 conversations, 6 messages (owner `user_3JPI4vKD0eD3KVY32ye3beNFpcA`).
+
 ### BLOCKER-3: Voice Call device QA (§50–51)
 
 15–30 min soak на iPhone Safari / Android Chrome — только вы.
