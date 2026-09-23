@@ -29,7 +29,7 @@
 | 19 | Playwright beta-critical | **done** | **11/11** on beta.persony.org (8 smoke + 3 persona-lifecycle opt-in) |
 | 20 | Manual QA | pending | |
 | 21 | Docs sync | **done** | readiness, acceptance, goal-mode, map synced |
-| 22–23 | Deploy + acceptance | **partial** | deployed `0e51ed4a`; manual §86 pending |
+| 22–23 | Deploy + acceptance | **partial** | prod `af3a78d`; manual §86 pending |
 
 ## Session changelog (latest)
 

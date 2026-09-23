@@ -232,6 +232,7 @@ function applyRosterPaths() {
 }
 
 async function main() {
+  loadDevVars();
   const args = parseArgs(process.argv.slice(2));
   const outDir = join(process.cwd(), 'public', 'personas', 'official');
   mkdirSync(outDir, { recursive: true });
@@ -269,22 +270,26 @@ async function main() {
     process.exit(0);
   }
 
-  const bearer = args.viaApi ? await mintClerkJwt() : null;
   const apiKey = args.viaApi ? null : loadGeminiApiKey();
   if (!args.viaApi && !apiKey) {
     console.error('GEMINI_API_KEY not found — use --via-api with Clerk credentials');
     process.exit(1);
+  }
+  if (args.viaApi) {
+    await mintClerkJwt();
   }
 
   for (const entry of roster) {
     const outPath = join(outDir, `${entry.slug}.webp`);
     const via = args.viaApi ? `Worker API (${args.apiBase})` : MODEL;
     console.log(`\nGenerating ${entry.slug} via ${via}…`);
-    const buffer = await withQuotaRetry(entry.slug, () =>
-      args.viaApi
-        ? generatePortraitViaApi(args.apiBase, bearer, entry)
-        : generatePortrait(apiKey, entry)
-    );
+    const buffer = await withQuotaRetry(entry.slug, async () => {
+      if (args.viaApi) {
+        const bearer = await mintClerkJwt();
+        return generatePortraitViaApi(args.apiBase, bearer, entry);
+      }
+      return generatePortrait(apiKey, entry);
+    });
     await saveWebp(buffer, outPath);
     console.log(`✓ ${outPath} (${buffer.length} bytes source → webp)`);
   }

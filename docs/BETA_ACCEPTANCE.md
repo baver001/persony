@@ -1,7 +1,7 @@
 # Beta RC — production acceptance (§86)
 
 **Target:** https://beta.persony.org  
-**Baseline:** Version `0e51ed4a` (2026-09-22T08:32Z)
+**Baseline:** gitSha `af3a78d` · CF `952375cd` (2026-09-23T12:55Z)
 
 Run automated gates first:
 
@@ -20,12 +20,12 @@ npm run test:e2e:beta
 
 | # | Scenario | Auto | Manual | Status |
 |---|----------|:----:|:------:|--------|
-| 1 | Health `GET /api/health` → ok | ✓ | — | verify post-deploy |
-| 2 | Anonymous: app shell loads | ✓ | — | |
-| 3 | Anonymous: Discover loads | ✓ | — | |
-| 4 | Anonymous: billing hidden in Settings | ✓ | — | |
-| 5 | Anonymous: Rooms hidden | ✓ | — | |
-| 6 | Auth: Sign in / Sign up entry visible | ✓ | sign-in flow | |
+| 1 | Health `GET /api/health` → ok | ✓ | — | **ok** `af3a78d` |
+| 2 | Anonymous: app shell loads | ✓ | — | **ok** E2E 2026-09-23 |
+| 3 | Anonymous: Discover loads | ✓ | — | **ok** E2E 2026-09-23 |
+| 4 | Anonymous: billing hidden in Settings | ✓ | — | **ok** E2E 2026-09-23 |
+| 5 | Anonymous: Rooms hidden | ✓ | — | **ok** E2E 2026-09-23 |
+| 6 | Auth: Sign in / Sign up entry visible | ✓ | sign-in flow | **ok** E2E entry |
 | 7 | Persona create → save → reload → edit → delete | partial | ✓ | E2E create→delete **3/3** green (opt-in); reload/edit manual |
 | 8 | AI Persona + portrait generation | — | ✓ | WIP |
 | 9 | Avatar Studio save + reload | — | ✓ | WIP |
