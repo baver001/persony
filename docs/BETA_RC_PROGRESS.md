@@ -2,7 +2,7 @@
 
 **Stage:** Beta Release Candidate  
 **Plan:** Beta RC spec §1–90 (execution order §87)  
-**Production:** gitSha `023ab15` · https://beta.persony.org  
+**Production:** gitSha `57e8016` · https://beta.persony.org  
 **Git:** `main` synced with `origin` (deploy workflow green 2026-09-23)  
 **Tests:** 165/165 vitest · `npm run ci` green · Playwright **12/12** on beta (2026-09-23)
 
@@ -29,7 +29,7 @@
 | 19 | Playwright beta-critical | **done** | **12/12** (8 smoke + 3 lifecycle + 1 discover-install, Clerk opt-in) |
 | 20 | Manual QA | pending | |
 | 21 | Docs sync | **done** | readiness, acceptance, goal-mode, map synced |
-| 22–23 | Deploy + acceptance | **partial** | prod `023ab15`; manual §86 pending |
+| 22–23 | Deploy + acceptance | **partial** | prod `57e8016`; manual §86 pending |
 
 ## Session changelog (latest)
 
@@ -146,7 +146,7 @@ npm run test:e2e:beta
 
 | Requirement | Status | Evidence |
 |-------------|--------|----------|
-| Persona P0 (editor, save, IDs, My Personas) | **done** | prod `023ab15`; lifecycle E2E 3/3 |
+| Persona P0 (editor, save, IDs, My Personas) | **done** | prod `57e8016`; lifecycle E2E 3/3 |
 | Billing hidden | **done** | `BILLING_ENABLED=false`; E2E billing-hidden |
 | `gemini-3.1-flash-image` | **done** | model-registry + avatar routes |
 | Official 6 avatars (not Unsplash) | **blocked** | quota 429; `--apply-roster` pending |

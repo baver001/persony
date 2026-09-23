@@ -1,7 +1,7 @@
 # Beta RC — production acceptance (§86)
 
 **Target:** https://beta.persony.org  
-**Baseline:** gitSha `023ab15` (2026-09-23T13:25Z deploy)
+**Baseline:** gitSha `57e8016` (2026-09-23T13:25Z deploy)
 
 Run automated gates first:
 
@@ -20,7 +20,7 @@ npm run test:e2e:beta
 
 | # | Scenario | Auto | Manual | Status |
 |---|----------|:----:|:------:|--------|
-| 1 | Health `GET /api/health` → ok | ✓ | — | **ok** `023ab15` |
+| 1 | Health `GET /api/health` → ok | ✓ | — | **ok** `57e8016` |
 | 2 | Anonymous: app shell loads | ✓ | — | **ok** E2E 2026-09-23 |
 | 3 | Anonymous: Discover loads | ✓ | — | **ok** E2E 2026-09-23 |
 | 4 | Anonymous: billing hidden in Settings | ✓ | — | **ok** E2E 2026-09-23 |
@@ -39,7 +39,7 @@ npm run test:e2e:beta
 
 ## Sign-off
 
-- [x] All automated gates green on target SHA (`023ab15` prod; CI + E2E 12/12 2026-09-23)
+- [x] All automated gates green on target SHA (`57e8016` prod; CI + E2E 12/12 2026-09-23)
 - [ ] Manual rows 7–16 verified
 - [ ] No P0 regressions in Persona / Auth / Chat
 - [ ] `docs/BETA_READINESS.md` recommendation updated to GO/NO-GO
