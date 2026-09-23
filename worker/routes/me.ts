@@ -10,6 +10,7 @@ import {
 } from '../repositories/user-persona-repository';
 import { getUserRoles, userHasRole } from '../repositories/role-repository';
 import { getUserLocale, updateUserLocale } from '../repositories/user-repository';
+import { recordProductAnalyticsEvent } from '../repositories/product-analytics-repository';
 import { getBatterySnapshot } from '../services/energy-service';
 import { getRelationshipProfileSummary } from '../services/persona-relationship-service';
 import { ensureOfficialPersonasInstalledForUser } from '../services/user-persona-service';
@@ -17,6 +18,11 @@ import type { PersonyEnv } from '../types/env';
 
 const localeSchema = z.object({
   preferredLocale: z.enum(['en', 'ru']),
+});
+
+const analyticsEventSchema = z.object({
+  eventName: z.string().min(1).max(80),
+  properties: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const meRoutes = new Hono<{ Bindings: PersonyEnv }>();
@@ -92,6 +98,27 @@ meRoutes.post('/me/personas/:personaId/install', async (c) => {
     const persona = await getPersonaRecord(c.env, c.env.DB, personaId);
     if (!persona) return c.json({ error_code: 'PERSONA_NOT_FOUND' }, 404);
     await installPersonaForUser(c.env.DB, userId, persona.id, persona.currentVersion);
+    return c.json({ ok: true });
+  } catch (err) {
+    if (err instanceof AuthRequiredError) return c.json({ error_code: 'AUTH_REQUIRED' }, 401);
+    return c.json({ error_code: 'INTERNAL_ERROR' }, 500);
+  }
+});
+
+meRoutes.post('/me/analytics/events', async (c) => {
+  try {
+    const userId = await requireUser(c);
+    if (!c.env.DB) return c.json({ error_code: 'DB_NOT_CONFIGURED' }, 503);
+    const body = await c.req.json();
+    const parsed = analyticsEventSchema.safeParse(body);
+    if (!parsed.success) return c.json({ error_code: 'INVALID_PAYLOAD' }, 400);
+
+    await recordProductAnalyticsEvent(c.env.DB, {
+      userId,
+      eventName: parsed.data.eventName,
+      properties: parsed.data.properties,
+    });
+
     return c.json({ ok: true });
   } catch (err) {
     if (err instanceof AuthRequiredError) return c.json({ error_code: 'AUTH_REQUIRED' }, 401);

@@ -20,6 +20,7 @@ export type PersonaPublicDTO = {
 export type PersonaOwnerDTO = PersonaPublicDTO & {
   systemPrompt: string;
   currentVersion: number;
+  configurationJson?: string | null;
   sourcePersonaId?: string;
 };
 
@@ -46,6 +47,7 @@ export function toPersonaOwnerDTO(record: PersonaRuntime): PersonaOwnerDTO {
     ...toPersonaPublicDTO(record, record.ownerUserId === 'system'),
     systemPrompt: record.systemPrompt,
     currentVersion: record.currentVersion,
+    configurationJson: record.configurationJson,
     sourcePersonaId: record.sourcePersonaId,
   };
 }

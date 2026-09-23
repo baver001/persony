@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, Check, Link2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { Persona } from '../types';
-import { fetchPersonaBySlug, installPersona } from '../lib/api/personas';
+import { fetchPersonaBySlug, installPersona, PersonasApiError } from '../lib/api/personas';
 import { copyPersonaShareLink } from '../lib/sharePersona';
 
 type Props = {
@@ -17,6 +17,7 @@ export function PublicPersonaPage({ slug, theme, onBack, onStartChat }: Props) {
   const [persona, setPersona] = useState<Persona | null>(null);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
+  const [installError, setInstallError] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [copiedShare, setCopiedShare] = useState(false);
   const isDark = theme === 'dark';
@@ -39,9 +40,14 @@ export function PublicPersonaPage({ slug, theme, onBack, onStartChat }: Props) {
   const handleStart = async () => {
     if (!persona) return;
     setStarting(true);
+    setInstallError(false);
     try {
       await installPersona(persona.id);
       onStartChat(persona);
+    } catch (err) {
+      if (!(err instanceof PersonasApiError && err.status === 401)) {
+        setInstallError(true);
+      }
     } finally {
       setStarting(false);
     }

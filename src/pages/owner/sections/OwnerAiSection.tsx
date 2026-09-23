@@ -87,7 +87,9 @@ export function OwnerAiSection({
             </select>
           </label>
           <p className="text-xs text-zinc-500">
-            {t('billingEnabledLabel')}: {overview.billingEnabled ? t('yes') : t('no')}
+            {overview.billingEnabled
+              ? `${t('billingEnabledLabel')}: ${t('yes')}`
+              : t('billingDisabledBeta')}
           </p>
           {overview.routingMatrix && overview.routingMatrix.length > 0 && (
             <section className="space-y-2">

@@ -1,6 +1,6 @@
 # Задачи для владельца проекта (Persony platform)
 
-Обновлено: 2026-09-19
+Обновлено: 2026-09-22
 
 ## 1. Clerk — authentication (блокер для production custom personas)
 
@@ -99,3 +99,38 @@ PERSONY_DEV_USER_ID=dev-local-user
 npm run db:migrate:local
 npm run dev
 ```
+
+## 8. Beta RC — 4 gate до GO (~76% automated done)
+
+Трекер: `docs/BETA_RC_PROGRESS.md` · prod `0e51ed4a` · E2E 11/11 · CI 165 tests.
+
+### 8.1 Official avatars (BLOCKER-1)
+
+1. Включить **paid quota** на `gemini-3.1-flash-image` в Google AI (тот же проект, что Worker `GEMINI_API_KEY`).
+2. `npm run generate:official-avatars:api` (или `--slug=athena` по одному).
+3. Визуально approve 6 портретов.
+4. `node scripts/generate-official-avatars.mjs --apply-roster --confirm` → `npm run deploy`.
+
+### 8.2 Beta persona reset (BLOCKER-2)
+
+1. **D1 backup** remote `persony-db`.
+2. Dry-run:
+   ```bash
+   node scripts/reset-beta-user-personas.mjs --clerk-user-id=user_3JPI4vKD0eD3KVY32ye3beNFpcA --remote
+   ```
+3. Execute:
+   ```bash
+   node scripts/reset-beta-user-personas.mjs --clerk-user-id=user_3JPI4vKD0eD3KVY32ye3beNFpcA --remote --execute --confirm
+   ```
+
+### 8.3 Voice Call device QA (BLOCKER-3)
+
+15–30 min soak: iPhone Safari + Android Chrome.
+
+### 8.4 Manual acceptance §86
+
+Чеклист: `docs/BETA_ACCEPTANCE.md` → sign-off → обновить `BETA_READINESS.md` на **GO**.
+
+### 8.5 Commit WIP (рекомендуется)
+
+Весь RC-код задеплоен, но **не закоммичен**. Скажите агенту **«commit»** для одного RC-коммита.

@@ -1,4 +1,5 @@
 import type { Persona } from '../../types';
+import { behaviorProfileFromPersona } from '../persona-form';
 import { getApiHeaders } from './headers';
 
 type PersonaVisibility = 'private' | 'unlisted' | 'public';
@@ -16,6 +17,8 @@ type OwnerPersonaDto = {
   badge?: string;
   color?: string;
   starterMessages?: string[];
+  currentVersion?: number;
+  configurationJson?: string | null;
 };
 
 type PublicPersonaDto = {
@@ -35,8 +38,18 @@ type PublicPersonaDto = {
   sortOrder?: number;
 };
 
-function dtoToPersona(dto: OwnerPersonaDto): Persona {
-  return {
+export class PersonasApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number
+  ) {
+    super(message);
+    this.name = 'PersonasApiError';
+  }
+}
+
+export function ownerDtoToPersona(dto: OwnerPersonaDto): Persona {
+  const persona: Persona = {
     id: dto.id,
     name: dto.name,
     tagline: dto.tagline,
@@ -51,7 +64,10 @@ function dtoToPersona(dto: OwnerPersonaDto): Persona {
     isCustom: true,
     createdAt: Date.now(),
     visibility: dto.visibility,
+    configurationJson: dto.configurationJson ?? undefined,
   };
+  persona.behaviorProfile = behaviorProfileFromPersona(persona);
+  return persona;
 }
 
 function publicDtoToPersona(dto: PublicPersonaDto): Persona {
@@ -79,24 +95,26 @@ export async function fetchPersonaBySlug(slug: string): Promise<Persona | null> 
     headers: await getApiHeaders(),
   });
   if (res.status === 404) return null;
-  if (!res.ok) throw new Error('Failed to load persona');
+  if (!res.ok) throw new PersonasApiError('Failed to load persona', res.status);
   const data = (await res.json()) as { persona?: PublicPersonaDto };
   return data.persona ? publicDtoToPersona(data.persona) : null;
 }
 
 export async function fetchAvailablePersonas(): Promise<Persona[]> {
   const res = await fetch('/api/personas', { headers: await getApiHeaders() });
-  if (!res.ok) return [];
+  if (!res.ok) throw new PersonasApiError('Failed to load gallery', res.status);
   const data = (await res.json()) as { personas?: PublicPersonaDto[] };
   return (data.personas ?? []).map(publicDtoToPersona);
 }
 
-export async function installPersona(personaId: string): Promise<boolean> {
+export async function installPersona(personaId: string): Promise<void> {
   const res = await fetch(`/api/me/personas/${personaId}/install`, {
     method: 'POST',
     headers: await getApiHeaders(),
   });
-  return res.ok;
+  if (!res.ok) {
+    throw new PersonasApiError('Failed to install persona', res.status);
+  }
 }
 
 export async function uninstallPersona(personaId: string): Promise<boolean> {
@@ -109,13 +127,14 @@ export async function uninstallPersona(personaId: string): Promise<boolean> {
 
 export async function fetchMyPersonas(): Promise<Persona[]> {
   const res = await fetch('/api/personas/mine', { headers: await getApiHeaders() });
-  if (!res.ok) return [];
+  if (res.status === 401) throw new PersonasApiError('Authentication required', 401);
+  if (!res.ok) throw new PersonasApiError('Failed to load your personas', res.status);
   const data = (await res.json()) as { personas?: OwnerPersonaDto[] };
-  return (data.personas ?? []).map(dtoToPersona);
+  return (data.personas ?? []).map(ownerDtoToPersona);
 }
 
 export async function createPersonaOnCloud(
-  persona: Omit<Persona, 'id' | 'isCustom' | 'createdAt'>
+  persona: Omit<Persona, 'id' | 'isCustom' | 'createdAt'> & { id?: string }
 ): Promise<Persona | null> {
   const res = await fetch('/api/personas', {
     method: 'POST',
@@ -138,7 +157,7 @@ export async function createPersonaOnCloud(
   });
   if (!res.ok) return null;
   const data = (await res.json()) as { persona?: OwnerPersonaDto };
-  return data.persona ? dtoToPersona(data.persona) : null;
+  return data.persona ? ownerDtoToPersona(data.persona) : null;
 }
 
 export async function updatePersonaOnCloud(persona: Persona): Promise<Persona | null> {
@@ -163,7 +182,7 @@ export async function updatePersonaOnCloud(persona: Persona): Promise<Persona | 
   });
   if (!res.ok) return null;
   const data = (await res.json()) as { persona?: OwnerPersonaDto };
-  return data.persona ? dtoToPersona(data.persona) : null;
+  return data.persona ? ownerDtoToPersona(data.persona) : null;
 }
 
 export async function deletePersonaOnCloud(personaId: string): Promise<boolean> {

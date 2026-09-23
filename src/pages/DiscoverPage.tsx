@@ -6,7 +6,8 @@ import {
   type DiscoverSectionId,
 } from '../../shared/personas/discover-sections';
 import type { Persona } from '../types';
-import { fetchAvailablePersonas, installPersona } from '../lib/api/personas';
+import { fetchAvailablePersonas, installPersona, PersonasApiError } from '../lib/api/personas';
+import { fetchInstalledPersonas } from '../lib/api/me';
 import {
   applyLocaleToPersonas,
   formatPersonaBadge,
@@ -55,25 +56,45 @@ export function DiscoverPage({ theme, onBack, onStartChat }: Props) {
   const { t, i18n } = useTranslation(['personas', 'common']);
   const [rawPersonas, setRawPersonas] = useState<Persona[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const personas = useMemo(
     () => applyLocaleToPersonas(rawPersonas, i18n.language),
     [rawPersonas, i18n.language]
   );
-  const [startingId, setStartingId] = useState<string | null>(null);
+  const [installedIds, setInstalledIds] = useState<Set<string>>(() => new Set());
+  const [actionId, setActionId] = useState<string | null>(null);
+  const [installErrorId, setInstallErrorId] = useState<string | null>(null);
+  const [installAuthRequiredId, setInstallAuthRequiredId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<DiscoverFilter>('all');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const isDark = theme === 'dark';
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        setRawPersonas(await fetchAvailablePersonas());
-      } finally {
-        setLoading(false);
+  const loadGallery = async () => {
+    setLoading(true);
+    setLoadError(false);
+    try {
+      const [gallery, installed] = await Promise.all([
+        fetchAvailablePersonas(),
+        fetchInstalledPersonas().catch(() => []),
+      ]);
+      setRawPersonas(gallery);
+      setInstalledIds(new Set(installed.map((p) => p.id)));
+    } catch (err) {
+      if (err instanceof PersonasApiError && err.status === 401) {
+        setRawPersonas([]);
+      } else {
+        setLoadError(true);
+        setRawPersonas([]);
       }
-    })();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadGallery();
   }, []);
 
   useEffect(() => {
@@ -127,13 +148,27 @@ export function DiscoverPage({ theme, onBack, onStartChat }: Props) {
     })).filter((section) => section.personas.length > 0);
   }, [activeFilter, personaById, searchQuery]);
 
-  const handleStart = async (persona: Persona) => {
-    setStartingId(persona.id);
+  const handlePersonaAction = async (persona: Persona) => {
+    if (installedIds.has(persona.id)) {
+      onStartChat(persona);
+      return;
+    }
+
+    setActionId(persona.id);
+    setInstallErrorId(null);
+    setInstallAuthRequiredId(null);
     try {
       await installPersona(persona.id);
+      setInstalledIds((prev) => new Set(prev).add(persona.id));
       onStartChat(persona);
+    } catch (err) {
+      if (err instanceof PersonasApiError && err.status === 401) {
+        setInstallAuthRequiredId(persona.id);
+      } else {
+        setInstallErrorId(persona.id);
+      }
     } finally {
-      setStartingId(null);
+      setActionId(null);
     }
   };
 
@@ -187,11 +222,18 @@ export function DiscoverPage({ theme, onBack, onStartChat }: Props) {
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <h3 className="font-semibold text-sm leading-tight truncate">{persona.name}</h3>
-            {badge && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-py-accent/15 text-py-accent shrink-0 max-w-[42%] truncate">
-                {badge}
-              </span>
-            )}
+            <div className="flex flex-col items-end gap-1 shrink-0 max-w-[42%]">
+              {installedIds.has(persona.id) && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 truncate">
+                  {t('personas:discoverInstalled')}
+                </span>
+              )}
+              {badge && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-py-accent/15 text-py-accent truncate">
+                  {badge}
+                </span>
+              )}
+            </div>
           </div>
           <p className="text-[11px] text-py-text-secondary mt-0.5 line-clamp-1">{persona.tagline}</p>
         </div>
@@ -209,15 +251,31 @@ export function DiscoverPage({ theme, onBack, onStartChat }: Props) {
         >
           {persona.voice}
         </span>
-        <button
-          type="button"
-          disabled={startingId === persona.id}
-          onClick={() => void handleStart(persona)}
-          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-py-accent text-white hover:opacity-90 disabled:opacity-50"
-        >
-          <MessageCircle className="w-3 h-3" />
-          {startingId === persona.id ? t('common:loading') : t('personas:startChat')}
-        </button>
+        <div className="flex flex-col items-end gap-1">
+          <button
+            type="button"
+            disabled={actionId === persona.id}
+            onClick={() => void handlePersonaAction(persona)}
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-py-accent text-white hover:opacity-90 disabled:opacity-50"
+          >
+            <MessageCircle className="w-3 h-3" />
+            {actionId === persona.id
+              ? t('personas:discoverInstalling')
+              : installedIds.has(persona.id)
+                ? t('personas:discoverOpen')
+                : t('personas:startChat')}
+          </button>
+          {installAuthRequiredId === persona.id && (
+            <span className="text-[10px] text-py-accent max-w-[9rem] text-right leading-tight">
+              {t('personas:discoverSignInToInstall')}
+            </span>
+          )}
+          {installErrorId === persona.id && (
+            <span className="text-[10px] text-rose-400 max-w-[9rem] text-right leading-tight">
+              {t('personas:discoverInstallFailed')}
+            </span>
+          )}
+        </div>
       </div>
     </article>
     );
@@ -308,6 +366,17 @@ export function DiscoverPage({ theme, onBack, onStartChat }: Props) {
 
         {loading ? (
           <p className="text-sm text-py-text-muted py-4">{t('common:loading')}</p>
+        ) : loadError ? (
+          <div className="py-surface-card p-5 text-center space-y-3">
+            <p className="text-sm text-py-text-secondary">{t('personas:discoverError')}</p>
+            <button
+              type="button"
+              onClick={() => void loadGallery()}
+              className="inline-flex px-4 py-2 rounded-full text-xs font-semibold bg-py-accent text-white hover:opacity-90"
+            >
+              {t('personas:discoverRetry')}
+            </button>
+          </div>
         ) : filteredPersonas.length === 0 ? (
           <div className="py-surface-card p-5 text-center space-y-2">
             <p className="text-sm text-py-text-secondary">{t('personas:discoverEmpty')}</p>

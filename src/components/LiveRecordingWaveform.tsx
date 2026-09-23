@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { VoiceWaveformBars } from './VoiceWaveformBars';
 import { WAVEFORM_MIN_LEVEL, normalizeWaveformLevel } from '../utils/audioWaveform';
 
-const BUFFER_SIZE = 128;
-const SAMPLE_MS = 72;
+const BUFFER_SIZE = 160;
+const SAMPLE_MS = 84;
+const LEVEL_SMOOTHING = 0.68;
 
 type Props = {
   stream: MediaStream | null;
@@ -50,7 +51,7 @@ export function LiveRecordingWaveform({ stream, active, onLevelsChange }: Props)
     const source = ctx.createMediaStreamSource(stream);
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 512;
-    analyser.smoothingTimeConstant = 0.62;
+    analyser.smoothingTimeConstant = 0.72;
     source.connect(analyser);
     analyserRef.current = analyser;
     bufferRef.current = new Uint8Array(analyser.fftSize);
@@ -60,8 +61,12 @@ export function LiveRecordingWaveform({ stream, active, onLevelsChange }: Props)
       const buffer = bufferRef.current;
       if (node && buffer && now - lastSampleRef.current >= SAMPLE_MS) {
         lastSampleRef.current = now;
-        const level = readMicLevel(node, buffer);
-        setLevels((prev) => [...prev.slice(1), level]);
+        const raw = readMicLevel(node, buffer);
+        setLevels((prev) => {
+          const last = prev[prev.length - 1] ?? WAVEFORM_MIN_LEVEL;
+          const level = normalizeWaveformLevel(last * (1 - LEVEL_SMOOTHING) + raw * LEVEL_SMOOTHING);
+          return [...prev.slice(1), level];
+        });
       }
       rafRef.current = requestAnimationFrame(tick);
     };

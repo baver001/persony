@@ -6,6 +6,7 @@ import {
   SignUpButton,
   useClerk,
 } from '@clerk/clerk-react';
+import { ROOMS_ENABLED } from '../lib/feature-flags';
 import {
   Brain,
   Compass,
@@ -111,12 +112,14 @@ function SignedInProfileMenu({
         icon={<Compass className="w-3.5 h-3.5" />}
         label={t('personas:discoverTitle')}
       />
-      <MenuItem
-        isDark={isDark}
-        onClick={() => go('/rooms')}
-        icon={<Users className="w-3.5 h-3.5" />}
-        label={t('rooms:title')}
-      />
+      {ROOMS_ENABLED && (
+        <MenuItem
+          isDark={isDark}
+          onClick={() => go('/rooms')}
+          icon={<Users className="w-3.5 h-3.5" />}
+          label={t('rooms:title')}
+        />
+      )}
       <MenuItem
         isDark={isDark}
         onClick={() => go('/my-personas')}

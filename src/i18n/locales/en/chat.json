@@ -30,6 +30,7 @@
   "sendEnter": "Send (Enter)",
   "waitingForResponse": "Waiting for response...",
   "recordVoiceNote": "Record voice note",
+  "voiceNoteMicError": "Microphone access is required for voice notes. Check browser permissions and try again.",
   "messageCopied": "Message copied",
   "dialogCopied": "Dialog copied",
   "copyMessage": "Copy message",

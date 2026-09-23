@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { usePersonyAuth } from './PersonyAuthProvider';
 import { useBattery } from '../hooks/useBattery';
 import { BatteryIndicator } from './BatteryIndicator';
 import { BatterySheet } from './BatterySheet';
@@ -9,11 +8,20 @@ type Props = {
 };
 
 export const SidebarBatteryControl: React.FC<Props> = ({ className }) => {
-  const { isSignedIn } = usePersonyAuth();
-  const { battery, refresh } = useBattery(30_000);
+  const { battery, refresh, isLoading, shouldFetch } = useBattery(30_000);
   const [showBatterySheet, setShowBatterySheet] = useState(false);
 
-  if (!isSignedIn || !battery?.enabled) return null;
+  if (!shouldFetch) return null;
+  if (battery && !battery.enabled) return null;
+  if (!battery) {
+    if (!isLoading) return null;
+    return (
+      <div
+        className={`w-[22px] h-[38px] rounded-[4px] border-2 border-zinc-600/60 bg-zinc-900/40 animate-pulse ${className ?? ''}`}
+        aria-hidden
+      />
+    );
+  }
 
   const openSheet = () => {
     void refresh();

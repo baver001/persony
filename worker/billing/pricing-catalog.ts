@@ -161,6 +161,18 @@ export const PRICING_CATALOG: PricingEntry[] = [
     sourceReference: GEMINI_PRICING,
   }),
   entry(
+    'gemini-3.1-flash-image:per_image:default',
+    'google',
+    'gemini-3.1-flash-image',
+    'per_image',
+    4_000_000,
+    {
+      effectiveFrom: '2026-09-21',
+      unit: 'per_image',
+      sourceReference: GEMINI_PRICING,
+    }
+  ),
+  entry(
     'gemini-2.0-flash-preview-image-generation:per_image:default',
     'google',
     'gemini-2.0-flash-preview-image-generation',

@@ -10,7 +10,7 @@ import { createTestD1 } from '../test/sqlite-d1';
 vi.mock('../lib/gemini', () => ({
   handleGenerateAvatar: vi.fn(async () => ({
     imageDataUrl: 'data:image/png;base64,abc',
-    model: 'gemini-2.0-flash-preview-image-generation',
+    model: 'gemini-3.1-flash-image',
     usage: { inputTokens: 50, outputTokens: 0 },
     usageEstimated: false,
     latencyMs: 2100,

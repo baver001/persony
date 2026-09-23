@@ -167,7 +167,8 @@
 }
 
 .py-waveform-bars--live {
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 3px;
 }
 
 .py-waveform-bars--playback {
@@ -188,12 +189,28 @@
   flex-shrink: 0;
 }
 
+.py-waveform-bars--live .py-waveform-bar,
+.py-waveform-bars--live .py-waveform-dot {
+  width: 3px;
+  min-width: 3px;
+  max-width: 3px;
+  flex: 0 0 3px;
+}
+
 .py-waveform-bars--live .py-waveform-bar {
-  width: 2px;
-  min-width: 2px;
-  max-width: 2px;
-  flex: 0 0 2px;
-  transition: height 60ms ease-out;
+  transition: height 80ms ease-out;
+}
+
+.py-waveform-bars--live .py-waveform-dot {
+  height: 3px;
+  border-radius: 9999px;
+  align-self: center;
+  opacity: 0.34;
+  background: color-mix(in srgb, var(--py-text-primary) 52%, transparent);
+}
+
+.dark .py-waveform-bars--live .py-waveform-dot {
+  background: color-mix(in srgb, #ffffff 48%, transparent);
 }
 
 .py-waveform-bars--playback .py-waveform-bar {
@@ -280,6 +297,63 @@
   80%,
   100% {
     opacity: 0;
+  }
+}
+
+/* Pearlescent label — aligned with illustrator-script-panel pearl tokens */
+.py-battery-topup-btn {
+  --py-pearl: linear-gradient(
+    105deg,
+    #ffbd72,
+    #ff9db3,
+    #c5b5ff,
+    #8ee8f4,
+    #caffbf,
+    #ffbd72
+  );
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3.25rem;
+  padding: 0.85rem 2rem;
+  border-radius: 9999px;
+  border: 2px solid color-mix(in srgb, #ffffff 38%, transparent);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    transform 0.15s ease;
+}
+
+.py-battery-topup-btn:hover {
+  border-color: color-mix(in srgb, #ffffff 52%, transparent);
+}
+
+.py-battery-topup-btn:active {
+  transform: scale(0.98);
+}
+
+.py-battery-topup-btn__label {
+  background-image: var(--py-pearl);
+  background-size: 280% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: py-pearl-shift 6s ease-in-out infinite;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  line-height: 1;
+}
+
+@keyframes py-pearl-shift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
   }
 }
 

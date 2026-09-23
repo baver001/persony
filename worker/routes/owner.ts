@@ -24,6 +24,7 @@ import {
   getOwnerPersonasAnalytics,
   getOwnerUsersAnalytics,
 } from '../services/owner-analytics-service';
+import { getBatteryTopupClickStats } from '../repositories/product-analytics-repository';
 import { ownerAdjustBattery } from '../services/energy-service';
 import type { PersonyEnv } from '../types/env';
 
@@ -47,36 +48,228 @@ function ownerErrorResponse(c: { json: (body: unknown, status: number) => Respon
   return c.json({ error_code: 'INTERNAL_ERROR' }, 500);
 }
 
+function isoDaysAgo(days: number): string {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - days);
+  return d.toISOString();
+}
+
+function trendDelta(current: number, previous: number): number | null {
+  if (previous <= 0) return current > 0 ? 100 : null;
+  return Math.round(((current - previous) / previous) * 1000) / 10;
+}
+
+async function countSince(
+  db: D1Database,
+  sql: string,
+  sinceIso: string,
+  untilIso?: string
+): Promise<number> {
+  const query = untilIso ? `${sql} AND started_at < ?` : sql;
+  const stmt = db.prepare(query);
+  const row = untilIso
+    ? await stmt.bind(sinceIso, untilIso).first<{ count: number }>()
+    : await stmt.bind(sinceIso).first<{ count: number }>();
+  return toSqlCount(row);
+}
+
 ownerRoutes.get('/owner/overview', async (c) => {
   try {
     const { userId } = await requireOwnerAccess(c);
     if (!c.env.DB) return c.json({ error_code: 'DB_NOT_CONFIGURED' }, 503);
 
-    const [users, messages, personas, inferenceErrors] = await Promise.all([
-      c.env.DB.prepare(`SELECT COUNT(*) as count FROM users`).first<{ count: number }>(),
-      c.env.DB.prepare(`SELECT COUNT(*) as count FROM messages`).first<{ count: number }>(),
-      c.env.DB
-        .prepare(`SELECT COUNT(*) as count FROM personas WHERE status = 'active'`)
-        .first<{ count: number }>(),
-      c.env.DB
-        .prepare(`SELECT COUNT(*) as count FROM inference_runs WHERE status = 'failed'`)
-        .first<{ count: number }>(),
+    const since24h = isoDaysAgo(1);
+    const since48h = isoDaysAgo(2);
+    const since7d = isoDaysAgo(7);
+    const since14d = isoDaysAgo(14);
+    const since30d = isoDaysAgo(30);
+    const since60d = isoDaysAgo(60);
+    const since90d = isoDaysAgo(90);
+    const since180d = isoDaysAgo(180);
+
+    const [users, messages, personas, inferenceErrors, newUsers24h, dau, aiCalls24h, aiCalls7d, voiceCalls24h] =
+      await Promise.all([
+        c.env.DB.prepare(`SELECT COUNT(*) as count FROM users`).first<{ count: number }>(),
+        c.env.DB.prepare(`SELECT COUNT(*) as count FROM messages`).first<{ count: number }>(),
+        c.env.DB
+          .prepare(`SELECT COUNT(*) as count FROM personas WHERE status = 'active'`)
+          .first<{ count: number }>(),
+        c.env.DB
+          .prepare(`SELECT COUNT(*) as count FROM inference_runs WHERE status = 'failed'`)
+          .first<{ count: number }>(),
+        c.env.DB
+          .prepare(`SELECT COUNT(*) as count FROM users WHERE created_at >= ?`)
+          .bind(since24h)
+          .first<{ count: number }>(),
+        c.env.DB
+          .prepare(
+            `SELECT COUNT(DISTINCT user_id) as count FROM inference_runs WHERE started_at >= ?`
+          )
+          .bind(since24h)
+          .first<{ count: number }>(),
+        c.env.DB
+          .prepare(`SELECT COUNT(*) as count FROM inference_runs WHERE started_at >= ?`)
+          .bind(since24h)
+          .first<{ count: number }>(),
+        c.env.DB
+          .prepare(`SELECT COUNT(*) as count FROM inference_runs WHERE started_at >= ?`)
+          .bind(since7d)
+          .first<{ count: number }>(),
+        c.env.DB
+          .prepare(
+            `SELECT COUNT(*) as count FROM inference_runs WHERE started_at >= ? AND operation_type = 'voice_call'`
+          )
+          .bind(since24h)
+          .first<{ count: number }>(),
+      ]);
+
+    const kpis = {
+      totalUsers: toSqlCount(users),
+      newUsers24h: toSqlCount(newUsers24h),
+      dau: toSqlCount(dau),
+      aiCalls24h: toSqlCount(aiCalls24h),
+      aiCalls7d: toSqlCount(aiCalls7d),
+      voiceCalls24h: toSqlCount(voiceCalls24h),
+      activePersonas: toSqlCount(personas),
+      failedInferenceRuns: toSqlCount(inferenceErrors),
+      totalMessages: toSqlCount(messages),
+    };
+
+    const [
+      aiCallsPrev24h,
+      aiCalls7dWindow,
+      aiCallsPrev7d,
+      aiCalls30d,
+      aiCallsPrev30d,
+      aiCalls90d,
+      aiCallsPrev90d,
+      dau7d,
+      dauPrev7d,
+      voice7d,
+      voicePrev7d,
+      dauPrev24h,
+    ] = await Promise.all([
+      countSince(
+        c.env.DB,
+        `SELECT COUNT(*) as count FROM inference_runs WHERE started_at >= ?`,
+        since48h,
+        since24h
+      ),
+      countSince(
+        c.env.DB,
+        `SELECT COUNT(*) as count FROM inference_runs WHERE started_at >= ?`,
+        since7d
+      ),
+      countSince(
+        c.env.DB,
+        `SELECT COUNT(*) as count FROM inference_runs WHERE started_at >= ?`,
+        since14d,
+        since7d
+      ),
+      countSince(
+        c.env.DB,
+        `SELECT COUNT(*) as count FROM inference_runs WHERE started_at >= ?`,
+        since30d
+      ),
+      countSince(
+        c.env.DB,
+        `SELECT COUNT(*) as count FROM inference_runs WHERE started_at >= ?`,
+        since60d,
+        since30d
+      ),
+      countSince(
+        c.env.DB,
+        `SELECT COUNT(*) as count FROM inference_runs WHERE started_at >= ?`,
+        since90d
+      ),
+      countSince(
+        c.env.DB,
+        `SELECT COUNT(*) as count FROM inference_runs WHERE started_at >= ?`,
+        since180d,
+        since90d
+      ),
+      countSince(
+        c.env.DB,
+        `SELECT COUNT(DISTINCT user_id) as count FROM inference_runs WHERE started_at >= ?`,
+        since7d
+      ),
+      countSince(
+        c.env.DB,
+        `SELECT COUNT(DISTINCT user_id) as count FROM inference_runs WHERE started_at >= ?`,
+        since14d,
+        since7d
+      ),
+      countSince(
+        c.env.DB,
+        `SELECT COUNT(*) as count FROM inference_runs WHERE started_at >= ? AND operation_type = 'voice_call'`,
+        since7d
+      ),
+      countSince(
+        c.env.DB,
+        `SELECT COUNT(*) as count FROM inference_runs WHERE started_at >= ? AND operation_type = 'voice_call'`,
+        since14d,
+        since7d
+      ),
+      countSince(
+        c.env.DB,
+        `SELECT COUNT(DISTINCT user_id) as count FROM inference_runs WHERE started_at >= ?`,
+        since48h,
+        since24h
+      ),
     ]);
 
+    const periods = {
+      '24h': {
+        aiCalls: kpis.aiCalls24h,
+        dau: kpis.dau,
+        newUsers: kpis.newUsers24h,
+        voiceCalls: kpis.voiceCalls24h,
+      },
+      '7d': { aiCalls: aiCalls7dWindow, dau: dau7d, voiceCalls: voice7d },
+      '30d': { aiCalls: aiCalls30d },
+      '90d': { aiCalls: aiCalls90d },
+    };
+
+    const trends = {
+      '24h': {
+        aiCalls: { current: kpis.aiCalls24h, previous: aiCallsPrev24h, deltaPercent: trendDelta(kpis.aiCalls24h, aiCallsPrev24h) },
+        dau: {
+          current: kpis.dau,
+          previous: dauPrev24h,
+          deltaPercent: trendDelta(kpis.dau, dauPrev24h),
+        },
+      },
+      '7d': {
+        aiCalls: { current: aiCalls7dWindow, previous: aiCallsPrev7d, deltaPercent: trendDelta(aiCalls7dWindow, aiCallsPrev7d) },
+        dau: { current: dau7d, previous: dauPrev7d, deltaPercent: trendDelta(dau7d, dauPrev7d) },
+        voiceCalls: { current: voice7d, previous: voicePrev7d, deltaPercent: trendDelta(voice7d, voicePrev7d) },
+      },
+      '30d': {
+        aiCalls: { current: aiCalls30d, previous: aiCallsPrev30d, deltaPercent: trendDelta(aiCalls30d, aiCallsPrev30d) },
+      },
+      '90d': {
+        aiCalls: { current: aiCalls90d, previous: aiCallsPrev90d, deltaPercent: trendDelta(aiCalls90d, aiCallsPrev90d) },
+      },
+    };
+
     return c.json({
+      kpis,
+      periods,
+      trends,
       metrics: {
-        totalUsers: toSqlCount(users),
-        totalMessages: toSqlCount(messages),
-        activePersonas: toSqlCount(personas),
-        failedInferenceRuns: toSqlCount(inferenceErrors),
+        totalUsers: kpis.totalUsers,
+        totalMessages: kpis.totalMessages,
+        activePersonas: kpis.activePersonas,
+        failedInferenceRuns: kpis.failedInferenceRuns,
         revenue: null,
         aiCogs: null,
         grossMargin: null,
       },
       whatChanged: [
-        'Phase 1.2 owner console online',
-        'Athena-only default install enabled',
-        'Memory and PersonaSpec foundation active',
+        'Beta RC: billing hidden; Rooms hidden',
+        'Owner overview KPIs + period trends (24h/7d/30d/90d)',
+        'Avatar generation on gemini-3.1-flash-image',
+        'Persona lifecycle E2E green on beta.persony.org',
       ],
       actorUserId: userId,
     });
@@ -336,7 +529,7 @@ ownerRoutes.get('/owner/battery/overview', async (c) => {
     await requireOwnerAccess(c);
     if (!c.env.DB) return c.json({ error_code: 'DB_NOT_CONFIGURED' }, 503);
 
-    const [wallets, usageToday, regenToday] = await Promise.all([
+    const [wallets, usageToday, regenToday, topupClicks] = await Promise.all([
       c.env.DB.prepare(`SELECT COUNT(*) as count FROM energy_wallets`).first<{ count: number }>(),
       c.env.DB
         .prepare(
@@ -350,6 +543,7 @@ ownerRoutes.get('/owner/battery/overview', async (c) => {
            WHERE type = 'beta_regeneration' AND date(created_at) = date('now')`
         )
         .first<{ count: number }>(),
+      getBatteryTopupClickStats(c.env.DB),
     ]);
 
     const config = DEFAULT_BATTERY_CONFIG;
@@ -365,10 +559,13 @@ ownerRoutes.get('/owner/battery/overview', async (c) => {
         walletCount: toSqlCount(wallets),
         usageEventsToday: toSqlCount(usageToday),
         regenerationEventsToday: toSqlCount(regenToday),
+        topupClicksTotal: topupClicks.totalClicks,
+        topupClicksUniqueUsers: topupClicks.uniqueUsers,
         revenue: null,
         payments: null,
       },
       config,
+      topupClicksByUser: topupClicks.byUser,
     });
   } catch (err) {
     return ownerErrorResponse(c, err);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Persona, ChatMessage } from './types';
 import { DEFAULT_PERSONAS } from './data/defaultPersonas';
 import { Sidebar } from './components/Sidebar';
@@ -34,7 +34,8 @@ import {
   cloudMessageToChat,
 } from './utils/chatMessageDisplay';
 import {
-  hasLegacyLocalData,
+  markImportPromptDismissed,
+  shouldOfferLocalImport,
   importLocalDataToCloud,
   remapMessagesByPersona,
   remapPersonaIds,
@@ -52,6 +53,15 @@ import { PublicPersonaPage } from './pages/PublicPersonaPage';
 import { RoomsPage } from './pages/RoomsPage';
 import i18n from './i18n';
 import { applyLocaleToPersona, applyLocaleToPersonas } from './utils/personaPresentation';
+import { ROOMS_ENABLED } from './lib/feature-flags';
+import {
+  migrateBetaPersonaCacheEpoch,
+  pickDefaultPersonaId,
+  readStoredSelectedPersonaId,
+  resolvePersonaById,
+  resolvePersonaByIdOptional,
+  writeStoredSelectedPersonaId,
+} from './lib/persona-selection';
 
 const STORAGE_KEY_PERSONAS = 'persony_personas_v1';
 const STORAGE_KEY_MESSAGES = 'persony_messages_v1';
@@ -59,6 +69,8 @@ const STORAGE_KEY_THEME = 'persony_theme_v1';
 const STORAGE_KEY_SOUND = 'persony_sound_v1';
 const PENDING_PERSONA_KEY = 'persony_pending_persona_v1';
 const OPEN_CREATE_PERSONA_KEY = 'persony_open_create_v1';
+const PENDING_EDIT_PERSONA_KEY = 'persony_pending_edit_v1';
+const PENDING_AVATAR_STUDIO_KEY = 'persony_pending_avatar_studio_v1';
 const MESSAGE_PAGE_SIZE = 50;
 
 const LEGACY_STORAGE_KEYS: Record<string, string> = {
@@ -69,6 +81,7 @@ const LEGACY_STORAGE_KEYS: Record<string, string> = {
 };
 
 function migrateLegacyStorageKeys() {
+  migrateBetaPersonaCacheEpoch();
   for (const [legacyKey, newKey] of Object.entries(LEGACY_STORAGE_KEYS)) {
     const legacyValue = localStorage.getItem(legacyKey);
     if (legacyValue && !localStorage.getItem(newKey)) {
@@ -217,7 +230,13 @@ function ChatApp() {
     return DEFAULT_PERSONAS;
   });
 
-  const [selectedPersona, setSelectedPersona] = useState<Persona>(() => personas[0] || DEFAULT_PERSONAS[0]);
+  const [selectedPersonaId, setSelectedPersonaId] = useState<string>(() =>
+    readStoredSelectedPersonaId() || pickDefaultPersonaId(personas)
+  );
+  const selectedPersona = useMemo(
+    () => resolvePersonaById(personas, selectedPersonaId),
+    [personas, selectedPersonaId]
+  );
 
   // Messages per persona
   const [messagesByPersona, setMessagesByPersona] = useState<Record<string, ChatMessage[]>>(() => {
@@ -237,11 +256,26 @@ function ChatApp() {
   // Modals & Panels
   const [isCallOpen, setIsCallOpen] = useState(false);
   const [callInsightsLoadingId, setCallInsightsLoadingId] = useState<string | null>(null);
-  const [callingPersona, setCallingPersona] = useState<Persona>(selectedPersona);
+  const [callingPersonaId, setCallingPersonaId] = useState<string>(() => selectedPersonaId);
+  const callingPersona = useMemo(
+    () => resolvePersonaById(personas, callingPersonaId, selectedPersona),
+    [personas, callingPersonaId, selectedPersona]
+  );
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
+  const [editingPersonaId, setEditingPersonaId] = useState<string | null>(null);
+  const [editingPersonaSeed, setEditingPersonaSeed] = useState<Persona | null>(null);
+  const editingPersona = useMemo(() => {
+    if (editingPersonaSeed) return editingPersonaSeed;
+    return resolvePersonaByIdOptional(personas, editingPersonaId);
+  }, [editingPersonaSeed, editingPersonaId, personas]);
+  const [personaModalMode, setPersonaModalMode] = useState<'create' | 'edit' | 'remix'>('create');
   const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
-  const [profilePersona, setProfilePersona] = useState<Persona | null>(null);
+  const [profilePersonaId, setProfilePersonaId] = useState<string | null>(null);
+  const [profileAvatarStudioOnOpen, setProfileAvatarStudioOnOpen] = useState(false);
+  const profilePersona = useMemo(
+    () => resolvePersonaByIdOptional(personas, profilePersonaId),
+    [personas, profilePersonaId]
+  );
 
   // Mobile layout state: 'list' (sidebar) or 'chat'
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
@@ -256,11 +290,14 @@ function ChatApp() {
   const [showMeetPersonas, setShowMeetPersonas] = useState(false);
 
   useEffect(() => {
+    if (isCreateModalOpen) {
+      setIsImportModalOpen(false);
+    }
+  }, [isCreateModalOpen]);
+
+  useEffect(() => {
     const syncPersonaLocale = (lng: string) => {
       setPersonas((prev) => applyLocaleToPersonas(prev, lng));
-      setSelectedPersona((prev) => applyLocaleToPersona(prev, lng));
-      setCallingPersona((prev) => applyLocaleToPersona(prev, lng));
-      setProfilePersona((prev) => (prev ? applyLocaleToPersona(prev, lng) : null));
     };
 
     syncPersonaLocale(i18n.language);
@@ -295,10 +332,10 @@ function ChatApp() {
       } else {
         setPersonas(merged);
         setShowMeetPersonas(officialInstalled.length === 0 && uniqueCustom.length === 0);
-        setSelectedPersona(merged[0]);
+        setSelectedPersonaId(merged[0].id);
       }
       setCloudPersonasLoaded(true);
-      if (hasLegacyLocalData()) {
+      if (shouldOfferLocalImport()) {
         setIsImportModalOpen(true);
       }
     })();
@@ -309,7 +346,7 @@ function ChatApp() {
       const exists = prev.some((p) => p.id === persona.id);
       return exists ? prev : [persona, ...prev];
     });
-    setSelectedPersona(persona);
+    setSelectedPersonaId(persona.id);
     setShowMeetPersonas(false);
     setMobileView('chat');
   };
@@ -330,9 +367,61 @@ function ChatApp() {
 
     if (sessionStorage.getItem(OPEN_CREATE_PERSONA_KEY)) {
       sessionStorage.removeItem(OPEN_CREATE_PERSONA_KEY);
+      setPersonaModalMode('create');
+      setEditingPersonaId(null);
+      setEditingPersonaSeed(null);
       setIsCreateModalOpen(true);
     }
+
+    const pendingEditRaw = sessionStorage.getItem(PENDING_EDIT_PERSONA_KEY);
+    if (pendingEditRaw) {
+      sessionStorage.removeItem(PENDING_EDIT_PERSONA_KEY);
+      try {
+        const payload = JSON.parse(pendingEditRaw) as {
+          persona?: Persona;
+          mode?: 'create' | 'edit' | 'remix';
+        };
+        if (payload.persona) {
+          setEditingPersonaSeed(payload.persona);
+          setEditingPersonaId(payload.persona.id);
+          setPersonaModalMode(
+            payload.mode === 'remix'
+              ? 'remix'
+              : payload.mode === 'create'
+                ? 'create'
+                : 'edit'
+          );
+          setIsCreateModalOpen(true);
+        }
+      } catch {
+        // ignore malformed payload
+      }
+    }
+
+    const pendingAvatarRaw = sessionStorage.getItem(PENDING_AVATAR_STUDIO_KEY);
+    if (pendingAvatarRaw) {
+      sessionStorage.removeItem(PENDING_AVATAR_STUDIO_KEY);
+      try {
+        const payload = JSON.parse(pendingAvatarRaw) as { personaId?: string };
+        if (payload.personaId) {
+          setProfilePersonaId(payload.personaId);
+          setProfileAvatarStudioOnOpen(true);
+          setIsProfileDrawerOpen(true);
+        }
+      } catch {
+        // ignore malformed payload
+      }
+    }
   }, [cloudPersonasLoaded]);
+
+  useEffect(() => {
+    writeStoredSelectedPersonaId(selectedPersonaId);
+  }, [selectedPersonaId]);
+
+  useEffect(() => {
+    if (personas.some((p) => p.id === selectedPersonaId)) return;
+    setSelectedPersonaId(pickDefaultPersonaId(personas));
+  }, [personas, selectedPersonaId]);
 
   useEffect(() => {
     if (!isAuthLoaded || !isSignedIn || !clerkEnabled || !selectedPersona) return;
@@ -698,7 +787,7 @@ function ChatApp() {
 
   // Launch Gemini 3.1 Flash Live Realtime Voice Call
   const handleStartCall = (persona: Persona) => {
-    setCallingPersona(persona);
+    setCallingPersonaId(persona.id);
     setIsCallOpen(true);
   };
 
@@ -794,7 +883,7 @@ function ChatApp() {
   };
 
   const handleSelectPersona = (persona: Persona) => {
-    setSelectedPersona(persona);
+    setSelectedPersonaId(persona.id);
     setMobileView('chat');
   };
 
@@ -802,12 +891,18 @@ function ChatApp() {
     let saved: Persona = { ...newPersona, isCustom: true };
 
     if (isSignedIn) {
-      if (editingPersona?.isCustom && editingPersona.id) {
+      const isEdit =
+        personaModalMode === 'edit' &&
+        Boolean(editingPersonaId) &&
+        newPersona.id === editingPersonaId;
+      if (isEdit) {
         const updated = await updatePersonaOnCloud(saved);
-        if (updated) saved = { ...updated, isCustom: true };
+        if (!updated) return { ok: false, error: 'SAVE_FAILED' };
+        saved = { ...updated, isCustom: true };
       } else {
         const created = await createPersonaOnCloud(saved);
-        if (created) saved = { ...created, isCustom: true };
+        if (!created) return { ok: false, error: 'SAVE_FAILED' };
+        saved = { ...created, isCustom: true };
       }
     }
 
@@ -820,8 +915,12 @@ function ChatApp() {
       }
       return [saved, ...prev];
     });
-    setSelectedPersona(saved);
+    setSelectedPersonaId(saved.id);
+    setEditingPersonaId(null);
+    setEditingPersonaSeed(null);
+    setIsImportModalOpen(false);
     setMobileView('chat');
+    return { ok: true, persona: saved };
   };
 
   const handleAvatarChange = async (character: Persona, avatar: string) => {
@@ -834,20 +933,31 @@ function ChatApp() {
     }
 
     setPersonas((prev) => prev.map((p) => (p.id === saved.id ? saved : p)));
-    if (selectedPersona.id === saved.id) {
-      setSelectedPersona(saved);
+    if (selectedPersonaId === saved.id) {
+      setSelectedPersonaId(saved.id);
     }
-    setProfilePersona((prev) => (prev?.id === saved.id ? saved : prev));
   };
 
   const handleDeletePersona = (id: string) => {
     if (isSignedIn) {
       void deletePersonaOnCloud(id);
     }
-    setPersonas((prev) => prev.filter((p) => p.id !== id));
-    if (selectedPersona.id === id) {
-      setSelectedPersona(DEFAULT_PERSONAS[0]);
-    }
+    setPersonas((prev) => {
+      const next = prev.filter((p) => p.id !== id);
+      if (selectedPersonaId === id) {
+        setSelectedPersonaId(pickDefaultPersonaId(next));
+      }
+      if (profilePersonaId === id) {
+        setProfilePersonaId(null);
+        setIsProfileDrawerOpen(false);
+      }
+      if (editingPersonaId === id) {
+        setEditingPersonaId(null);
+        setEditingPersonaSeed(null);
+        setIsCreateModalOpen(false);
+      }
+      return next;
+    });
   };
 
   const handleImportLocalData = async () => {
@@ -892,7 +1002,7 @@ function ChatApp() {
   const handleResetDefaults = () => {
     const localized = applyLocaleToPersonas(DEFAULT_PERSONAS, i18n.language);
     setPersonas(localized);
-    setSelectedPersona(localized[0]!);
+    setSelectedPersonaId(localized[0]!.id);
     localStorage.removeItem(STORAGE_KEY_PERSONAS);
   };
 
@@ -947,7 +1057,9 @@ function ChatApp() {
             selectedPersona={selectedPersona}
             onSelectPersona={handleSelectPersona}
             onOpenCreateModal={() => {
-              setEditingPersona(null);
+              setEditingPersonaId(null);
+              setEditingPersonaSeed(null);
+              setPersonaModalMode('create');
               setIsCreateModalOpen(true);
             }}
             onStartCall={handleStartCall}
@@ -977,7 +1089,7 @@ function ChatApp() {
             onSendMessage={handleSendMessage}
             onStartCall={handleStartCall}
             onOpenProfile={(char) => {
-              setProfilePersona(char);
+              setProfilePersonaId(char.id);
               setIsProfileDrawerOpen(true);
             }}
             onBackToList={() => setMobileView('list')}
@@ -1036,15 +1148,21 @@ function ChatApp() {
         isOpen={isCreateModalOpen}
         onClose={() => {
           setIsCreateModalOpen(false);
-          setEditingPersona(null);
+          setEditingPersonaId(null);
+          setEditingPersonaSeed(null);
+          setPersonaModalMode('create');
         }}
         onSave={handleSavePersona}
         initialPersona={editingPersona}
+        mode={personaModalMode}
       />
 
       <ImportLocalDataModal
         isOpen={isImportModalOpen}
-        onClose={() => setIsImportModalOpen(false)}
+        onClose={() => {
+          markImportPromptDismissed();
+          setIsImportModalOpen(false);
+        }}
         onConfirm={handleImportLocalData}
       />
 
@@ -1052,11 +1170,18 @@ function ChatApp() {
       <PersonaProfileDrawer
         character={profilePersona}
         isOpen={isProfileDrawerOpen}
-        onClose={() => setIsProfileDrawerOpen(false)}
+        onClose={() => {
+          setIsProfileDrawerOpen(false);
+          setProfileAvatarStudioOnOpen(false);
+        }}
+        initialAvatarStudioOpen={profileAvatarStudioOnOpen}
+        onInitialAvatarStudioConsumed={() => setProfileAvatarStudioOnOpen(false)}
         onCall={handleStartCall}
         onEdit={(char) => {
           setIsProfileDrawerOpen(false);
-          setEditingPersona(char);
+          setEditingPersonaSeed(char);
+          setEditingPersonaId(char.id);
+          setPersonaModalMode(char.isCustom ? 'edit' : 'remix');
           setIsCreateModalOpen(true);
         }}
         onDelete={handleDeletePersona}
@@ -1081,6 +1206,12 @@ export default function App() {
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
+
+  useEffect(() => {
+    if (pathname.startsWith('/rooms') && !ROOMS_ENABLED) {
+      navigateHome();
+    }
+  }, [pathname]);
 
   if (pathname.startsWith('/memory')) {
     return <MemoryPage onBack={navigateHome} />;
@@ -1120,6 +1251,7 @@ export default function App() {
     );
   }
   if (pathname.startsWith('/rooms')) {
+    if (!ROOMS_ENABLED) return null;
     return (
       <RoomsPage
         theme={getStoredTheme()}
@@ -1142,6 +1274,30 @@ export default function App() {
         }}
         onCreatePersona={() => {
           sessionStorage.setItem(OPEN_CREATE_PERSONA_KEY, '1');
+          navigateHome();
+        }}
+        onEditPersona={(persona) => {
+          sessionStorage.setItem(
+            PENDING_EDIT_PERSONA_KEY,
+            JSON.stringify({ persona, mode: 'edit' })
+          );
+          navigateHome();
+        }}
+        onDuplicatePersona={(persona) => {
+          sessionStorage.setItem(
+            PENDING_EDIT_PERSONA_KEY,
+            JSON.stringify({
+              persona: { ...persona, name: `${persona.name} (copy)` },
+              mode: 'remix',
+            })
+          );
+          navigateHome();
+        }}
+        onChangeAvatar={(persona) => {
+          sessionStorage.setItem(
+            PENDING_AVATAR_STUDIO_KEY,
+            JSON.stringify({ personaId: persona.id })
+          );
           navigateHome();
         }}
       />

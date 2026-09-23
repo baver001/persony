@@ -1,10 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Upload, RefreshCw, X, Wand2, ImageIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { generateSvgAvatar, PRESET_AVATARS } from '../utils/avatarGenerator';
 import { compressAvatarDataUrl, readImageFileAsDataUrl } from '../utils/avatarImage';
 import { getApiHeaders } from '../lib/api/headers';
+import {
+  buildAvatarApiPrompt,
+  buildAvatarVisualDirection,
+  type AvatarPersonaContext,
+} from '../lib/avatar-prompt';
+import { avatarErrorMessage } from '../lib/avatar-errors';
 
 interface AvatarStudioModalProps {
   isOpen: boolean;
@@ -13,6 +19,9 @@ interface AvatarStudioModalProps {
   personaName?: string;
   personaId?: string;
   category?: string;
+  tagline?: string;
+  description?: string;
+  behaviorProfile?: AvatarPersonaContext['behaviorProfile'];
   currentAvatar?: string;
 }
 
@@ -23,6 +32,9 @@ export const AvatarStudioModal: React.FC<AvatarStudioModalProps> = ({
   personaName = '',
   personaId,
   category = 'custom',
+  tagline,
+  description,
+  behaviorProfile,
   currentAvatar,
 }) => {
   const { t } = useTranslation(['personas', 'common']);
@@ -32,6 +44,22 @@ export const AvatarStudioModal: React.FC<AvatarStudioModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const personaContext = useMemo<AvatarPersonaContext>(
+    () => ({
+      name: personaName,
+      tagline,
+      description,
+      category,
+      behaviorProfile,
+    }),
+    [personaName, tagline, description, category, behaviorProfile]
+  );
+
+  const suggestedDirection = useMemo(
+    () => buildAvatarVisualDirection(personaContext),
+    [personaContext]
+  );
+
   useEffect(() => {
     if (isOpen) {
       setPreview(currentAvatar || PRESET_AVATARS[0]);
@@ -40,21 +68,32 @@ export const AvatarStudioModal: React.FC<AvatarStudioModalProps> = ({
     }
   }, [isOpen, currentAvatar]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.stopPropagation();
+      event.preventDefault();
+      onClose();
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleGenerate = async () => {
-    const trimmed = prompt.trim();
-    if (!trimmed) return;
-
     setIsGenerating(true);
     setError(null);
+
+    const apiPrompt = buildAvatarApiPrompt(personaContext, prompt);
 
     try {
       const res = await fetch('/api/generate-avatar', {
         method: 'POST',
         headers: await getApiHeaders(),
         body: JSON.stringify({
-          prompt: trimmed,
+          prompt: apiPrompt,
           personaName: personaName.trim() || undefined,
           personaId,
           clientRequestId: `avatar_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -67,19 +106,19 @@ export const AvatarStudioModal: React.FC<AvatarStudioModalProps> = ({
           error_code?: string;
           message?: string;
         } | null;
-        throw new Error(
-          errJson?.error || errJson?.message || errJson?.error_code || t('avatarGenerateFailed')
-        );
+        const fallback = errJson?.error || errJson?.message || t('avatarGenerateFailed');
+        throw new Error(avatarErrorMessage(errJson?.error_code, fallback, t));
       }
 
       const data = (await res.json()) as { imageDataUrl?: string };
-      if (!data.imageDataUrl) throw new Error(t('avatarGenerateFailed'));
+      if (!data.imageDataUrl) throw new Error(t('avatarErrorGenerationFailed'));
 
       const compressed = await compressAvatarDataUrl(data.imageDataUrl);
       setPreview(compressed);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t('avatarGenerateFailed');
-      setError(message);
+      setPreview(generateSvgAvatar(personaName || 'Persona', category, Date.now().toString()));
+      setError(t('avatarAiFallbackApplied', { detail: message }));
     } finally {
       setIsGenerating(false);
     }
@@ -103,10 +142,12 @@ export const AvatarStudioModal: React.FC<AvatarStudioModalProps> = ({
     setError(null);
   };
 
+  const canGenerate = Boolean(prompt.trim() || suggestedDirection);
+
   return (
     <AnimatePresence>
       <div
-        className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm"
+        className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm"
         onClick={onClose}
       >
         <motion.div
@@ -144,6 +185,12 @@ export const AvatarStudioModal: React.FC<AvatarStudioModalProps> = ({
               </div>
             </div>
 
+            {suggestedDirection && (
+              <p className="text-[11px] text-zinc-500 leading-relaxed">
+                {t('avatarContextHint')}: {suggestedDirection}
+              </p>
+            )}
+
             <div className="space-y-2">
               <label className="text-[11px] font-medium text-zinc-400">{t('avatarPromptLabel')}</label>
               <textarea
@@ -159,7 +206,7 @@ export const AvatarStudioModal: React.FC<AvatarStudioModalProps> = ({
               <button
                 type="button"
                 onClick={() => void handleGenerate()}
-                disabled={isGenerating || !prompt.trim()}
+                disabled={isGenerating || !canGenerate}
                 className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white text-zinc-900 text-xs font-semibold disabled:opacity-50 transition-opacity"
               >
                 {isGenerating ? (
@@ -167,7 +214,7 @@ export const AvatarStudioModal: React.FC<AvatarStudioModalProps> = ({
                 ) : (
                   <Sparkles className="w-3.5 h-3.5" />
                 )}
-                {t('avatarGenerateAi')}
+                {isGenerating ? t('avatarGenerating') : t('avatarGenerateAi')}
               </button>
               <button
                 type="button"

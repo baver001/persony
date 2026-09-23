@@ -23,10 +23,10 @@ describe('model-registry', () => {
     expect(assertModelSupportsOperation('google', 'gemini-3.8-live', 'voice_call')).toBe(true);
   });
 
-  it('marks avatar preview models', () => {
+  it('routes avatar_generation to gemini-3.1-flash-image', () => {
     const avatar = AI_MODEL_REGISTRY.filter((m) => m.operations.includes('avatar_generation'));
-    expect(avatar.length).toBeGreaterThan(0);
-    expect(avatar.every((m) => m.status === 'preview')).toBe(true);
+    expect(avatar.map((m) => m.modelId)).toContain('gemini-3.1-flash-image');
+    expect(avatar.every((m) => m.enabled)).toBe(true);
   });
 
   it('exports owner routing matrix aligned with registry', () => {

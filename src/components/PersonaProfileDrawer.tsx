@@ -30,6 +30,8 @@ interface PersonaProfileDrawerProps {
   onDelete?: (characterId: string) => void;
   onClearChat?: (characterId: string) => void;
   onAvatarChange?: (character: Persona, avatar: string) => void;
+  initialAvatarStudioOpen?: boolean;
+  onInitialAvatarStudioConsumed?: () => void;
 }
 
 export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
@@ -41,6 +43,8 @@ export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
   onDelete,
   onClearChat,
   onAvatarChange,
+  initialAvatarStudioOpen = false,
+  onInitialAvatarStudioConsumed,
 }) => {
   const { t, i18n } = useTranslation(['personas', 'common', 'chat']);
   const { isSignedIn } = usePersonyAuth();
@@ -60,12 +64,21 @@ export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
   }, [isOpen, character?.id, isSignedIn]);
 
   React.useEffect(() => {
+    if (!isOpen || !initialAvatarStudioOpen || !character?.isCustom) return;
+    setIsAvatarStudioOpen(true);
+    onInitialAvatarStudioConsumed?.();
+  }, [isOpen, initialAvatarStudioOpen, character?.id, character?.isCustom, onInitialAvatarStudioConsumed]);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key !== 'Escape' || isAvatarStudioOpen) return;
+      e.preventDefault();
+      onClose();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [isOpen, isAvatarStudioOpen, onClose]);
 
   if (!isOpen || !character) return null;
 
@@ -284,6 +297,9 @@ export const PersonaProfileDrawer: React.FC<PersonaProfileDrawerProps> = ({
           personaName={character.name}
           personaId={character.id}
           category={character.category}
+          tagline={character.tagline}
+          description={character.description}
+          behaviorProfile={character.behaviorProfile}
           currentAvatar={character.avatar}
         />
       )}

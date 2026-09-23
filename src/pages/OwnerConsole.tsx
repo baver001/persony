@@ -321,7 +321,18 @@ export function OwnerConsole({ onBack }: Props) {
     }
   };
 
-  const metrics = (overview?.metrics as Record<string, unknown>) || {};
+  const kpis =
+    (overview?.kpis as {
+      totalUsers: number;
+      newUsers24h: number;
+      dau: number;
+      aiCalls24h: number;
+      aiCalls7d: number;
+      voiceCalls24h: number;
+      activePersonas: number;
+      failedInferenceRuns: number;
+      totalMessages: number;
+    } | null) ?? null;
 
   if (!isLoaded) {
     return (
@@ -363,7 +374,23 @@ export function OwnerConsole({ onBack }: Props) {
     >
       {section === 'overview' && (
         <OwnerOverviewSection
-          metrics={metrics}
+          kpis={kpis}
+          periods={
+            (overview.periods as Record<
+              string,
+              { aiCalls?: number; dau?: number; newUsers?: number; voiceCalls?: number }
+            >) ?? null
+          }
+          trends={
+            (overview.trends as Record<
+              string,
+              {
+                aiCalls?: { current: number; previous: number; deltaPercent: number | null };
+                dau?: { current: number; previous: number; deltaPercent: number | null };
+                voiceCalls?: { current: number; previous: number; deltaPercent: number | null };
+              }
+            >) ?? null
+          }
           economics={economics}
           whatChanged={(overview.whatChanged as string[]) || []}
         />
@@ -502,13 +529,34 @@ export function OwnerConsole({ onBack }: Props) {
               )
             )}
           </div>
+
+          {Array.isArray(battery.topupClicksByUser) && battery.topupClicksByUser.length > 0 && (
+            <div className="rounded-xl border border-white/10 bg-white/5 overflow-hidden">
+              <div className="px-3 py-2 border-b border-white/10 text-xs uppercase tracking-wide text-zinc-500">
+                Top-up button clicks
+              </div>
+              <div className="divide-y divide-white/5">
+                {(battery.topupClicksByUser as Array<Record<string, unknown>>).map((row) => (
+                  <div
+                    key={String(row.userId)}
+                    className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
+                  >
+                    <span className="truncate text-zinc-200">
+                      {String(row.displayName || row.username || row.userId)}
+                    </span>
+                    <span className="shrink-0 tabular-nums text-zinc-400">{String(row.clickCount)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {section === 'ai' && (
         <OwnerAiSection
           overview={aiOverview}
-          failedInferenceRuns={Number(metrics.failedInferenceRuns ?? 0)}
+          failedInferenceRuns={Number(kpis?.failedInferenceRuns ?? 0)}
           loading={aiLoading}
           error={aiError}
           onRetry={() => void loadAi()}

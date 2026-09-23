@@ -31,7 +31,7 @@ export const GEMINI_GENERATOR_MODELS = modelIdsTupleForOperation(
 export const GEMINI_AVATAR_IMAGE_MODELS = modelIdsTupleForOperation(
   'google',
   'avatar_generation',
-  'gemini-2.0-flash-preview-image-generation'
+  'gemini-3.1-flash-image'
 );
 
 /** Real-time voice calls (Live API). */

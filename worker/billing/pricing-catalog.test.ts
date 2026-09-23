@@ -158,7 +158,7 @@ describe('findPricingEntries', () => {
   it('prices avatar generation by per_image catalog row', () => {
     const result = computePerImageCost({
       provider: 'google',
-      model: 'gemini-2.0-flash-preview-image-generation',
+      model: 'gemini-3.1-flash-image',
       imageCount: 1,
     });
     expect(result.priced).toBe(true);

@@ -59,14 +59,10 @@ export function SettingsPage({ onBack, isSignedIn }: Props) {
           </section>
         )}
 
-        {isSignedIn && billing && (
+        {isSignedIn && billing?.enabled && (
           <section className="py-surface-card p-4 space-y-3">
             <h2 className="font-medium">{t('settings:billingTitle')}</h2>
-            <p className="text-sm text-py-text-secondary">
-              {billing.enabled
-                ? t('settings:billingEnabledHint')
-                : t('settings:billingDisabledHint')}
-            </p>
+            <p className="text-sm text-py-text-secondary">{t('settings:billingEnabledHint')}</p>
             {!billing.checkoutAvailable && (
               <p className="text-xs text-py-text-muted">{t('settings:billingComingSoon')}</p>
             )}

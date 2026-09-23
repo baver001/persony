@@ -61,6 +61,7 @@ import { useBattery } from '../hooks/useBattery';
 import { SidebarBatteryControl } from './SidebarBatteryControl';
 import { getOfferedCallInsights } from '../utils/callTranscriptPersistence';
 import { submitMessageFeedback } from '../lib/api/feedback';
+import { speechRecognitionLocale } from '../utils/speechRecognition';
 
 interface ChatAreaProps {
   character: Persona;
@@ -425,6 +426,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
   // Voice Note Recording State
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [voiceNoteMicError, setVoiceNoteMicError] = useState<string | null>(null);
   const [recordingStream, setRecordingStream] = useState<MediaStream | null>(null);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const recordingWaveformRef = useRef<number[]>(
@@ -509,6 +511,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
   const startVoiceRecording = async () => {
     if (isBatteryEmpty) return;
+    setVoiceNoteMicError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioChunksRef.current = [];
@@ -523,7 +526,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       if (SpeechRecClass) {
         try {
           const rec = new SpeechRecClass();
-          rec.lang = 'ru-RU';
+          rec.lang = speechRecognitionLocale(i18n.language);
           rec.continuous = true;
           rec.interimResults = true;
           rec.onresult = (evt: any) => {
@@ -610,7 +613,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       }, 1000);
     } catch (err) {
       console.error('Microphone error for voice note:', err);
-      onStartCall(character);
+      setVoiceNoteMicError(t('voiceNoteMicError'));
+      window.setTimeout(() => setVoiceNoteMicError(null), 5000);
     }
   };
 
@@ -1346,6 +1350,20 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               }`}
             >
               {t('battery:emptyHint')}
+            </div>
+          </div>
+        )}
+
+        {voiceNoteMicError && (
+          <div className="py-chat-thread mb-2">
+            <div
+              className={`rounded-2xl border px-3 py-2.5 text-sm ${
+                isDark
+                  ? 'bg-amber-950/40 border-amber-500/30 text-amber-100'
+                  : 'bg-amber-50 border-amber-200 text-amber-900'
+              }`}
+            >
+              {voiceNoteMicError}
             </div>
           </div>
         )}

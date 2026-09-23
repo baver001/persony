@@ -1,9 +1,15 @@
-import React from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { motion, AnimatePresence, useDragControls, type PanInfo } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import type { BatterySnapshot } from '../lib/api/battery';
+import {
+  BATTERY_TOPUP_CLICK_EVENT,
+  trackProductAnalyticsEvent,
+} from '../lib/api/analytics';
 import { BatteryIndicator } from './BatteryIndicator';
+
+const CLOSE_DRAG_OFFSET = 56;
+const CLOSE_VELOCITY = 380;
 
 type Props = {
   isOpen: boolean;
@@ -13,55 +19,129 @@ type Props = {
 
 export const BatterySheet: React.FC<Props> = ({ isOpen, onClose, battery }) => {
   const { t } = useTranslation('battery');
+  const [notice, setNotice] = useState<string | null>(null);
+  const noticeTimerRef = useRef<number | null>(null);
+  const dragControls = useDragControls();
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    return () => {
+      if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) setNotice(null);
+  }, [isOpen]);
 
   const pct = battery?.percentage ?? 100;
 
+  const handleTopUp = () => {
+    void trackProductAnalyticsEvent(BATTERY_TOPUP_CLICK_EVENT, {
+      source: 'battery_sheet',
+      batteryPercent: pct,
+      batteryStatus: battery?.status ?? 'unknown',
+    }).catch(() => {});
+
+    setNotice(t('topUpComingSoon'));
+    if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
+    noticeTimerRef.current = window.setTimeout(() => setNotice(null), 2800);
+  };
+
+  const startSheetDrag = (event: React.PointerEvent<HTMLElement>) => {
+    dragControls.start(event);
+  };
+
+  const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    if (info.offset.y < -CLOSE_DRAG_OFFSET || info.velocity.y < -CLOSE_VELOCITY) {
+      onClose();
+    }
+  };
+
   return (
     <AnimatePresence>
-      <div
-        className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
-        onClick={onClose}
-      >
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 16 }}
-          onClick={(e) => e.stopPropagation()}
-          className="w-full sm:max-w-sm bg-zinc-900 border border-zinc-800 rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden"
-        >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
-            <h2 className="text-sm font-semibold text-white">{t('sheetTitle')}</h2>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10"
-              aria-label={t('close')}
+      {isOpen && (
+        <div className="fixed inset-0 z-[70]">
+          <motion.button
+            type="button"
+            aria-label={t('close')}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="absolute inset-0 bg-black/55 backdrop-blur-[2px] cursor-default"
+            onClick={onClose}
+          />
+
+          <div className="absolute inset-x-0 top-0 flex flex-col items-center pointer-events-none">
+            <motion.div
+              role="dialog"
+              aria-labelledby="battery-sheet-title"
+              drag="y"
+              dragControls={dragControls}
+              dragListener={false}
+              dragConstraints={{ top: -280, bottom: 0 }}
+              dragElastic={{ top: 0.12, bottom: 0 }}
+              onDragEnd={handleDragEnd}
+              initial={{ y: '-100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '-100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 320 }}
+              className="pointer-events-auto relative w-full max-w-md bg-zinc-900 rounded-b-2xl shadow-2xl overflow-hidden pt-[env(safe-area-inset-top,0px)]"
             >
-              <X className="w-4 h-4" />
-            </button>
+              <div
+                className="px-5 pt-6 pb-1 flex flex-col items-center text-center gap-3.5 cursor-grab active:cursor-grabbing touch-none"
+                onPointerDown={startSheetDrag}
+              >
+                <h2 id="battery-sheet-title" className="text-sm font-semibold text-white select-none">
+                  {t('sheetTitle')}
+                </h2>
+
+                <div className="text-4xl font-semibold tabular-nums text-white select-none">{pct}%</div>
+
+                <div className="pointer-events-none">
+                  <BatteryIndicator battery={battery} variant="vertical" />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleTopUp}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="py-battery-topup-btn touch-auto cursor-pointer"
+                >
+                  <span className="py-battery-topup-btn__label">{t('topUp')}</span>
+                </button>
+              </div>
+
+              <div className="px-5 pb-2 pt-0">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  onPointerDown={startSheetDrag}
+                  className="mx-auto flex w-full items-center justify-center pb-1 pt-0.5 cursor-grab active:cursor-grabbing touch-none"
+                  aria-label={t('close')}
+                >
+                  <span className="h-[3px] w-9 rounded-full bg-white/22" aria-hidden />
+                </button>
+              </div>
+            </motion.div>
+
+            <AnimatePresence>
+              {notice && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.22 }}
+                  className="pointer-events-none mt-3 w-[min(100%-2rem,28rem)] rounded-xl border border-white/10 bg-zinc-950/95 px-4 py-3 text-center text-xs leading-relaxed text-zinc-200 shadow-lg backdrop-blur-sm"
+                  role="status"
+                >
+                  {notice}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-
-          <div className="p-4 space-y-4">
-            <div className="flex justify-center">
-              <div className="text-4xl font-semibold tabular-nums text-white">{pct}%</div>
-            </div>
-            <div className="flex justify-center py-2">
-              <BatteryIndicator battery={battery} variant="vertical" />
-            </div>
-
-            <div className="rounded-xl bg-white/5 border border-white/10 px-3 py-3 space-y-2 text-xs text-zinc-300">
-              <p className="leading-relaxed">{t('sheetHint')}</p>
-              <p className="text-zinc-500">{t('fullRechargeEta', { hours: 8 })}</p>
-            </div>
-
-            {battery?.status === 'empty' && (
-              <p className="text-xs text-amber-300/90">{t('emptyHint')}</p>
-            )}
-          </div>
-        </motion.div>
-      </div>
+        </div>
+      )}
     </AnimatePresence>
   );
 };

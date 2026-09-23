@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { WAVEFORM_BAR_COUNT, WAVEFORM_MIN_LEVEL, resampleWaveformLevels } from '../utils/audioWaveform';
-
-const LIVE_SLOT_PX = 4; // 2px bar + ~2px distributed gap via space-between
-const LIVE_MIN_BARS = 40;
-const LIVE_MAX_BARS = 128;
-const LIVE_QUIET_THRESHOLD = 0.18;
+import {
+  LIVE_QUIET_THRESHOLD,
+  WAVEFORM_BAR_COUNT,
+  WAVEFORM_MIN_LEVEL,
+  countLiveWaveformBars,
+  resampleWaveformLevels,
+  tailWaveformLevels,
+} from '../utils/audioWaveform';
 
 type Variant = 'live' | 'playback';
 
@@ -18,11 +20,13 @@ type Props = {
   className?: string;
 };
 
-function barHeight(level: number, variant: Variant): number {
-  if (variant === 'live' && level <= LIVE_QUIET_THRESHOLD) return 3;
-  const min = variant === 'live' ? 4 : 5;
-  const scale = variant === 'live' ? 14 : 18;
-  return min + level * scale;
+function playbackBarHeight(level: number): number {
+  return 5 + level * 18;
+}
+
+function liveBarHeight(level: number): number {
+  const shaped = Math.pow(Math.min(1, level), 0.82);
+  return 4 + shaped * 14;
 }
 
 export function VoiceWaveformBars({
@@ -50,12 +54,7 @@ export function VoiceWaveformBars({
     const el = containerRef.current;
     if (!el) return;
 
-    const update = () => {
-      const width = el.clientWidth;
-      setBarCount(
-        Math.max(LIVE_MIN_BARS, Math.min(LIVE_MAX_BARS, Math.floor(width / LIVE_SLOT_PX)))
-      );
-    };
+    const update = () => setBarCount(countLiveWaveformBars(el.clientWidth));
 
     update();
     const observer = new ResizeObserver(update);
@@ -63,7 +62,11 @@ export function VoiceWaveformBars({
     return () => observer.disconnect();
   }, [barCountProp, variant]);
 
-  const bars = resampleWaveformLevels(levels, barCount);
+  const bars =
+    variant === 'live'
+      ? tailWaveformLevels(levels, barCount)
+      : resampleWaveformLevels(levels, barCount);
+
   const variantClass = variant === 'live' ? 'py-waveform-bars--live' : 'py-waveform-bars--playback';
 
   return (
@@ -73,13 +76,14 @@ export function VoiceWaveformBars({
       aria-hidden
     >
       {bars.map((level, index) => {
-        const height = barHeight(level, variant);
-        const opacity =
-          variant === 'live'
-            ? level <= LIVE_QUIET_THRESHOLD
-              ? 0.42
-              : 0.68 + level * 0.32
-            : 0.65 + level * 0.35;
+        const isQuiet = variant === 'live' && level <= LIVE_QUIET_THRESHOLD;
+
+        if (isQuiet) {
+          return <span key={index} className="py-waveform-dot" />;
+        }
+
+        const height = variant === 'live' ? liveBarHeight(level) : playbackBarHeight(level);
+        const opacity = variant === 'live' ? 0.9 : 0.65 + level * 0.35;
 
         return (
           <span
@@ -98,5 +102,5 @@ export function VoiceWaveformBars({
 }
 
 export function micLevelToBarHeight(level: number): number {
-  return barHeight(Math.max(WAVEFORM_MIN_LEVEL, level), 'live');
+  return liveBarHeight(Math.max(WAVEFORM_MIN_LEVEL, level));
 }

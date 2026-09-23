@@ -2,6 +2,7 @@ import type { Persona, ChatMessage } from '../types';
 import { getApiHeaders } from './api/headers';
 
 const MIGRATION_VERSION_KEY = 'persony_cloud_migration_v1';
+const IMPORT_PROMPT_DISMISSED_KEY = 'persony_import_prompt_dismissed_v1';
 const STORAGE_KEY_PERSONAS = 'persony_personas_v1';
 const STORAGE_KEY_MESSAGES = 'persony_messages_v1';
 
@@ -30,6 +31,18 @@ export type LocalImportPayload = {
     }>;
   }>;
 };
+
+export function isImportPromptDismissed(): boolean {
+  return localStorage.getItem(IMPORT_PROMPT_DISMISSED_KEY) === '1';
+}
+
+export function markImportPromptDismissed(): void {
+  localStorage.setItem(IMPORT_PROMPT_DISMISSED_KEY, '1');
+}
+
+export function shouldOfferLocalImport(): boolean {
+  return hasLegacyLocalData() && !isImportPromptDismissed();
+}
 
 export function hasLegacyLocalData(): boolean {
   if (isCloudMigrationCompleted()) return false;

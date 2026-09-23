@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Persona } from '../types';
-import { fetchAvailablePersonas, installPersona } from '../lib/api/personas';
+import { fetchAvailablePersonas, installPersona, PersonasApiError } from '../lib/api/personas';
 import {
   applyLocaleToPersonas,
   formatPersonaBadge,
@@ -22,6 +22,7 @@ export function MeetPersonasPage({ theme, onStartChat }: Props) {
   );
   const [loading, setLoading] = useState(true);
   const [startingId, setStartingId] = useState<string | null>(null);
+  const [installErrorId, setInstallErrorId] = useState<string | null>(null);
   const isDark = theme === 'dark';
 
   useEffect(() => {
@@ -36,9 +37,14 @@ export function MeetPersonasPage({ theme, onStartChat }: Props) {
 
   const handleStart = async (persona: Persona) => {
     setStartingId(persona.id);
+    setInstallErrorId(null);
     try {
       await installPersona(persona.id);
       onStartChat(persona);
+    } catch (err) {
+      if (!(err instanceof PersonasApiError && err.status === 401)) {
+        setInstallErrorId(persona.id);
+      }
     } finally {
       setStartingId(null);
     }

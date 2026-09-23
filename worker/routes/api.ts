@@ -16,6 +16,7 @@ import { bodySizeLimit } from '../middleware/body-limit';
 import { getAuthContext } from '../middleware/auth';
 import { requireAIEntitlement } from '../middleware/entitlement';
 import { mapApiError } from '../lib/api-errors';
+import { classifyProviderError } from '../lib/provider-errors';
 import { clientIp, rateLimitMiddleware } from '../middleware/rate-limit';
 import { withEnergyReservation } from '../services/energy-service';
 import { runAvatarWithInference } from '../services/avatar-inference-service';
@@ -185,6 +186,30 @@ apiRoutes.post('/summarize-call', aiUserRateLimit, async (c) => {
   }
 });
 
+function avatarGenerationErrorResponse(err: unknown, fallbackMessage: string) {
+  const mapped = mapApiError(err, fallbackMessage);
+  if (mapped.status !== 500) {
+    return mapped;
+  }
+  const kind = classifyProviderError(err);
+  const codeByKind: Record<string, string> = {
+    model_unavailable: 'MODEL_UNAVAILABLE',
+    rate_limit: 'RATE_LIMIT',
+    billing_quota: 'RATE_LIMIT',
+    invalid_request: 'GENERATION_FAILED',
+    user_cancellation: 'GENERATION_FAILED',
+    network: 'NETWORK',
+    unknown: 'GENERATION_FAILED',
+  };
+  return {
+    status: kind === 'rate_limit' || kind === 'billing_quota' ? 429 : 500,
+    body: {
+      error: fallbackMessage,
+      error_code: codeByKind[kind] ?? 'GENERATION_FAILED',
+    },
+  };
+}
+
 apiRoutes.post('/generate-avatar', aiHeavyRateLimit, async (c) => {
   try {
     const userId = await requireAIEntitlement(c);
@@ -216,7 +241,7 @@ apiRoutes.post('/generate-avatar', aiHeavyRateLimit, async (c) => {
     );
     return c.json({ imageDataUrl: result.imageDataUrl });
   } catch (err) {
-    const mapped = mapApiError(err, formatCleanErrorMessage(err));
+    const mapped = avatarGenerationErrorResponse(err, formatCleanErrorMessage(err));
     return c.json(mapped.body, mapped.status as 401 | 402 | 429 | 500);
   }
 });

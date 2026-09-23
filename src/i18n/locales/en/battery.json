@@ -2,6 +2,8 @@
   "title": "Battery",
   "sheetTitle": "Battery",
   "close": "Close",
+  "topUp": "Top up",
+  "topUpComingSoon": "This feature is in development. Top-ups are coming soon.",
   "ariaLabel": "Battery {{percent}} percent",
   "recharging": "Recharging",
   "sheetHint": "Energy drains when you use AI and restores over time. Payments are not enabled yet.",
