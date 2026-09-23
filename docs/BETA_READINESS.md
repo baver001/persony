@@ -2,7 +2,7 @@
 
 **Updated:** 2026-09-23  
 **Target:** Closed beta without commercial billing  
-**Production:** https://beta.persony.org (git `af3a78d`, CF `952375cd`)
+**Production:** https://beta.persony.org (git `023ab15`, deployed 2026-09-23)
 
 Legend: `impl` = implemented in code · `test` = automated · `manual` = human verified · `prod` = on beta
 

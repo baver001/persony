@@ -10,9 +10,9 @@
 
 | Field | Value |
 |-------|--------|
-| **Production** | git `af3a78d` · https://beta.persony.org |
+| **Production** | git `023ab15` · https://beta.persony.org |
 | **Health** | `GET /api/health` → ok |
-| **Local `main`** | ahead of `origin/main` (E2E + docs post-`af3a78d`; push when ready) |
+| **GitHub `main`** | synced with local (`023ab15`; post-`af3a78d` E2E/docs) |
 | **Billing** | `BILLING_ENABLED=false` (hidden in Settings) |
 | **Tests (local)** | 165/165 vitest · `npm run ci` green |
 | **Playwright beta-critical** | **12/12** on prod (2026-09-23; Clerk opt-in for 4 specs) |

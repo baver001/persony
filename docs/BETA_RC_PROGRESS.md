@@ -2,8 +2,8 @@
 
 **Stage:** Beta Release Candidate  
 **Plan:** Beta RC spec §1–90 (execution order §87)  
-**Production:** Version `952375cd` · gitSha `af3a78d` · https://beta.persony.org  
-**Git:** prod `af3a78d` · local `main` ahead (E2E reload→edit, avatar script JWT fix — not deployed)  
+**Production:** gitSha `023ab15` · https://beta.persony.org  
+**Git:** `main` synced with `origin` (deploy workflow green 2026-09-23)  
 **Tests:** 165/165 vitest · `npm run ci` green · Playwright **12/12** on beta (2026-09-23)
 
 ## §87 execution tracker

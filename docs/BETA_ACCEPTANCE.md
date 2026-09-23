@@ -1,7 +1,7 @@
 # Beta RC — production acceptance (§86)
 
 **Target:** https://beta.persony.org  
-**Baseline:** gitSha `af3a78d` · CF `952375cd` (2026-09-23T12:55Z)
+**Baseline:** gitSha `023ab15` (2026-09-23T13:25Z deploy)
 
 Run automated gates first:
 
@@ -20,7 +20,7 @@ npm run test:e2e:beta
 
 | # | Scenario | Auto | Manual | Status |
 |---|----------|:----:|:------:|--------|
-| 1 | Health `GET /api/health` → ok | ✓ | — | **ok** `af3a78d` |
+| 1 | Health `GET /api/health` → ok | ✓ | — | **ok** `023ab15` |
 | 2 | Anonymous: app shell loads | ✓ | — | **ok** E2E 2026-09-23 |
 | 3 | Anonymous: Discover loads | ✓ | — | **ok** E2E 2026-09-23 |
 | 4 | Anonymous: billing hidden in Settings | ✓ | — | **ok** E2E 2026-09-23 |
