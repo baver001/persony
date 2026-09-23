@@ -26,14 +26,14 @@
 | 14–16 | Chat / Voice / Call | **partial** | voice notes done (mic UX, i18n speech rec, waveform tests); Call QA **user** |
 | 17 | Owner Console | **done** | KPI + period bars + trends; beta whatChanged; billing disabled label |
 | 18 | UI normalization | **done** | nested modal Esc (Editor/Profile Drawer → Avatar Studio) §69 |
-| 19 | Playwright beta-critical | **done** | **11/11** on beta.persony.org (8 smoke + 3 persona-lifecycle opt-in) |
+| 19 | Playwright beta-critical | **done** | **12/12** (8 smoke + 3 lifecycle + 1 discover-install, Clerk opt-in) |
 | 20 | Manual QA | pending | |
 | 21 | Docs sync | **done** | readiness, acceptance, goal-mode, map synced |
 | 22–23 | Deploy + acceptance | **partial** | prod `af3a78d`; manual §86 pending |
 
 ## Session changelog (latest)
 
-- E2E: lifecycle covers create→reload→edit (PATCH tagline)→reload→delete; **11/11** re-run on prod
+- E2E: discover-install (Elsa) + lifecycle reload→edit; **12/12** on prod
 - Official avatar script: remint Clerk JWT on quota retry (`634a7b0`)
 - Beta reset: fixed `clerk:user_…` lookup; remote dry-run OK (18 personas for owner)
 - Official avatars: `generate-official-avatars.mjs --execute` + `--apply-roster` (Gemini quota blocked 429)
@@ -149,7 +149,7 @@ npm run test:e2e:beta
 | `gemini-3.1-flash-image` | **done** | model-registry + avatar routes |
 | Official 6 avatars (not Unsplash) | **blocked** | quota 429; `--apply-roster` pending |
 | Discover/Gallery | **done** | E2E discover-smoke |
-| Playwright beta-critical | **done** | **11/11** re-verified on prod |
+| Playwright beta-critical | **done** | **12/12** re-verified on prod |
 | Owner Console beta standard | **done** | KPI + trends + beta labels |
 | Beta reset execute | **blocked** | script ready; user D1 backup + confirm |
 | Voice Call device QA | **blocked** | user soak |

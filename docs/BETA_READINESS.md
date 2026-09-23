@@ -35,7 +35,7 @@ Legend: `impl` = implemented in code · `test` = automated · `manual` = human v
 | Persona CRUD no data loss | **yes** (unit + integration + E2E opt-in) |
 | Avatar generate/save/reload | **partial** (studio + fallback; official roster still Unsplash) |
 | Official 6 avatars | **no** (Gemini image quota + visual approve) |
-| Gallery install flow | **partial** (manual install verify) |
+| Gallery install flow | **yes** (E2E discover-install, Clerk opt-in) |
 | Voice message E2E | **partial** (unit tests; no Playwright mic test) |
 | Voice Call devices | **no** (user soak) |
 | Owner operational | **yes** |
