@@ -2,8 +2,8 @@
 
 **Stage:** Beta Release Candidate  
 **Plan:** Beta RC spec §1–90 (execution order §87)  
-**Production:** Version `0e51ed4a` · https://beta.persony.org  
-**Git:** `a87cecd` (Beta RC commit)  
+**Production:** Version `952375cd` · gitSha `af3a78d` · https://beta.persony.org  
+**Git:** `af3a78d` (Beta RC commit on `main`)  
 **Tests:** 165/165 vitest · `npm run ci` green · Playwright **11/11** on beta
 
 ## §87 execution tracker

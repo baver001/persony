@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Production** | Version `0e51ed4a` |
+| **Production** | git `af3a78d` · health gitSha verified |
 | **Health** | `GET https://beta.persony.org/api/health` → ok |
 | **Billing** | `BILLING_ENABLED=false` (hidden in Settings) |
 | **Tests (local)** | 165/165 vitest · `npm run ci` green |

@@ -44,7 +44,7 @@ flowchart TD
 
 - **Цель:** закрытая beta без Paddle billing; всё видимое — production-quality или скрыто flag
 - **Трекер:** `docs/BETA_RC_PROGRESS.md`, `docs/BETA_READINESS.md`
-- **Готово (deployed `0e51ed4a`):** Persona Editor reset, canonical IDs, DTO round-trip, My Personas center, async save, import-modal UX, Avatar Studio fallback, Rooms hidden, billing hidden, avatar model `gemini-3.1-flash-image`, Discover install states, Owner KPI + period charts, Playwright beta-critical **11/11**
+- **Готово (git `af3a78d`, deployed):** Persona Editor reset, canonical IDs, DTO round-trip, My Personas center, async save, import-modal UX, Avatar Studio fallback, Rooms hidden, billing hidden, avatar model `gemini-3.1-flash-image`, Discover install states, Owner KPI + period charts, Playwright beta-critical **11/11**
 - **Заблокировано:** official avatars (Unsplash → generated), device Voice Call QA, beta reset execute
 - **Скрипты:** `scripts/reset-beta-user-personas.mjs`, `scripts/generate-official-avatars.mjs`
 
