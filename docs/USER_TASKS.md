@@ -104,6 +104,8 @@ npm run dev
 
 Трекер: `docs/BETA_RC_PROGRESS.md` · git/prod `af3a78d` · E2E 12/12 · CI 165 tests.
 
+**Git:** локальный `main` может быть впереди `origin/main` (E2E/docs после deploy `af3a78d`). Синхронизация: `git push origin main` когда готовы.
+
 ### 8.1 Official avatars (BLOCKER-1)
 
 1. Включить **paid quota** на `gemini-3.1-flash-image` в Google AI (тот же проект, что Worker `GEMINI_API_KEY`).

@@ -12,7 +12,7 @@
 |-------|--------|
 | **Production** | git `af3a78d` · https://beta.persony.org |
 | **Health** | `GET /api/health` → ok |
-| **Local `main`** | **9 commits ahead** of `origin/main` (E2E + docs; not deployed) |
+| **Local `main`** | ahead of `origin/main` (E2E + docs post-`af3a78d`; push when ready) |
 | **Billing** | `BILLING_ENABLED=false` (hidden in Settings) |
 | **Tests (local)** | 165/165 vitest · `npm run ci` green |
 | **Playwright beta-critical** | **12/12** on prod (2026-09-23; Clerk opt-in for 4 specs) |
