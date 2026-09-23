@@ -3,8 +3,8 @@
 **Stage:** Beta Release Candidate  
 **Plan:** Beta RC spec §1–90 (execution order §87)  
 **Production:** Version `952375cd` · gitSha `af3a78d` · https://beta.persony.org  
-**Git:** `af3a78d` (Beta RC commit on `main`)  
-**Tests:** 165/165 vitest · `npm run ci` green · Playwright **11/11** on beta
+**Git:** prod `af3a78d` · local `main` ahead (E2E reload→edit, avatar script JWT fix — not deployed)  
+**Tests:** 165/165 vitest · `npm run ci` green · Playwright **11/11** on beta (2026-09-23)
 
 ## §87 execution tracker
 
@@ -33,6 +33,8 @@
 
 ## Session changelog (latest)
 
+- E2E: lifecycle covers create→reload→edit (PATCH tagline)→reload→delete; **11/11** re-run on prod
+- Official avatar script: remint Clerk JWT on quota retry (`634a7b0`)
 - Beta reset: fixed `clerk:user_…` lookup; remote dry-run OK (18 personas for owner)
 - Official avatars: `generate-official-avatars.mjs --execute` + `--apply-roster` (Gemini quota blocked 429)
 - UI §69: Profile Drawer Esc не закрывает drawer при открытом Avatar Studio

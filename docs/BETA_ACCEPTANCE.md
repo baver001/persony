@@ -39,7 +39,7 @@ npm run test:e2e:beta
 
 ## Sign-off
 
-- [ ] All automated gates green on target SHA
+- [x] All automated gates green on target SHA (`af3a78d` prod; CI + E2E 11/11 2026-09-23)
 - [ ] Manual rows 7–16 verified
 - [ ] No P0 regressions in Persona / Auth / Chat
 - [ ] `docs/BETA_READINESS.md` recommendation updated to GO/NO-GO

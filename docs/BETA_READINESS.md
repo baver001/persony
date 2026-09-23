@@ -1,6 +1,6 @@
 # Beta Readiness
 
-**Updated:** 2026-09-22  
+**Updated:** 2026-09-23  
 **Target:** Closed beta without commercial billing  
 **Production:** https://beta.persony.org (git `af3a78d`, CF `952375cd`)
 
@@ -8,8 +8,8 @@ Legend: `impl` = implemented in code · `test` = automated · `manual` = human v
 
 | Feature | impl | test | manual | prod | Known issues |
 |---------|:----:|:----:|:------:|:----:|--------------|
-| Auth (Clerk) | ✓ | ✓ | partial | ✓ | persona-lifecycle E2E 3/3 (opt-in) |
-| Persona create/edit | ✓ | ✓ | — | ✓ | editor reset + async save deployed |
+| Auth (Clerk) | ✓ | ✓ | partial | ✓ | lifecycle E2E 3/3 incl. reload→edit (opt-in) |
+| Persona create/edit | ✓ | ✓ | — | ✓ | E2E: create→reload→PATCH→reload→delete |
 | Persona canonical IDs | ✓ | ✓ | — | ✓ | `selectedPersonaId`, profile/editing IDs |
 | Persona DTO round-trip | ✓ | ✓ | — | ✓ | worker + client map tests |
 | Persona AI generation | ✓ | — | — | ✓ | auto portrait after character gen |
@@ -25,7 +25,7 @@ Legend: `impl` = implemented in code · `test` = automated · `manual` = human v
 | Beta Battery | ✓ | — | — | ✓ | — |
 | Commercial billing | hidden | ✓ | — | ✓ | `BILLING_ENABLED=false` |
 | Rooms | hidden | ✓ | — | partial | `ROOMS_ENABLED=false` |
-| Playwright beta-critical | ✓ | ✓ | — | ✓ | 11/11 (8 smoke + 3 lifecycle opt-in) |
+| Playwright beta-critical | ✓ | ✓ | — | ✓ | **11/11** on prod (2026-09-23, msedge) |
 
 ## Release gate (§85)
 
