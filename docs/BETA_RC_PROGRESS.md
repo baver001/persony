@@ -76,7 +76,7 @@
 - Canonical IDs: `profilePersonaId`, `editingPersonaId` + `editingPersonaSeed` in `App.tsx`
 - AI Persona: `generatePersonaAvatar()` after character gen (`src/lib/api/avatar-generation.ts`)
 - Tests: `persona-selection.test.ts` (+5), total 141 vitest green
-- Playwright Chromium install still times out (BLOCKER-4)
+- Playwright: use `PERSONY_E2E_CHANNEL=msedge` if Chromium CDN install fails (see BLOCKER-4)
 
 - Avatar Studio: `avatar-prompt.ts`, persona context, structured API errors
 - Owner overview: periods 24h/7d/30d/90d + trend deltas
@@ -138,11 +138,11 @@ $env:PERSONY_E2E_CHANNEL = "msedge"   # или "chrome"
 npm run test:e2e:beta
 ```
 
-## Completion audit (2026-09-22)
+## Completion audit (2026-09-23)
 
 | Requirement | Status | Evidence |
 |-------------|--------|----------|
-| Persona P0 (editor, save, IDs, My Personas) | **done** | deployed `0e51ed4a`; E2E 3/3 |
+| Persona P0 (editor, save, IDs, My Personas) | **done** | prod `af3a78d`; lifecycle E2E 3/3 |
 | Billing hidden | **done** | `BILLING_ENABLED=false`; E2E billing-hidden |
 | `gemini-3.1-flash-image` | **done** | model-registry + avatar routes |
 | Official 6 avatars (not Unsplash) | **blocked** | quota 429; `--apply-roster` pending |
