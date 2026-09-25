@@ -55,11 +55,16 @@ export async function generateAvatarWithWorkersAi(
   form.append('prompt', text);
   form.append('width', '1024');
   form.append('height', '1024');
+  const formResponse = new Response(form);
+  const contentType = formResponse.headers.get('content-type');
+  if (!formResponse.body || !contentType) {
+    throw new Error('Failed to serialize FLUX multipart body');
+  }
 
   const response = await ai.run(WORKERS_AI_AVATAR_MODEL, {
     multipart: {
-      body: form,
-      contentType: 'multipart/form-data',
+      body: formResponse.body as unknown as object,
+      contentType,
     },
   });
 
