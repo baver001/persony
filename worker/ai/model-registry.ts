@@ -1,6 +1,6 @@
 import type { InferenceOperation } from './operations';
 
-export type AIProviderId = 'google' | 'deepseek';
+export type AIProviderId = 'google' | 'deepseek' | 'cloudflare';
 
 export type AIModelStatus = 'stable' | 'preview' | 'deprecated';
 
@@ -107,15 +107,15 @@ export const AI_MODEL_REGISTRY: AIModelDefinition[] = [
     displayName: 'Gemini 3.1 Flash Image',
     status: 'stable',
     capabilities: ['text', 'image_output'],
-    operations: ['avatar_generation'],
+    operations: [],
     supportsStreaming: false,
     supportsUsage: true,
     supportsVision: false,
     supportsAudio: false,
     supportsLive: false,
-    enabled: true,
+    enabled: false,
     source: GEMINI_MODELS_DOC,
-    lastVerifiedAt: '2026-09-21',
+    lastVerifiedAt: '2026-09-25',
   },
   {
     provider: 'google',
@@ -164,6 +164,22 @@ export const AI_MODEL_REGISTRY: AIModelDefinition[] = [
     enabled: true,
     source: GEMINI_MODELS_DOC,
     lastVerifiedAt: VERIFIED_AT,
+  },
+  {
+    provider: 'cloudflare',
+    modelId: '@cf/black-forest-labs/flux-2-klein-9b',
+    displayName: 'FLUX.2 Klein 9B',
+    status: 'stable',
+    capabilities: ['image_output'],
+    operations: ['avatar_generation'],
+    supportsStreaming: false,
+    supportsUsage: false,
+    supportsVision: false,
+    supportsAudio: false,
+    supportsLive: false,
+    enabled: true,
+    source: 'https://developers.cloudflare.com/workers-ai/models/flux-2-klein-9b/',
+    lastVerifiedAt: '2026-09-25',
   },
   {
     provider: 'deepseek',

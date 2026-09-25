@@ -2,6 +2,7 @@
 
 interface Env {
   GEMINI_API_KEY: string;
+  AI?: Ai;
   DB: D1Database;
   ASSETS: Fetcher;
   CLERK_SECRET_KEY?: string;

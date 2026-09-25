@@ -268,7 +268,7 @@ ownerRoutes.get('/owner/overview', async (c) => {
       whatChanged: [
         'Beta RC: billing hidden; Rooms hidden',
         'Owner overview KPIs + period trends (24h/7d/30d/90d)',
-        'Avatar generation on gemini-3.1-flash-image',
+        'Avatar generation on Workers AI FLUX.2 klein 9B',
         'Persona lifecycle E2E green on beta.persony.org',
       ],
       actorUserId: userId,

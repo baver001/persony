@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { formatCleanErrorMessage } from '../lib/errors';
+import { generateAvatarWithWorkersAi } from '../lib/workers-ai-avatar';
 import {
   handleGenerateAvatar,
   handleGenerateCharacter,
@@ -219,12 +220,18 @@ apiRoutes.post('/generate-avatar', aiHeavyRateLimit, async (c) => {
       return c.json({ error: 'Prompt is required' }, 400);
     }
     if (c.env.DB && parsed.data.personaId && parsed.data.clientRequestId) {
-      const tracked = await runAvatarWithInference(c.env.DB, userId, c.env.GEMINI_API_KEY, {
-        prompt: parsed.data.prompt,
-        personaName: parsed.data.personaName,
-        personaId: parsed.data.personaId,
-        clientRequestId: parsed.data.clientRequestId,
-      });
+      const tracked = await runAvatarWithInference(
+        c.env.DB,
+        userId,
+        c.env.GEMINI_API_KEY,
+        {
+          prompt: parsed.data.prompt,
+          personaName: parsed.data.personaName,
+          personaId: parsed.data.personaId,
+          clientRequestId: parsed.data.clientRequestId,
+        },
+        c.env.AI
+      );
       return c.json({ imageDataUrl: tracked.imageDataUrl });
     }
 
@@ -233,11 +240,13 @@ apiRoutes.post('/generate-avatar', aiHeavyRateLimit, async (c) => {
       userId,
       'avatar_generation',
       () =>
-        handleGenerateAvatar(
-          c.env.GEMINI_API_KEY,
-          parsed.data.prompt,
-          parsed.data.personaName
-        )
+        c.env.AI
+          ? generateAvatarWithWorkersAi(c.env.AI, parsed.data.prompt, parsed.data.personaName)
+          : handleGenerateAvatar(
+              c.env.GEMINI_API_KEY,
+              parsed.data.prompt,
+              parsed.data.personaName
+            )
     );
     return c.json({ imageDataUrl: result.imageDataUrl });
   } catch (err) {

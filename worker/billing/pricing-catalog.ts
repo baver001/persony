@@ -161,6 +161,18 @@ export const PRICING_CATALOG: PricingEntry[] = [
     sourceReference: GEMINI_PRICING,
   }),
   entry(
+    'flux-2-klein-9b:per_image:default',
+    'cloudflare',
+    '@cf/black-forest-labs/flux-2-klein-9b',
+    'per_image',
+    15_000,
+    {
+      effectiveFrom: '2026-09-25',
+      unit: 'per_image',
+      sourceReference: 'https://developers.cloudflare.com/workers-ai/models/flux-2-klein-9b/',
+    }
+  ),
+  entry(
     'gemini-3.1-flash-image:per_image:default',
     'google',
     'gemini-3.1-flash-image',

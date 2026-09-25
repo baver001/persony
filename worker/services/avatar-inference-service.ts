@@ -4,6 +4,7 @@ import { loadMergedPricingCatalog } from '../repositories/pricing-catalog-reposi
 import { loadRetailPricingConfig } from '../billing/retail-pricing';
 import { GEMINI_AVATAR_IMAGE_MODELS } from '../lib/models';
 import { handleGenerateAvatar } from '../lib/gemini';
+import { generateAvatarWithWorkersAi, WORKERS_AI_AVATAR_MODEL } from '../lib/workers-ai-avatar';
 import {
   createInferenceRun,
   findInferenceRunByClientRequest,
@@ -38,12 +39,15 @@ export async function runAvatarWithInference(
   db: D1Database,
   userId: string,
   apiKey: string,
-  input: AvatarInferenceInput
+  input: AvatarInferenceInput,
+  ai?: Ai
 ): Promise<{ imageDataUrl: string; inferenceRunId: string }> {
   const conversationId = `avatar:${userId}:${input.personaId}`;
   const clientRequestId = input.clientRequestId;
   const personaVersion = await resolvePersonaVersion(db, input.personaId);
-  const provider = 'google';
+  const useWorkersAi = Boolean(ai);
+  const provider = useWorkersAi ? 'cloudflare' : 'google';
+  const requestedModel = useWorkersAi ? WORKERS_AI_AVATAR_MODEL : GEMINI_AVATAR_IMAGE_MODELS[0];
 
   const existing = await findInferenceRunByClientRequest(db, conversationId, clientRequestId);
   const run =
@@ -55,7 +59,7 @@ export async function runAvatarWithInference(
       personaId: input.personaId,
       personaVersion,
       provider,
-      model: GEMINI_AVATAR_IMAGE_MODELS[0],
+      model: requestedModel,
       operationType: 'avatar_generation',
     }));
 
@@ -64,14 +68,16 @@ export async function runAvatarWithInference(
   await updateInferenceRunEconomics(db, run.id, {
     energyReserved: reservation.reservedUnits,
     requestedProvider: provider,
-    requestedModel: GEMINI_AVATAR_IMAGE_MODELS[0],
+    requestedModel,
     actualProvider: provider,
-    actualModel: GEMINI_AVATAR_IMAGE_MODELS[0],
+    actualModel: requestedModel,
   });
 
   try {
-    const result = await handleGenerateAvatar(apiKey, input.prompt, input.personaName);
-    const model = result.model ?? GEMINI_AVATAR_IMAGE_MODELS[0];
+    const result = useWorkersAi
+      ? await generateAvatarWithWorkersAi(ai!, input.prompt, input.personaName)
+      : await handleGenerateAvatar(apiKey, input.prompt, input.personaName);
+    const model = result.model ?? requestedModel;
     const pricing = computePerImageCost({
       provider,
       model,

@@ -1,5 +1,7 @@
 export interface PersonyEnv {
   GEMINI_API_KEY: string;
+  /** Cloudflare Workers AI — avatar portraits (FLUX.2 klein 9B). */
+  AI?: Ai;
   /** Optional — enables DeepSeek text chat when routed. */
   DEEPSEEK_API_KEY?: string;
   /** Paddle API key — not used until billing is enabled. */
