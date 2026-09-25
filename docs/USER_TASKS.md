@@ -131,6 +131,4 @@ npm run dev
 
 Чеклист: `docs/BETA_ACCEPTANCE.md` → sign-off → обновить `BETA_READINESS.md` на **GO**.
 
-### 8.5 Commit WIP (рекомендуется)
-
-Весь RC-код задеплоен, но **не закоммичен**. Скажите агенту **«commit»** для одного RC-коммита.
+Код RC на `main` и на prod (см. `docs/BETA_RC_PROGRESS.md` · текущий gitSha в `/api/health`).
