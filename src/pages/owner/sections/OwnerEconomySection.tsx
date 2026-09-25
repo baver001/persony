@@ -11,6 +11,15 @@ type Economics = {
   callsToday: number;
   energyConsumedToday: number;
   costByProvider: Array<{ provider: string; costMicrousd: number; calls: number }>;
+  costByModel: Array<{
+    provider: string;
+    model: string;
+    costMicrousd: number;
+    calls: number;
+    inputTokens: number;
+    outputTokens: number;
+    cachedInputTokens: number;
+  }>;
   simulatedRetailValueTodayMicrousd: number;
   simulatedGrossProfitTodayMicrousd: number;
   simulatedGrossMarginTodayPercent: number;
@@ -75,6 +84,43 @@ export function OwnerEconomySection({ economics, loading, error, onRetry }: Prop
           </div>
         ))}
       </div>
+      {economics.costByModel.length > 0 && (
+        <section className="space-y-2">
+          <div>
+            <h3 className="font-medium">{t('modelSpendTitle')}</h3>
+            <p className="text-xs text-zinc-500 mt-1">{t('modelSpendHint')}</p>
+          </div>
+          <div className="rounded-xl border border-white/10 overflow-x-auto">
+            <table className="w-full text-sm min-w-[720px]">
+              <thead className="bg-white/5 text-zinc-400 text-left">
+                <tr>
+                  <th className="px-3 py-2">{t('modelSpendModel')}</th>
+                  <th className="px-3 py-2">{t('modelSpendInput')}</th>
+                  <th className="px-3 py-2">{t('modelSpendCached')}</th>
+                  <th className="px-3 py-2">{t('modelSpendOutput')}</th>
+                  <th className="px-3 py-2">{t('modelSpendCalls')}</th>
+                  <th className="px-3 py-2">{t('modelSpendCost')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {economics.costByModel.map((row) => (
+                  <tr key={`${row.provider}:${row.model}`} className="border-t border-white/5">
+                    <td className="px-3 py-2">
+                      <div className="font-medium">{row.model}</div>
+                      <div className="text-[11px] text-zinc-500">{row.provider}</div>
+                    </td>
+                    <td className="px-3 py-2 tabular-nums">{row.inputTokens.toLocaleString()}</td>
+                    <td className="px-3 py-2 tabular-nums">{row.cachedInputTokens.toLocaleString()}</td>
+                    <td className="px-3 py-2 tabular-nums">{row.outputTokens.toLocaleString()}</td>
+                    <td className="px-3 py-2 tabular-nums">{row.calls}</td>
+                    <td className="px-3 py-2 font-mono text-xs">{formatMicrousd(row.costMicrousd, 4)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
       {economics.costByProvider.length > 0 && (
         <ul className="md:hidden space-y-2">
           {economics.costByProvider.map((row) => (

@@ -51,6 +51,9 @@ describe('getOwnerEconomicsSnapshot', () => {
     await updateInferenceRunEconomics(db, run.id, {
       costConfidence: economics.costConfidence,
       providerCostMicrousd: economics.providerCostMicrousd,
+      inputTokens: 1200,
+      outputTokens: 300,
+      cachedInputTokens: 100,
       costCalculatedAt:
         economics.costConfidence === 'unpriced' ? undefined : new Date().toISOString(),
       pricingVersion: 'test-v1',
@@ -77,6 +80,13 @@ describe('getOwnerEconomicsSnapshot', () => {
     expect(snapshot.simulatedRetailValueTodayMicrousd).toBeGreaterThan(500);
     expect(snapshot.energyConsumedToday).toBe(0);
     expect(snapshot.simulatedGrossProfitTodayMicrousd).toBeGreaterThan(0);
+    expect(snapshot.costByModel[0]).toMatchObject({
+      model: 'gemini-3.8-flash',
+      inputTokens: 2400,
+      outputTokens: 600,
+      cachedInputTokens: 200,
+      costMicrousd: 500,
+    });
     expect(snapshot.retailPricingVersion).toBeTruthy();
   });
 

@@ -85,7 +85,15 @@ export type OwnerEconomicsSnapshot = {
   avgLatencyMsToday: number | null;
   fallbackRateToday: number;
   costByProvider: Array<{ provider: string; costMicrousd: number; calls: number }>;
-  costByModel: Array<{ provider: string; model: string; costMicrousd: number; calls: number }>;
+  costByModel: Array<{
+    provider: string;
+    model: string;
+    costMicrousd: number;
+    calls: number;
+    inputTokens: number;
+    outputTokens: number;
+    cachedInputTokens: number;
+  }>;
   activeUsersWithInference7d: number;
   /** Simulated retail — not actual revenue until Paddle billing. */
   simulatedRetailValueTodayMicrousd: number;
@@ -123,7 +131,10 @@ export async function getOwnerEconomicsSnapshot(
         `SELECT COALESCE(actual_provider, provider, 'unknown') AS provider,
                 COALESCE(actual_model, model, 'unknown') AS model,
                 COALESCE(SUM(${KNOWN_COST_SQL}), 0) AS cost_microusd,
-                COUNT(*) AS calls
+                COUNT(*) AS calls,
+                COALESCE(SUM(input_tokens), 0) AS input_tokens,
+                COALESCE(SUM(output_tokens), 0) AS output_tokens,
+                COALESCE(SUM(cached_input_tokens), 0) AS cached_input_tokens
          FROM inference_runs
          WHERE started_at >= ?
          GROUP BY COALESCE(actual_provider, provider, 'unknown'),
@@ -132,7 +143,15 @@ export async function getOwnerEconomicsSnapshot(
          LIMIT 20`
       )
       .bind(isoDaysAgo(7))
-      .all<{ provider: string; model: string; cost_microusd: number; calls: number }>(),
+      .all<{
+        provider: string;
+        model: string;
+        cost_microusd: number;
+        calls: number;
+        input_tokens: number;
+        output_tokens: number;
+        cached_input_tokens: number;
+      }>(),
     db
       .prepare(
         `SELECT COUNT(DISTINCT user_id) AS count
@@ -175,6 +194,9 @@ export async function getOwnerEconomicsSnapshot(
       model: r.model,
       costMicrousd: r.cost_microusd,
       calls: r.calls,
+      inputTokens: r.input_tokens,
+      outputTokens: r.output_tokens,
+      cachedInputTokens: r.cached_input_tokens,
     })),
     activeUsersWithInference7d: toSqlCount(activeUsers),
     simulatedRetailValueTodayMicrousd: simulatedRetailToday,

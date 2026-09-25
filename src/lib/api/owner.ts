@@ -126,7 +126,15 @@ export async function fetchOwnerEconomics(): Promise<{
     avgLatencyMsToday: number | null;
     fallbackRateToday: number;
     costByProvider: Array<{ provider: string; costMicrousd: number; calls: number }>;
-    costByModel: Array<{ provider: string; model: string; costMicrousd: number; calls: number }>;
+    costByModel: Array<{
+      provider: string;
+      model: string;
+      costMicrousd: number;
+      calls: number;
+      inputTokens: number;
+      outputTokens: number;
+      cachedInputTokens: number;
+    }>;
     activeUsersWithInference7d: number;
     simulatedRetailValueTodayMicrousd: number;
     simulatedGrossProfitTodayMicrousd: number;
