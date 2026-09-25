@@ -94,9 +94,10 @@ export async function runAvatarWithInference(
       priced,
     });
 
+    const usage = 'usage' in result ? result.usage : undefined;
     const tokenHint = {
-      input: result.usage?.inputTokens,
-      output: result.usage?.outputTokens,
+      input: usage?.inputTokens,
+      output: usage?.outputTokens,
     };
     const batteryConfig = await loadBatteryConfig(db);
     const retailPricing = await loadRetailPricingConfig(db);
@@ -111,9 +112,9 @@ export async function runAvatarWithInference(
     const costCalculatedAt = new Date().toISOString();
     await updateInferenceRunEconomics(db, run.id, {
       actualModel: model,
-      inputTokens: result.usage?.inputTokens ?? null,
-      outputTokens: result.usage?.outputTokens ?? null,
-      cachedInputTokens: result.usage?.cachedInputTokens ?? null,
+      inputTokens: usage?.inputTokens ?? null,
+      outputTokens: usage?.outputTokens ?? null,
+      cachedInputTokens: usage?.cachedInputTokens ?? null,
       usageEstimated,
       providerCostMicrousd,
       costConfidence,

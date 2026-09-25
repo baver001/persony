@@ -51,10 +51,16 @@ export async function generateAvatarWithWorkersAi(
     .filter(Boolean)
     .join(' ');
 
+  const form = new FormData();
+  form.append('prompt', text);
+  form.append('width', '1024');
+  form.append('height', '1024');
+
   const response = await ai.run(WORKERS_AI_AVATAR_MODEL, {
-    prompt: text,
-    width: 1024,
-    height: 1024,
+    multipart: {
+      body: form,
+      contentType: 'multipart/form-data',
+    },
   });
 
   return {
