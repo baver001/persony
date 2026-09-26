@@ -7,11 +7,10 @@ function canFetchBatterySnapshot(
   apiAuthReady: boolean,
   clerkEnabled: boolean
 ): boolean {
-  // Local dev: worker accepts dev-user headers even when Clerk fails on localhost.
-  if (import.meta.env.DEV) return true;
-  if (!isSignedIn) return false;
-  if (clerkEnabled) return apiAuthReady;
-  return true;
+  if (clerkEnabled && !apiAuthReady) return false;
+  if (isSignedIn) return true;
+  // Local dev: guest session via X-Persony-Dev-User-Id when Clerk has no session.
+  return import.meta.env.DEV;
 }
 
 export function useBattery(pollMs = 60_000) {
@@ -32,7 +31,9 @@ export function useBattery(pollMs = 60_000) {
     setIsLoading(true);
     try {
       const snapshot = await fetchBatterySnapshot();
-      setBattery(snapshot);
+      if (snapshot !== null) {
+        setBattery(snapshot);
+      }
     } catch {
       // keep last known snapshot
     } finally {

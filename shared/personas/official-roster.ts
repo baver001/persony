@@ -8,8 +8,7 @@ import type { OfficialPersonaDefinition } from './official-types';
 import type { PersonaSpecV1 } from '../persona-spec/types';
 
 const AVATARS = {
-  athena:
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop&crop=faces&auto=format&q=80',
+  athena: '/personas/official/athena.webp',
   viktor:
     'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop&crop=faces&auto=format&q=80',
   sofia:

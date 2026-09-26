@@ -5,6 +5,7 @@
  *   node scripts/generate-official-avatars.mjs
  *   node scripts/generate-official-avatars.mjs --execute
  *   node scripts/generate-official-avatars.mjs --execute --slug=athena
+ *   npx tsx scripts/generate-official-avatars.mjs --execute --via-workers-ai --slug=athena
  *   node scripts/generate-official-avatars.mjs --execute --via-api
  *   node scripts/generate-official-avatars.mjs --apply-roster --confirm
  */
@@ -13,22 +14,34 @@ import { join } from 'node:path';
 import { GoogleGenAI, Modality } from '@google/genai';
 import { createClerkClient } from '@clerk/backend';
 import sharp from 'sharp';
+import { buildOfficialAvatarPrompt } from '../shared/personas/official-avatar-prompt.ts';
+import { OFFICIAL_PERSONA_ROSTER } from '../shared/personas/official-roster.ts';
 
 const MODEL = 'gemini-3.1-flash-image';
-const ROSTER = [
-  { slug: 'athena', name: 'Athena', hint: 'calm strategic thinker, intellectual warmth, modern mentor' },
-  { slug: 'viktor', name: 'Viktor', hint: 'pragmatic software engineer, focused, subtle tech aesthetic' },
-  { slug: 'marc_nova', name: 'Marc Nova', hint: 'startup strategist, confident, approachable business leader' },
-  { slug: 'sofia', name: 'Sofia', hint: 'reflective companion, gentle empathy, soft natural light' },
-  { slug: 'elsa', name: 'Elsa', hint: 'imaginative storyteller, creative spark, dreamy but clear portrait' },
-  { slug: 'chef_marco', name: 'Chef Marco', hint: 'warm culinary companion, inviting smile, kitchen ambiance bokeh' },
-];
+const WORKERS_AI_MODEL = '@cf/black-forest-labs/flux-1-schnell';
 
-const STYLE_PREFIX =
-  'Premium AI messenger portrait, bust framing, simple background, consistent Persony official collection lighting, no text, no watermark. ';
+const LEGACY_HINTS = {
+  viktor: 'pragmatic software engineer, focused, subtle tech aesthetic',
+  marc_nova: 'startup strategist, confident, approachable business leader',
+  sofia: 'reflective companion, gentle empathy, soft natural light',
+  elsa: 'adult storyteller, calm creative expression, clear studio portrait, modest clothing',
+  chef_marco: 'warm culinary companion, inviting smile, kitchen ambiance bokeh',
+};
+
+const ROSTER = OFFICIAL_PERSONA_ROSTER.map((persona) => ({
+  slug: persona.id,
+  name: persona.name,
+  spec: persona.spec,
+  fallbackArtDirection: LEGACY_HINTS[persona.id],
+}));
 
 function buildPrompt(entry) {
-  return `${STYLE_PREFIX}Character: ${entry.name}. ${entry.hint}.`;
+  return buildOfficialAvatarPrompt({
+    name: entry.name,
+    slug: entry.slug,
+    spec: entry.spec,
+    fallbackArtDirection: entry.fallbackArtDirection,
+  });
 }
 
 function sleep(ms) {
@@ -67,6 +80,7 @@ function parseArgs(argv) {
     confirm: argv.includes('--confirm'),
     slug: slugArg?.split('=')[1]?.trim() || null,
     viaApi: argv.includes('--via-api'),
+    viaWorkersAi: argv.includes('--via-workers-ai'),
     apiBase: argv.find((a) => a.startsWith('--api-base='))?.split('=')[1] ?? 'https://beta.persony.org',
   };
 }
@@ -201,12 +215,46 @@ async function generatePortraitViaApi(apiBase, bearer, entry) {
   return Buffer.from(base64, 'base64');
 }
 
-async function saveWebp(buffer, outPath) {
+async function generatePortraitViaWorkersAi(prompt) {
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID || '9e75a3866eb9269f8d3c3407bdef7cf8';
+  const token = process.env.CLOUDFLARE_API_TOKEN;
+  if (!token) throw new Error('CLOUDFLARE_API_TOKEN not set');
+
+  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${WORKERS_AI_MODEL}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ prompt, steps: 4 }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(`Workers AI ${res.status}: ${JSON.stringify(body).slice(0, 300)}`);
+  }
+  const b64 = body?.result?.image ?? body?.image;
+  if (!b64 || typeof b64 !== 'string') {
+    throw new Error('Workers AI returned no image');
+  }
+  return Buffer.from(b64, 'base64');
+}
+
+async function saveWebp(buffer, outPath, { previewDir, slug } = {}) {
   const webp = await sharp(buffer)
     .resize(1024, 1024, { fit: 'cover', position: 'attention' })
-    .webp({ quality: 82 })
+    .sharpen({ sigma: 0.6 })
+    .webp({ quality: 84 })
     .toBuffer();
   writeFileSync(outPath, webp);
+
+  if (previewDir && slug) {
+    mkdirSync(previewDir, { recursive: true });
+    for (const size of [36, 64]) {
+      const thumb = await sharp(webp).resize(size, size, { fit: 'cover' }).png().toBuffer();
+      writeFileSync(join(previewDir, `${slug}-${size}px.png`), thumb);
+    }
+  }
 }
 
 function applyRosterPaths() {
@@ -262,9 +310,12 @@ async function main() {
     return;
   }
 
-  console.log(
-    `mode=${args.execute ? 'EXECUTE' : 'DRY-RUN'} via=${args.viaApi ? 'worker-api' : 'gemini-direct'} apiBase=${args.apiBase}`
-  );
+  const viaLabel = args.viaWorkersAi
+    ? 'workers-ai-flux-schnell'
+    : args.viaApi
+      ? 'worker-api'
+      : 'gemini-direct';
+  console.log(`mode=${args.execute ? 'EXECUTE' : 'DRY-RUN'} via=${viaLabel} apiBase=${args.apiBase}`);
   for (const entry of roster) {
     const prompt = buildPrompt(entry);
     const manifestPath = join(outDir, `${entry.slug}.prompt.txt`);
@@ -281,28 +332,41 @@ async function main() {
     process.exit(0);
   }
 
-  const apiKey = args.viaApi ? null : loadGeminiApiKey();
-  if (!args.viaApi && !apiKey) {
-    console.error('GEMINI_API_KEY not found — use --via-api with Clerk credentials');
+  const apiKey = args.viaApi || args.viaWorkersAi ? null : loadGeminiApiKey();
+  if (!args.viaApi && !args.viaWorkersAi && !apiKey) {
+    console.error('GEMINI_API_KEY not found — use --via-workers-ai, --via-api, or set GEMINI_API_KEY');
     process.exit(1);
   }
   if (args.viaApi) {
     await mintClerkJwt();
   }
 
+  const previewDir = join(process.cwd(), 'public', 'personas', 'official', '_previews');
+
   for (const entry of roster) {
     const outPath = join(outDir, `${entry.slug}.webp`);
-    const via = args.viaApi ? `Worker API (${args.apiBase})` : MODEL;
+    const prompt = buildPrompt(entry);
+    const via = args.viaWorkersAi
+      ? WORKERS_AI_MODEL
+      : args.viaApi
+        ? `Worker API (${args.apiBase})`
+        : MODEL;
     console.log(`\nGenerating ${entry.slug} via ${via}…`);
     const buffer = await withQuotaRetry(entry.slug, async () => {
+      if (args.viaWorkersAi) {
+        return generatePortraitViaWorkersAi(prompt);
+      }
       if (args.viaApi) {
         const bearer = await mintClerkJwt();
         return generatePortraitViaApi(args.apiBase, bearer, entry);
       }
       return generatePortrait(apiKey, entry);
     });
-    await saveWebp(buffer, outPath);
+    await saveWebp(buffer, outPath, { previewDir, slug: entry.slug });
     console.log(`✓ ${outPath} (${buffer.length} bytes source → webp)`);
+    if (previewDir) {
+      console.log(`  previews: ${join(previewDir, `${entry.slug}-36px.png`)}`);
+    }
   }
 
   console.log('\nGeneration complete. Visually approve all six, then run --apply-roster --confirm');

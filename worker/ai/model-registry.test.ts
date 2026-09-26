@@ -23,11 +23,11 @@ describe('model-registry', () => {
     expect(assertModelSupportsOperation('google', 'gemini-3.8-live', 'voice_call')).toBe(true);
   });
 
-  it('routes avatar_generation to Workers AI FLUX.2 klein 9B', () => {
+  it('routes avatar_generation to Workers AI FLUX.1 schnell', () => {
     const avatar = AI_MODEL_REGISTRY.filter(
       (m) => m.enabled && m.operations.includes('avatar_generation')
     );
-    expect(avatar.map((m) => m.modelId)).toEqual(['@cf/black-forest-labs/flux-2-klein-9b']);
+    expect(avatar.map((m) => m.modelId)).toEqual(['@cf/black-forest-labs/flux-1-schnell']);
   });
 
   it('exports owner routing matrix aligned with registry', () => {

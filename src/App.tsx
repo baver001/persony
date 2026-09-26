@@ -924,7 +924,16 @@ function ChatApp() {
   };
 
   const handleAvatarChange = async (character: Persona, avatar: string) => {
-    const updated: Persona = { ...character, avatar, isCustom: true };
+    let avatarForSave = avatar;
+    if (avatarForSave.startsWith('data:image/')) {
+      try {
+        const { compressAvatarDataUrl } = await import('./utils/avatarImage');
+        avatarForSave = await compressAvatarDataUrl(avatarForSave);
+      } catch {
+        // keep original
+      }
+    }
+    const updated: Persona = { ...character, avatar: avatarForSave, isCustom: true };
     let saved = updated;
 
     if (isSignedIn && character.isCustom) {

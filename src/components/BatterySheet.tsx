@@ -48,7 +48,8 @@ export const BatterySheet: React.FC<Props> = ({ isOpen, onClose, battery }) => {
   };
 
   const startSheetDrag = (event: React.PointerEvent<HTMLElement>) => {
-    dragControls.start(event);
+    event.preventDefault();
+    dragControls.start(event.nativeEvent);
   };
 
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
@@ -79,8 +80,9 @@ export const BatterySheet: React.FC<Props> = ({ isOpen, onClose, battery }) => {
               drag="y"
               dragControls={dragControls}
               dragListener={false}
-              dragConstraints={{ top: -280, bottom: 0 }}
-              dragElastic={{ top: 0.12, bottom: 0 }}
+              dragConstraints={{ top: -320, bottom: 0 }}
+              dragElastic={{ top: 0.1, bottom: 0 }}
+              dragMomentum={false}
               onDragEnd={handleDragEnd}
               initial={{ y: '-100%' }}
               animate={{ y: 0 }}

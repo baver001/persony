@@ -1,5 +1,8 @@
 /** Official portraits and Avatar Studio — Cloudflare Workers AI. */
-export const WORKERS_AI_AVATAR_MODEL = '@cf/black-forest-labs/flux-2-klein-9b';
+export const WORKERS_AI_AVATAR_MODEL = '@cf/black-forest-labs/flux-1-schnell';
+
+/** Default diffusion steps for FLUX.1 schnell (max 8 per Cloudflare). */
+export const WORKERS_AI_AVATAR_STEPS = 4;
 
 export type WorkersAvatarResult = {
   imageDataUrl: string;
@@ -51,21 +54,9 @@ export async function generateAvatarWithWorkersAi(
     .filter(Boolean)
     .join(' ');
 
-  const form = new FormData();
-  form.append('prompt', text);
-  form.append('width', '1024');
-  form.append('height', '1024');
-  const formResponse = new Response(form);
-  const contentType = formResponse.headers.get('content-type');
-  if (!formResponse.body || !contentType) {
-    throw new Error('Failed to serialize FLUX multipart body');
-  }
-
   const response = await ai.run(WORKERS_AI_AVATAR_MODEL, {
-    multipart: {
-      body: formResponse.body as unknown as object,
-      contentType,
-    },
+    prompt: text,
+    steps: WORKERS_AI_AVATAR_STEPS,
   });
 
   return {

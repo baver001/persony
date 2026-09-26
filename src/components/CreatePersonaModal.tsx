@@ -20,6 +20,7 @@ import type { CustomPersonaStyleInput } from '../../shared/persona-spec/build-cu
 import { resetPersonaForm, type PersonaFormState } from '../lib/persona-form';
 import type { PersonaSaveHandler } from '../lib/persona-save';
 import { generatePersonaAvatar } from '../lib/api/avatar-generation';
+import { compressAvatarDataUrl } from '../utils/avatarImage';
 
 interface CreatePersonaModalProps {
   isOpen: boolean;
@@ -249,6 +250,15 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
       styleNotes: systemPrompt.trim() ? [systemPrompt.trim()] : undefined,
     });
 
+    let avatarForSave = avatar || generateSvgAvatar(name, category);
+    if (avatarForSave.startsWith('data:image/')) {
+      try {
+        avatarForSave = await compressAvatarDataUrl(avatarForSave);
+      } catch {
+        // keep existing data URL if compression fails
+      }
+    }
+
     const newPersona: Persona = {
       id: slug,
       name: name.trim(),
@@ -256,7 +266,7 @@ export const CreatePersonaModal: React.FC<CreatePersonaModalProps> = ({
       description: description.trim() || t('common:customPersonaDefault'),
       systemPrompt:
         systemPrompt.trim() || t('defaultSystemPrompt', { name: name.trim() }),
-      avatar: avatar || generateSvgAvatar(name, category),
+      avatar: avatarForSave,
       voice,
       category: isRemix ? 'custom' : category,
       color: isRemix ? '#71717a' : initialPersona?.color || '#71717a',

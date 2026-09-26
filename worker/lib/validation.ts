@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
 export const MAX_CHAT_MESSAGE_CHARS = 50_000;
+/** Persona avatars are stored as HTTPS URLs or compressed JPEG data URLs from Avatar Studio. */
+export const MAX_PERSONA_AVATAR_URL_CHARS = 280_000;
 export const MAX_TRANSCRIBE_BASE64_CHARS = 8_000_000;
 export const MAX_WS_JSON_BYTES = 256_000;
 export const MAX_WS_AUDIO_CHUNK_CHARS = 512_000;
@@ -49,7 +51,7 @@ export const createPersonaSchema = z.object({
   tagline: z.string().max(200).optional().default(''),
   description: z.string().max(2000).optional().default(''),
   systemPrompt: z.string().min(1).max(32_000),
-  avatarUrl: z.string().max(4096),
+  avatarUrl: z.string().max(MAX_PERSONA_AVATAR_URL_CHARS),
   voice: z.string().min(1).max(32),
   category: z.string().min(1).max(32),
   badge: z.string().max(64).optional(),
@@ -132,7 +134,7 @@ export const localImportSchema = z.object({
         tagline: z.string().max(200).optional().default(''),
         description: z.string().max(2000).optional().default(''),
         systemPrompt: z.string().min(1).max(32_000),
-        avatarUrl: z.string().max(4096),
+        avatarUrl: z.string().max(MAX_PERSONA_AVATAR_URL_CHARS),
         voice: z.string().min(1).max(32),
         category: z.string().min(1).max(32),
         badge: z.string().max(64).optional(),

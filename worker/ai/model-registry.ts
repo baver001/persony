@@ -167,8 +167,8 @@ export const AI_MODEL_REGISTRY: AIModelDefinition[] = [
   },
   {
     provider: 'cloudflare',
-    modelId: '@cf/black-forest-labs/flux-2-klein-9b',
-    displayName: 'FLUX.2 Klein 9B',
+    modelId: '@cf/black-forest-labs/flux-1-schnell',
+    displayName: 'FLUX.1 Schnell',
     status: 'stable',
     capabilities: ['image_output'],
     operations: ['avatar_generation'],
@@ -178,8 +178,8 @@ export const AI_MODEL_REGISTRY: AIModelDefinition[] = [
     supportsAudio: false,
     supportsLive: false,
     enabled: true,
-    source: 'https://developers.cloudflare.com/workers-ai/models/flux-2-klein-9b/',
-    lastVerifiedAt: '2026-09-25',
+    source: 'https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/',
+    lastVerifiedAt: '2026-09-26',
   },
   {
     provider: 'deepseek',

@@ -161,6 +161,18 @@ export const PRICING_CATALOG: PricingEntry[] = [
     sourceReference: GEMINI_PRICING,
   }),
   entry(
+    'flux-1-schnell:per_image:default',
+    'cloudflare',
+    '@cf/black-forest-labs/flux-1-schnell',
+    'per_image',
+    634,
+    {
+      effectiveFrom: '2026-09-26',
+      unit: 'per_image',
+      sourceReference: 'https://developers.cloudflare.com/workers-ai/platform/pricing/',
+    }
+  ),
+  entry(
     'flux-2-klein-9b:per_image:default',
     'cloudflare',
     '@cf/black-forest-labs/flux-2-klein-9b',

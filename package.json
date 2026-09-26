@@ -30,8 +30,9 @@
     "test:watch": "vitest",
     "types": "wrangler types",
     "icons": "node scripts/generate-icons.mjs",
-    "generate:official-avatars": "node scripts/generate-official-avatars.mjs",
-    "generate:official-avatars:api": "node scripts/generate-official-avatars.mjs --execute --via-api",
+    "generate:official-avatars": "tsx scripts/generate-official-avatars.mjs",
+    "generate:official-avatars:api": "tsx scripts/generate-official-avatars.mjs --execute --via-api",
+    "generate:official-avatars:workers": "tsx scripts/generate-official-avatars.mjs --execute --via-workers-ai",
     "db:migrate:local": "wrangler d1 migrations apply persony-db --local",
     "db:migrate:remote": "wrangler d1 migrations apply persony-db --remote"
   },
